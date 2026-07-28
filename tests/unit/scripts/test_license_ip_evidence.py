@@ -9,6 +9,8 @@ from typing import Any
 import pytest
 
 from scripts.license_ip_evidence import (
+    ISOLATED_ENV_FLAG,
+    PIP_BOOTSTRAP_PACKAGES,
     LicensePolicy,
     _run_in_isolated_environment,
     build_license_inventory,
@@ -53,15 +55,38 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
 
     assert result == 0
     assert calls[0][0][1:3] == ["-m", "venv"]
-    assert calls[1][0][-2] == "-r"
-    assert Path(calls[1][0][-1]).name == "requirements-prod.txt"
+    assert calls[1][0][1:6] == [
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "install",
+    ]
+    assert "--upgrade" in calls[1][0]
+    assert calls[1][0][-2:] == list(PIP_BOOTSTRAP_PACKAGES)
+    assert calls[2][0][1:6] == [
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "install",
+    ]
     assert calls[2][0][-2] == "-r"
-    assert Path(calls[2][0][-1]).name == "requirements-dev.txt"
-    assert calls[3][0][1].endswith("scripts/license_ip_evidence.py") or calls[3][0][1].endswith(
+    assert Path(calls[2][0][-1]).name == "requirements-prod.txt"
+    assert calls[3][0][1:6] == [
+        "-m",
+        "pip",
+        "--isolated",
+        "--disable-pip-version-check",
+        "install",
+    ]
+    assert calls[3][0][-2] == "-r"
+    assert Path(calls[3][0][-1]).name == "requirements-dev.txt"
+    assert calls[4][0][1].endswith("scripts/license_ip_evidence.py") or calls[4][0][1].endswith(
         "scripts\\license_ip_evidence.py"
     )
-    assert "--no-isolation" in calls[3][0]
-    assert calls[3][1]["env"]["LOTUS_ADVISE_LICENSE_IP_ISOLATED"] == "1"
+    assert "--no-isolation" in calls[4][0]
+    assert calls[4][1]["env"][ISOLATED_ENV_FLAG] == "1"
 
 
 def test_isolated_license_inventory_stops_on_install_failure(
@@ -83,6 +108,15 @@ def test_isolated_license_inventory_stops_on_install_failure(
 
     assert result == 17
     assert len(calls) == 2
+
+
+def test_isolated_license_inventory_rejects_nested_isolation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(ISOLATED_ENV_FLAG, "1")
+
+    with pytest.raises(RuntimeError, match="nested license/IP isolated execution"):
+        _run_in_isolated_environment(_isolated_args("check-inventory"))
 
 
 def test_license_inventory_includes_transitive_dependency(tmp_path: Path) -> None:

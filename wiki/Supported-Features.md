@@ -37,7 +37,7 @@ to confirm which capability claims are supported, bounded, or blocked.
 | Runtime smoke and production guardrails | Supported | `make ci` includes Postgres runtime smoke and production-profile guardrail negatives. |
 | Dependency health and security audit | Supported | `make verify-dependencies` and `make security-audit`. |
 | Dependency-lock evidence | Supported | `make dependency-lock-gate` and `uv.lock`. |
-| License/IP release evidence | Supported | `make license-ip-gate`, isolated runtime/development requirements-installed evidence generation, `docs/standards/license-ip-policy.v1.json`, `docs/standards/license-ip-inventory.v1.json`, and `NOTICE.md`. |
+| License/IP release evidence | Supported | `make license-ip-gate`, isolated runtime/development requirements-installed evidence generation with pinned pip/setuptools bootstrap tooling, `docs/standards/license-ip-policy.v1.json`, `docs/standards/license-ip-inventory.v1.json`, and `NOTICE.md`. |
 | Supportability metrics and readiness evidence | Supported | `GET /platform/capabilities` documents bounded labels for `lotus_advise_advisory_supportability_total` and bounded dependency readiness basis fields. |
 | Live cross-service evidence | Supported when the local stack is configured | Live validation scripts prove canonical and degraded proposal behavior. |
 

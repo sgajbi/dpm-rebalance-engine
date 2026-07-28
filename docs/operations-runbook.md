@@ -30,8 +30,8 @@
   inventory evidence.
 - `make license-ip-gate`: runtime/development dependency license inventory and approved-exception
   validation for release evidence, evaluated in a temporary virtual environment installed from the
-  governed runtime/development requirements files rather than the caller's ambient Python
-  environment.
+  governed runtime/development requirements files with pinned pip/setuptools bootstrap tooling and
+  pip isolated from the caller's ambient Python environment and user configuration.
 - `make bandit-severity-regression-gate`: Bandit security gate that blocks all high findings and
   fails on new, stale, expired, or worsened medium/low findings relative to the governed baseline.
 - `make trust-telemetry-freshness-gate`: derives committed trust-telemetry age and blocking posture

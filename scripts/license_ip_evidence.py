@@ -26,6 +26,7 @@ INVENTORY_PATH = Path("docs/standards/license-ip-inventory.v1.json")
 NOTICE_PATH = Path("NOTICE.md")
 LICENSE_OPERATOR_RE = re.compile(r"\s+(?:AND|OR|WITH)\s+|[()]")
 ISOLATED_ENV_FLAG = "LOTUS_ADVISE_LICENSE_IP_ISOLATED"
+PIP_BOOTSTRAP_PACKAGES = ("pip==25.0.1", "setuptools==83.0.0")
 
 
 @dataclass(frozen=True)
@@ -661,6 +662,24 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
 
     venv_python = _venv_python(venv_root)
     install_env = {**os.environ, "PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+    bootstrap_result = subprocess.run(
+        [
+            str(venv_python),
+            "-m",
+            "pip",
+            "--isolated",
+            "--disable-pip-version-check",
+            "install",
+            "--upgrade",
+            *PIP_BOOTSTRAP_PACKAGES,
+        ],
+        cwd=REPO_ROOT,
+        env=install_env,
+        check=False,
+    )
+    if bootstrap_result.returncode != 0:
+        return bootstrap_result.returncode
+
     for requirement_file in (
         args.runtime_requirements,
         args.development_requirements,
@@ -670,6 +689,8 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
                 str(venv_python),
                 "-m",
                 "pip",
+                "--isolated",
+                "--disable-pip-version-check",
                 "install",
                 "-r",
                 str(REPO_ROOT / requirement_file),
