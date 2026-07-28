@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
+import sys
 from email.message import Message
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,7 @@ from scripts.license_ip_evidence import (
     ISOLATED_ENV_FLAG,
     PIP_BOOTSTRAP_PACKAGES,
     LicensePolicy,
+    _governed_python_command,
     _run_in_isolated_environment,
     build_license_inventory,
     validate_license_inventory,
@@ -96,6 +99,40 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     for _, kwargs in calls:
         assert "PYTHONHOME" not in kwargs["env"]
         assert "PYTHONPATH" not in kwargs["env"]
+
+
+def test_governed_python_command_uses_current_supported_python(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "scripts.license_ip_evidence.sys.version_info",
+        (3, 11, 9, "final", 0),
+    )
+
+    assert _governed_python_command(env={}) == (sys.executable,)
+
+
+def test_governed_python_command_selects_python_311_launcher(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[list[str], dict[str, Any]]] = []
+    expected_candidate = ("py", "-3.11") if os.name == "nt" else ("python3.11",)
+    monkeypatch.setattr(
+        "scripts.license_ip_evidence.sys.version_info",
+        (3, 13, 0, "final", 0),
+    )
+
+    def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append((command, kwargs))
+        if tuple(command[:-1]) == expected_candidate and command[-1] == "--version":
+            return subprocess.CompletedProcess(command, 0, stdout="Python 3.11.9\n")
+        return subprocess.CompletedProcess(command, 1, stderr="not found")
+
+    monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
+
+    assert _governed_python_command(env={"PATH": "test-path"}) == expected_candidate
+    assert calls[0][0] == [*expected_candidate, "--version"]
+    assert calls[0][1]["env"] == {"PATH": "test-path"}
 
 
 def test_isolated_license_inventory_stops_on_install_failure(
