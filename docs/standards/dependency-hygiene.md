@@ -38,6 +38,12 @@ becomes a fail-on-new-regression or blocking CI gate.
 transitive packages. Review-required license terms must have explicit owner-approved exceptions with
 expiry dates; prohibited or unclassified terms fail the gate.
 
+`make license-ip-inventory` and `make license-ip-gate` run the evidence generator inside a
+temporary virtual environment installed from the governed runtime and development requirements
+files. Ambient developer or runner site-packages must not determine license/IP release evidence; the
+inventory reflects the same requirements graph that CI installs and the dependency-lock mirror
+validates.
+
 `make dependency-lock-gate` is blocking. `uv.lock` is the generated dependency-lock mirror for the
 requirements install strategy. It records requirement-file hashes, the license/IP inventory hash, and
 the package closure used for local/CI/release evidence. Regenerate it with `make dependency-lock`

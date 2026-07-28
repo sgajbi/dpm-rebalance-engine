@@ -231,10 +231,10 @@ dependency-lock-gate:
 	python scripts/dependency_lock_evidence.py check-lock
 
 license-ip-inventory:
-	python scripts/license_ip_evidence.py write-inventory --commit-sha $(GIT_SHA) --image-digest $(IMAGE_DIGEST) --repository-url $(REPO_URL)
+	python scripts/license_ip_evidence.py write-inventory --isolated --commit-sha $(GIT_SHA) --image-digest $(IMAGE_DIGEST) --repository-url $(REPO_URL)
 
 license-ip-gate:
-	python scripts/license_ip_evidence.py check-inventory --commit-sha $(GIT_SHA) --image-digest $(IMAGE_DIGEST) --repository-url $(REPO_URL)
+	python scripts/license_ip_evidence.py check-inventory --isolated --commit-sha $(GIT_SHA) --image-digest $(IMAGE_DIGEST) --repository-url $(REPO_URL)
 
 coverage-combined:
 	COVERAGE_FILE=.coverage.unit python -m pytest tests/unit --cov=src --cov-report=
