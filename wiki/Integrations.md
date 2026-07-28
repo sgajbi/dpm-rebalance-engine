@@ -152,12 +152,17 @@ Current governed usage includes:
 
 - downstream consumption of Advise data-product posture as opportunity-intelligence evidence
 - source-safe proposal-intake receipt through `POST /advisory/proposals/idea-intake`
+- downstream reconciliation of policy-evaluation workflow receipts with Advise-produced
+  source-owned as-of identity, trusted legal-entity/booking-center/proposal/version/portfolio scope,
+  and source-safe tenant/service/correlation/trace hashes
 
 Boundary rule:
 
 - `lotus-idea` owns idea candidates and conversion-intent evidence
 - `lotus-advise` owns advisory proposal lifecycle, suitability, approval, and client-publication
   authority
+- policy-evaluation receipt identity lets `lotus-idea` verify producer evidence without substituting
+  consumer request dates, caller-generated lineage, or raw tenant/correlation/trace identifiers
 - the current route proves executable intake receipt behavior and remains `not_certified`; it uses
   trusted local/dev caller headers for bounded scope and idempotency, but it does not persist
   proposal records, create orders, certify data-product realization, bind production IdP claims, or

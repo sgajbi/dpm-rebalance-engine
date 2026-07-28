@@ -76,6 +76,7 @@ class DurablePolicyEvaluationRepository:
         created_by: str,
         idempotency_key: str,
         reason: dict[str, Any],
+        observed_trace_id: str | None = None,
     ) -> PolicyEvaluationPersistenceResult:
         store = self._load_store()
         result = store.finalize_policy_evaluation_record(
@@ -87,6 +88,7 @@ class DurablePolicyEvaluationRepository:
             created_by=created_by,
             idempotency_key=idempotency_key,
             reason=reason,
+            observed_trace_id=observed_trace_id,
         )
         self._save_store(store)
         return result

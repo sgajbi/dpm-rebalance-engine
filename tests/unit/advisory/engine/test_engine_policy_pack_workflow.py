@@ -53,6 +53,7 @@ def test_policy_workflow_delegates_projection_and_decision_helpers() -> None:
 def _base_evidence_bundle() -> dict:
     return {
         "context_resolution": {
+            "as_of_date": "2026-05-26",
             "advisory_policy_context": {
                 "jurisdiction": "SG",
                 "client_classification": "ACCREDITED_INVESTOR",
@@ -65,15 +66,17 @@ def _base_evidence_bundle() -> dict:
                 "mandate_id": "MANDATE-BALANCED-001",
                 "objectives": ["capital_preservation", "balanced_growth"],
                 "restrictions": ["no_single_name_above_10pct"],
-            }
+            },
         },
         "inputs": {
             "portfolio_snapshot": {
                 "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "as_of_date": "2026-05-26",
                 "positions": [{"instrument_id": "US_EQ_ETF", "quantity": "100"}],
                 "cash_balances": [{"currency": "USD", "amount": "50000"}],
             },
             "market_data_snapshot": {
+                "as_of_date": "2026-05-26",
                 "prices": [{"instrument_id": "US_EQ_ETF", "price": "100", "currency": "USD"}],
                 "fx_rates": [{"pair": "USD/SGD", "rate": "1.35"}],
             },
@@ -113,6 +116,22 @@ def _base_evidence_bundle() -> dict:
     }
 
 
+def _trusted_reason(purpose: str) -> dict:
+    return {
+        "purpose": purpose,
+        "trusted_principal": {
+            "subject": "advisor_1",
+            "role": "ADVISOR",
+            "tenant_id": "tenant_sg_001",
+            "legal_entity_code": "REFERENCE",
+            "correlation_id": "corr-policy-workflow-test",
+            "trace_id": "trace-policy-workflow-test",
+            "service_identity": "lotus-gateway",
+            "capability": "advisory.policy_evaluation.finalize",
+        },
+    }
+
+
 def _activate_sg_policy_pack() -> None:
     detail = get_policy_pack_version(
         policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
@@ -147,7 +166,7 @@ def _create_policy_evaluation(*, material_conflict: bool = False):
         proposal_version_id="ppv_policy_workflow",
         created_by="advisor_1",
         idempotency_key=f"policy-workflow-{material_conflict}",
-        reason={"purpose": "workflow projection"},
+        reason=_trusted_reason("workflow projection"),
     ).record
 
 
@@ -240,15 +259,27 @@ def test_policy_workflow_projects_open_approval_disclosure_consent_and_sla_postu
     assert workflow.consent_requirements[0].status == "OPEN"
     assert workflow.sla_posture["open_requirement_count"] == 5
     assert workflow.conflict_posture["status"] == "SATISFIED"
-    assert workflow.metadata["product_id"] == ("lotus-advise:AdvisoryPolicyEvaluationRecord:v1")
-    assert workflow.metadata["generated_at"] == record.generated_at
-    assert workflow.metadata["content_hash"] == record.evaluation_hash
-    assert workflow.metadata["freshness_state"] == "current"
-    assert workflow.metadata["data_quality_status"] == "incomplete"
-    assert workflow.metadata["source_gap_count"] == len(record.source_gaps)
-    assert workflow.metadata["source_gaps"] == record.source_gaps
-    assert workflow.replay_metadata["source_evidence_hash"] == record.source_evidence_hash
-    assert workflow.replay_metadata["evaluation_hash"] == record.evaluation_hash
+    assert workflow.metadata.product_id == ("lotus-advise:AdvisoryPolicyEvaluationRecord:v1")
+    assert workflow.metadata.generated_at == record.generated_at
+    assert workflow.metadata.as_of_date == "2026-05-26"
+    assert workflow.metadata.content_hash == record.evaluation_hash
+    assert workflow.metadata.freshness_state == "current"
+    assert workflow.metadata.data_quality_status == "incomplete"
+    assert workflow.metadata.source_gap_count == len(record.source_gaps)
+    assert workflow.metadata.source_gaps == record.source_gaps
+    assert workflow.metadata.scope_identity.authority_source == ("trusted_policy_control_principal")
+    assert workflow.metadata.scope_identity.tenant_scope_hash.startswith("sha256:")
+    assert workflow.metadata.scope_identity.legal_entity_code == "REFERENCE"
+    assert workflow.metadata.scope_identity.booking_center_code == "SG"
+    assert workflow.metadata.observed_correlation_id_hash.startswith("sha256:")
+    assert workflow.metadata.observed_trace_id_hash.startswith("sha256:")
+    assert workflow.replay_metadata.source_evidence_hash == record.source_evidence_hash
+    assert workflow.replay_metadata.evaluation_hash == record.evaluation_hash
+    assert workflow.replay_metadata.as_of_date == workflow.metadata.as_of_date
+    assert workflow.replay_metadata.scope_identity == workflow.metadata.scope_identity
+    assert (
+        workflow.replay_metadata.observed_trace_id_hash == workflow.metadata.observed_trace_id_hash
+    )
 
 
 def test_policy_sign_off_requires_maker_checker_and_all_requirements_resolved() -> None:

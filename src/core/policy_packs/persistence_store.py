@@ -31,6 +31,7 @@ from src.core.policy_packs.projection_models import (
     PolicyEvaluationReviewQueueResponse,
     PolicyEvaluationSignOffPackageResponse,
 )
+from src.core.policy_packs.receipt_identity import idempotency_stable_reason
 from src.core.policy_packs.supportability import (
     POLICY_EVALUATION_PERSISTENCE_CONTRACT_VERSION,
     policy_sign_off_package_posture,
@@ -118,6 +119,7 @@ class PolicyEvaluationRecordStore:
         created_by: str,
         idempotency_key: str,
         reason: dict[str, Any],
+        observed_trace_id: str | None = None,
     ) -> PolicyEvaluationPersistenceResult:
         source_evidence_hash = hash_canonical_payload(evidence_bundle)
         request_hash = hash_canonical_payload(
@@ -128,7 +130,7 @@ class PolicyEvaluationRecordStore:
                 "policy_pack_id": policy_pack_id,
                 "policy_version": policy_version,
                 "source_evidence_hash": source_evidence_hash,
-                "reason": reason,
+                "reason": idempotency_stable_reason(reason),
             }
         )
         replayed = self._find_replayed_event(
@@ -182,6 +184,7 @@ class PolicyEvaluationRecordStore:
             policy_content_hash=detail.policy_pack.content_hash,
             idempotency_key=idempotency_key,
             reason=reason,
+            observed_trace_id=observed_trace_id,
         )
         event = self._event(
             record=record,

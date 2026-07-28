@@ -36,6 +36,7 @@ def finalize_policy_evaluation_record(
     created_by: str,
     idempotency_key: str,
     reason: dict[str, Any] | None = None,
+    observed_trace_id: str | None = None,
 ) -> PolicyEvaluationPersistenceResult:
     idempotency_key = require_proposal_idempotency_key(idempotency_key)
     return _repository().finalize_policy_evaluation_record(
@@ -47,6 +48,7 @@ def finalize_policy_evaluation_record(
         created_by=created_by,
         idempotency_key=idempotency_key,
         reason=reason or {},
+        observed_trace_id=observed_trace_id,
     )
 
 

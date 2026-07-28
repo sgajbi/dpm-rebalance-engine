@@ -112,6 +112,14 @@ roles, missing capabilities, and cross-scope proposal, portfolio, tenant, or leg
 before application state transitions. Successful audit events retain trusted subject, role, tenant,
 legal entity, correlation id, service identity, and capability metadata.
 
+Finalized policy-evaluation workflow receipts use the same trusted principal boundary. Receipt
+identity fails closed unless Advise observes a trace context and the evidence bundle carries a
+source-owned as-of date from context resolution, portfolio snapshot, or market-data snapshot
+metadata. Replay metadata exposes legal entity, booking center, proposal, version, and portfolio
+scope plus source-safe hashes for tenant, service identity, observed correlation id, and observed
+trace id. This is a local/dev trusted-header control; production identity-provider session and
+token-claim binding remains a separately tracked platform/gateway dependency.
+
 ## Advisory Copilot Review Principal Governance
 
 Advisory copilot action execution is model-governed before output can become review-ready. Advise

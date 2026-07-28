@@ -93,7 +93,12 @@ Current repository posture:
    `rfc0025.policy-evaluation-persistence.v1` finalized policy evaluation records with
    policy/source/evaluation hashes, per-rule hashes, source gaps, approval dependencies,
    disclosure and consent requirements, replay metadata, duplicate prevention, idempotent replay,
-   and append-only review/sign-off/report-archive events. Slice 8 exposes certified Advise policy
+   and append-only review/sign-off/report-archive events. RFC-0002 producer hardening adds the
+   `rfc0002.policy-evaluation-receipt-identity.v1` receipt identity to finalized workflow
+   projections: receipts fail closed without a source-owned as-of date, trusted local/dev
+   policy-control principal, Advise-observed trace context, and stable scope identity; persisted
+   replay metadata exposes source-safe tenant/service/correlation/trace hashes rather than raw
+   caller identifiers. Slice 8 exposes certified Advise policy
    evaluation create/read/replay/event/lineage/review-queue/sign-off source-package APIs and
    OpenAPI documentation. Slice 9 adds Advise-owned policy workflow projection and sign-off
    decision recording over finalized records, including approval dependencies, disclosure and
@@ -137,8 +142,10 @@ Current repository posture:
    commands bind actor authority to trusted policy-control headers: `X-Actor-Id`, `X-Role`,
    `X-Tenant-Id`, `X-Legal-Entity-Code`, `X-Correlation-Id`, service identity, capability,
    authorized proposal id, and authorized portfolio id. Body actor fields are compatibility echoes
-   only and must match the trusted principal; maker-checker, audit metadata, and scope checks use
-   trusted principal identity rather than request strings,
+   only and must match the trusted principal; maker-checker, audit metadata, scope checks, and
+   policy-evaluation workflow receipt identity use trusted principal identity rather than request
+   strings. The receipt identity is intentionally local/dev trusted-header based until a later
+   production identity-provider slice binds bank-authenticated session and token claims,
 8. RFC-0026 advisor cockpit first-wave scope is implemented for source-owned Advise evidence and
    cross-repo product consumption: the dedicated `src/core/advisor_cockpit/` package owns action
    construction, source-read-model aggregation, SLA/acknowledgement rules, supportability, and API
@@ -349,10 +356,16 @@ Boundary rules:
     application commands run; do not pass caller-supplied actor strings into policy-pack or
     evaluation state transitions unless they have been bound to the trusted principal and
     authorized proposal, portfolio, tenant, and legal-entity scope,
-21. outbound `lotus-report` calls must require source-derived as-of date, reporting currency, and
+21. finalized policy-evaluation workflow receipts must derive `as_of_date` from explicit
+    source-owned context, portfolio, or market-data evidence; current clock time, generated-at
+    timestamps, request-body dates, and consumer-supplied dates cannot certify producer as-of
+    identity. Receipt metadata may expose raw business scope codes such as legal entity,
+    booking center, proposal, version, and portfolio ids, but tenant, service, correlation, and
+    trace identity must be source-safe hashes,
+22. outbound `lotus-report` calls must require source-derived as-of date, reporting currency, and
    jurisdiction/booking-center metadata; current-date, USD, and SG fallbacks are not production
    source truth,
-22. unavailable `lotus-risk` authority must always carry degraded evidence with a stable reason
+23. unavailable `lotus-risk` authority must always carry degraded evidence with a stable reason
    code; do not allow `risk_authority="unavailable"` with `degraded=false`.
 23. advisor memo and policy sign-off report packages must not project archive-ready status from
     accepted, running, missing-status, malformed-status, or failed status lookups; terminal

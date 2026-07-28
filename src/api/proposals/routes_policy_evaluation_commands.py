@@ -3,7 +3,7 @@ from typing import cast
 from fastapi import Depends, status
 
 import src.api.proposals.router as shared
-from src.api.observability import record_policy_evaluation_operation
+from src.api.observability import record_policy_evaluation_operation, trace_id_var
 from src.api.proposals.errors import run_proposal_operation
 from src.api.proposals.policy_control_principal import (
     POLICY_EVALUATION_FINALIZE_CAPABILITY,
@@ -137,6 +137,7 @@ def _create_or_replay_policy_evaluation_with_telemetry(
                     principal=principal,
                     capability=POLICY_EVALUATION_FINALIZE_CAPABILITY,
                 ),
+                observed_trace_id=trace_id_var.get() or None,
             )
         )
     except ProposalIdempotencyConflictError:

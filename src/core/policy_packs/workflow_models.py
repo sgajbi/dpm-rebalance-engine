@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.policy_packs.evaluation_models import PolicyEvaluationStatus
 from src.core.policy_packs.persistence_models import PolicyEvaluationAuditEvent
+from src.core.policy_packs.receipt_identity import PolicyEvaluationReceiptScopeIdentity
 
 PolicyEvaluationRequirementStatus = Literal["OPEN", "SATISFIED", "BLOCKED"]
 PolicyEvaluationSignOffStatus = Literal[
@@ -52,6 +53,142 @@ class PolicyEvaluationRequirementProjection(BaseModel):
         default_factory=list,
         description="Reason codes explaining the requirement posture.",
         examples=[["POLICY_REQUIREMENT_OPEN"]],
+    )
+
+
+class PolicyEvaluationWorkflowMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    product_id: str = Field(
+        description="Source data-product identifier for the policy evaluation receipt.",
+        examples=["lotus-advise:AdvisoryPolicyEvaluationRecord:v1"],
+    )
+    product_version: str = Field(description="Source data-product version.", examples=["v1"])
+    source_system: str = Field(
+        description="Producer system that emitted the receipt.", examples=["LOTUS_ADVISE"]
+    )
+    evaluation_id: str = Field(
+        description="Policy evaluation record identifier.", examples=["pev_123abc"]
+    )
+    proposal_id: str = Field(description="Proposal identifier.", examples=["pp_001"])
+    proposal_version_id: str = Field(
+        description="Immutable proposal version identifier.", examples=["ppv_001"]
+    )
+    portfolio_id: str = Field(
+        description="Portfolio identifier from the evaluated evidence.",
+        examples=["PB_SG_GLOBAL_BAL_001"],
+    )
+    policy_pack_id: str = Field(
+        description="Policy pack identifier.", examples=["GLOBAL_PRIVATE_BANKING_BASELINE"]
+    )
+    policy_version: str = Field(description="Policy pack version.", examples=["2026.05"])
+    as_of_date: str = Field(
+        description="Source-owned business date evaluated by Advise.", examples=["2026-05-26"]
+    )
+    generated_at: str = Field(
+        description="UTC time when Advise finalized the evaluation.",
+        examples=["2026-05-26T01:00:00+00:00"],
+    )
+    content_hash: str = Field(
+        description="Canonical hash of immutable policy evaluation truth.",
+        examples=["sha256:policy-evaluation"],
+    )
+    evaluation_hash: str = Field(
+        description="Canonical policy evaluation hash.", examples=["sha256:policy-evaluation"]
+    )
+    source_evidence_hash: str = Field(
+        description="Canonical hash of evaluated source evidence.",
+        examples=["sha256:source-evidence"],
+    )
+    policy_content_hash: str = Field(
+        description="Canonical policy-pack content hash.", examples=["sha256:policy-content"]
+    )
+    freshness_state: str = Field(
+        description="Source evidence freshness posture.", examples=["current"]
+    )
+    data_quality_status: str = Field(
+        description="Source evidence quality posture.", examples=["complete"]
+    )
+    source_gap_count: int = Field(
+        description="Count of missing source evidence gaps.", examples=[0]
+    )
+    source_gaps: list[str] = Field(
+        description="Missing source evidence gap identifiers.", examples=[[]]
+    )
+    client_ready_publication: str = Field(
+        description="Client-ready publication boundary.", examples=["BLOCKED"]
+    )
+    scope_identity: PolicyEvaluationReceiptScopeIdentity = Field(
+        description="Source-safe trusted tenant/legal-entity/portfolio scope identity.",
+        examples=[{"tenant_scope_hash": "sha256:tenant"}],
+    )
+    observed_correlation_id_hash: str = Field(
+        description="Source-safe hash of correlation id observed by Advise.",
+        examples=["sha256:correlation"],
+    )
+    observed_trace_id_hash: str = Field(
+        description="Source-safe hash of trace id observed by Advise.",
+        examples=["sha256:trace"],
+    )
+
+
+class PolicyEvaluationWorkflowReplayMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    receipt_contract_version: str = Field(
+        description="Closed receipt identity contract version.",
+        examples=["rfc0002.policy-evaluation-receipt-identity.v1"],
+    )
+    evaluation_id: str = Field(
+        description="Policy evaluation record identifier.", examples=["pev_123abc"]
+    )
+    proposal_id: str = Field(description="Proposal identifier.", examples=["pp_001"])
+    proposal_version_id: str = Field(
+        description="Immutable proposal version identifier.", examples=["ppv_001"]
+    )
+    portfolio_id: str = Field(
+        description="Portfolio identifier from the evaluated evidence.",
+        examples=["PB_SG_GLOBAL_BAL_001"],
+    )
+    as_of_date: str = Field(
+        description="Source-owned business date evaluated by Advise.", examples=["2026-05-26"]
+    )
+    policy_pack_id: str = Field(
+        description="Policy pack identifier.", examples=["GLOBAL_PRIVATE_BANKING_BASELINE"]
+    )
+    policy_version: str = Field(description="Policy pack version.", examples=["2026.05"])
+    source_refs: list[str] = Field(
+        description="Persisted source refs used for replay proof.",
+        examples=[["lotus-risk:RiskMetricsReport:v1"]],
+    )
+    source_gaps: list[str] = Field(
+        description="Persisted source gaps used for replay proof.", examples=[[]]
+    )
+    source_evidence_hash: str = Field(
+        description="Canonical hash of evaluated source evidence.",
+        examples=["sha256:source-evidence"],
+    )
+    evaluation_hash: str = Field(
+        description="Canonical policy evaluation hash.", examples=["sha256:policy-evaluation"]
+    )
+    policy_content_hash: str = Field(
+        description="Canonical policy-pack content hash.", examples=["sha256:policy-content"]
+    )
+    replay_policy: str = Field(
+        description="Replay policy applied to the finalized record.",
+        examples=["PIN_POLICY_VERSION_AND_COMPARE_SOURCE_HASHES"],
+    )
+    scope_identity: PolicyEvaluationReceiptScopeIdentity = Field(
+        description="Source-safe trusted tenant/legal-entity/portfolio scope identity.",
+        examples=[{"tenant_scope_hash": "sha256:tenant"}],
+    )
+    observed_correlation_id_hash: str = Field(
+        description="Source-safe hash of correlation id observed by Advise.",
+        examples=["sha256:correlation"],
+    )
+    observed_trace_id_hash: str = Field(
+        description="Source-safe hash of trace id observed by Advise.",
+        examples=["sha256:trace"],
     )
 
 
@@ -111,8 +248,7 @@ class PolicyEvaluationWorkflowResponse(BaseModel):
         description="Client-ready publication boundary for this policy workflow.",
         examples=["BLOCKED"],
     )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict,
+    metadata: PolicyEvaluationWorkflowMetadata = Field(
         description=(
             "Source-owned policy evaluation lineage metadata for downstream proof consumers."
         ),
@@ -125,8 +261,7 @@ class PolicyEvaluationWorkflowResponse(BaseModel):
             }
         ],
     )
-    replay_metadata: dict[str, Any] = Field(
-        default_factory=dict,
+    replay_metadata: PolicyEvaluationWorkflowReplayMetadata = Field(
         description="Bounded replay metadata proving policy version, source refs, and hashes.",
         examples=[{"replay_policy": "EXACT_SOURCE_HASH_MATCH"}],
     )

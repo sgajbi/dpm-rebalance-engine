@@ -164,6 +164,12 @@ than reconstructing advisory suitability, memo, narrative, policy, or proof sema
   headers. Body actor fields such as `requested_by`, `activated_by`, `created_by`, and `actor_id`
   are compatibility echoes; mismatch returns stable 403 policy-control errors and no state
   mutation.
+- Policy-evaluation workflow responses expose `metadata.as_of_date`, `metadata.scope_identity`, and
+  replay metadata from the Advise-produced receipt identity. The as-of date must come from explicit
+  source evidence, not request dates or clocks. Tenant, service, observed correlation, and observed
+  trace identity are published as source-safe hashes; legal entity, booking center, proposal,
+  version, and portfolio identity remain visible business scope so downstream consumers can detect
+  mismatch without treating local/dev headers as production identity-provider claims.
 - Advisory copilot run output includes bounded claim-grounding posture in persisted output sections
   and lineage. Completed provider output remains review-ready only when every claim cites source
   refs from the input evidence packet and aligns to the output section; missing, duplicate,

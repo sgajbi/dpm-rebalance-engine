@@ -73,6 +73,7 @@ def setup_function() -> None:
 def _base_evidence_bundle() -> dict:
     return {
         "context_resolution": {
+            "as_of_date": "2026-05-26",
             "advisory_policy_context": {
                 "household_id": "HH-PB-001",
                 "jurisdiction": "SG",
@@ -85,15 +86,17 @@ def _base_evidence_bundle() -> dict:
                 "mandate_id": "MANDATE-BALANCED-001",
                 "objectives": ["capital_preservation", "balanced_growth"],
                 "restrictions": ["no_single_name_above_10pct"],
-            }
+            },
         },
         "inputs": {
             "portfolio_snapshot": {
                 "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "as_of_date": "2026-05-26",
                 "positions": [{"instrument_id": "US_EQ_ETF", "quantity": "100"}],
                 "cash_balances": [{"currency": "USD", "amount": "50000"}],
             },
             "market_data_snapshot": {
+                "as_of_date": "2026-05-26",
                 "prices": [{"instrument_id": "US_EQ_ETF", "price": "100", "currency": "USD"}],
                 "fx_rates": [{"pair": "USD/SGD", "rate": "1.35"}],
             },
@@ -144,6 +147,33 @@ def _create_payload(evidence: dict | None = None) -> dict:
     }
 
 
+def _receipt_identity(
+    *,
+    proposal_id: str = "proposal-gap",
+    proposal_version_id: str = "version-gap",
+    portfolio_id: str = "PB_SG_GLOBAL_BAL_001",
+) -> dict:
+    return {
+        "receipt_contract_version": "rfc0002.policy-evaluation-receipt-identity.v1",
+        "as_of_date": "2026-05-26",
+        "scope_identity": {
+            "identity_contract_version": "rfc0002.policy-evaluation-receipt-identity.v1",
+            "authority_source": "trusted_policy_control_principal",
+            "tenant_scope_hash": "sha256:tenant",
+            "legal_entity_code": "REFERENCE",
+            "booking_center_code": "SG",
+            "service_identity_hash": "sha256:service",
+            "proposal_id": proposal_id,
+            "proposal_version_id": proposal_version_id,
+            "portfolio_id": portfolio_id,
+        },
+        "observed_correlation_id_hash": "sha256:correlation",
+        "observed_trace_id_hash": "sha256:trace",
+        "correlation_identity_source": "trusted_policy_control_principal",
+        "trace_identity_source": "advise_observability_context",
+    }
+
+
 def _policy_headers(
     *,
     actor_id: str,
@@ -165,6 +195,7 @@ def _policy_headers(
         "X-Correlation-Id": f"corr-{actor_id}",
         "X-Service-Identity": service_identity,
         "X-Capabilities": capability,
+        "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
     }
     if principal_status is not None:
         headers["X-Principal-Status"] = principal_status
@@ -581,7 +612,23 @@ def test_generic_policy_evaluation_event_api_rejects_privileged_event_types() ->
 
         workflow = client.get(f"/advisory/policy-evaluations/{evaluation_id}/workflow")
         assert workflow.status_code == 200
-        assert workflow.json()["sign_off_status"] != "SIGNED_OFF"
+        workflow_body = workflow.json()
+        assert workflow_body["sign_off_status"] != "SIGNED_OFF"
+        assert workflow_body["metadata"]["as_of_date"] == "2026-05-26"
+        assert workflow_body["metadata"]["scope_identity"]["authority_source"] == (
+            "trusted_policy_control_principal"
+        )
+        assert workflow_body["metadata"]["scope_identity"]["tenant_scope_hash"].startswith(
+            "sha256:"
+        )
+        assert workflow_body["metadata"]["scope_identity"]["legal_entity_code"] == "REFERENCE"
+        assert workflow_body["metadata"]["observed_correlation_id_hash"].startswith("sha256:")
+        assert workflow_body["metadata"]["observed_trace_id_hash"].startswith("sha256:")
+        assert workflow_body["replay_metadata"]["as_of_date"] == "2026-05-26"
+        assert (
+            workflow_body["replay_metadata"]["observed_trace_id_hash"]
+            == workflow_body["metadata"]["observed_trace_id_hash"]
+        )
 
 
 def test_policy_evaluation_workflow_and_sign_off_decision_api_enforce_requirements() -> None:
@@ -697,6 +744,7 @@ def test_policy_workflow_metadata_reports_incomplete_source_gaps() -> None:
         source_evidence_hash="sha256:source-evidence",
         policy_content_hash="sha256:policy-content",
         source_gaps=["MISSING_CLIENT_CONSENT"],
+        replay_metadata_json={"receipt_identity": _receipt_identity()},
     )
 
     metadata = workflow_lineage_metadata(
@@ -704,9 +752,11 @@ def test_policy_workflow_metadata_reports_incomplete_source_gaps() -> None:
         client_ready_publication="BLOCKED",
     )
 
-    assert metadata["data_quality_status"] == "incomplete"
-    assert metadata["source_gap_count"] == 1
-    assert metadata["source_gaps"] == ["MISSING_CLIENT_CONSENT"]
+    assert metadata.data_quality_status == "incomplete"
+    assert metadata.source_gap_count == 1
+    assert metadata.source_gaps == ["MISSING_CLIENT_CONSENT"]
+    assert metadata.as_of_date == "2026-05-26"
+    assert metadata.scope_identity.tenant_scope_hash == "sha256:tenant"
 
 
 def test_policy_report_package_records_report_render_archive_refs_after_sign_off() -> None:

@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-22T10:07:59.345730+00:00",
+  "generatedAt": "2026-07-28T11:39:48.569066+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -1107,7 +1107,7 @@
       "semanticId": "lotus.as_of_date",
       "canonicalTerm": "as_of_date",
       "preferredName": "as_of_date",
-      "description": "Business date that the capability contract applies to.",
+      "description": "Source-owned business date evaluated by Advise.",
       "example": "2026-03-02",
       "type": "string",
       "locations": [
@@ -1343,6 +1343,20 @@
       ]
     },
     {
+      "semanticId": "lotus.authority_source",
+      "canonicalTerm": "authority_source",
+      "preferredName": "authority_source",
+      "description": "Server-side authority used to derive the scope identity.",
+      "example": "trusted_policy_control_principal",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.authorization",
       "canonicalTerm": "authorization",
       "preferredName": "authorization",
@@ -1539,7 +1553,7 @@
       "semanticId": "lotus.booking_center_code",
       "canonicalTerm": "booking_center_code",
       "preferredName": "booking_center_code",
-      "description": "Booking center or market context for cohort review.",
+      "description": "Source evidence booking center where present and matched to the evaluation.",
       "example": "SG",
       "type": "string",
       "locations": [
@@ -2814,6 +2828,20 @@
       "preferredName": "data_quality_issue_severity",
       "description": "Severity used for suitability data-quality issues.",
       "example": "LOW",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.data_quality_status",
+      "canonicalTerm": "data_quality_status",
+      "preferredName": "data_quality_status",
+      "description": "Source evidence quality posture.",
+      "example": "ACTIVE",
       "type": "string",
       "locations": [
         "body"
@@ -4532,6 +4560,20 @@
       ]
     },
     {
+      "semanticId": "lotus.freshness_state",
+      "canonicalTerm": "freshness_state",
+      "preferredName": "freshness_state",
+      "description": "Source evidence freshness posture.",
+      "example": "advisory_review_context",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.from_state",
       "canonicalTerm": "from_state",
       "preferredName": "from_state",
@@ -5189,6 +5231,20 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.identity_contract_version",
+      "canonicalTerm": "identity_contract_version",
+      "preferredName": "identity_contract_version",
+      "description": "Closed receipt identity contract governing source-safe scope fields.",
+      "example": "rfc0002.policy-evaluation-receipt-identity.v1",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -5930,6 +5986,20 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.legal_entity_code",
+      "canonicalTerm": "legal_entity_code",
+      "preferredName": "legal_entity_code",
+      "description": "Trusted legal entity code that bounds the policy evaluation scope.",
+      "example": "ADVISORY_REVIEW_REQUIRED",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -6704,7 +6774,7 @@
       ],
       "observedTypes": [
         "ProposalCreateMetadata",
-        "object",
+        "PolicyEvaluationWorkflowMetadata",
         "BackendProofCaptureMetadata",
         "WorkspaceLifecycleHandoffMetadata"
       ]
@@ -6994,6 +7064,34 @@
       ],
       "observedTypes": [
         "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.observed_correlation_id_hash",
+      "canonicalTerm": "observed_correlation_id_hash",
+      "preferredName": "observed_correlation_id_hash",
+      "description": "Source-safe hash of correlation id observed by Advise.",
+      "example": "sha256:advisory-evidence",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.observed_trace_id_hash",
+      "canonicalTerm": "observed_trace_id_hash",
+      "preferredName": "observed_trace_id_hash",
+      "description": "Source-safe hash of trace id observed by Advise.",
+      "example": "sha256:advisory-evidence",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -7794,6 +7892,20 @@
       ]
     },
     {
+      "semanticId": "lotus.product_id",
+      "canonicalTerm": "product_id",
+      "preferredName": "product_id",
+      "description": "Source data-product identifier for the policy evaluation receipt.",
+      "example": "PRODUCT_001",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.product_name",
       "canonicalTerm": "product_name",
       "preferredName": "product_name",
@@ -7841,8 +7953,8 @@
       "semanticId": "lotus.product_version",
       "canonicalTerm": "product_version",
       "preferredName": "product_version",
-      "description": "Product version.",
-      "example": "v1",
+      "description": "Source data-product version.",
+      "example": "advisory_review_context",
       "type": "string",
       "locations": [
         "body"
@@ -8556,6 +8668,20 @@
       ]
     },
     {
+      "semanticId": "lotus.receipt_contract_version",
+      "canonicalTerm": "receipt_contract_version",
+      "preferredName": "receipt_contract_version",
+      "description": "Closed receipt identity contract version.",
+      "example": "advisory_review_context",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.received_at",
       "canonicalTerm": "received_at",
       "preferredName": "received_at",
@@ -8950,7 +9076,8 @@
         "body"
       ],
       "observedTypes": [
-        "object"
+        "object",
+        "PolicyEvaluationWorkflowReplayMetadata"
       ]
     },
     {
@@ -8968,6 +9095,20 @@
       ],
       "observedTypes": [
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.replay_policy",
+      "canonicalTerm": "replay_policy",
+      "preferredName": "replay_policy",
+      "description": "Replay policy applied to the finalized record.",
+      "example": "advisory_review_context",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -10333,6 +10474,26 @@
       ]
     },
     {
+      "semanticId": "lotus.scope_identity",
+      "canonicalTerm": "scope_identity",
+      "preferredName": "scope_identity",
+      "description": "Canonical scope identity used by lotus-advise APIs.",
+      "example": {
+        "identity_contract_version": "advisory_review_context",
+        "authority_source": "advisory_review_context",
+        "tenant_scope_hash": "sha256:advisory-evidence",
+        "legal_entity_code": "ADVISORY_REVIEW_REQUIRED",
+        "service_identity_hash": "sha256:advisory-evidence"
+      },
+      "type": "PolicyEvaluationReceiptScopeIdentity",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "PolicyEvaluationReceiptScopeIdentity"
+      ]
+    },
+    {
       "semanticId": "lotus.score",
       "canonicalTerm": "score",
       "preferredName": "score",
@@ -10404,6 +10565,20 @@
       ],
       "observedTypes": [
         "array"
+      ]
+    },
+    {
+      "semanticId": "lotus.service_identity_hash",
+      "canonicalTerm": "service_identity_hash",
+      "preferredName": "service_identity_hash",
+      "description": "Source-safe deterministic hash of the trusted service identity.",
+      "example": "sha256:advisory-evidence",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -10837,6 +11012,20 @@
       ]
     },
     {
+      "semanticId": "lotus.source_gap_count",
+      "canonicalTerm": "source_gap_count",
+      "preferredName": "source_gap_count",
+      "description": "Count of missing source evidence gaps.",
+      "example": 10,
+      "type": "integer",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "integer"
+      ]
+    },
+    {
       "semanticId": "lotus.source_gaps",
       "canonicalTerm": "source_gaps",
       "preferredName": "source_gaps",
@@ -11090,7 +11279,7 @@
       "semanticId": "lotus.source_system",
       "canonicalTerm": "source_system",
       "preferredName": "source_system",
-      "description": "Authoritative Lotus system that owns the evidence.",
+      "description": "Producer system that emitted the receipt.",
       "example": "lotus-advise",
       "type": "string",
       "locations": [
@@ -11756,6 +11945,20 @@
       ],
       "observedTypes": [
         "boolean"
+      ]
+    },
+    {
+      "semanticId": "lotus.tenant_scope_hash",
+      "canonicalTerm": "tenant_scope_hash",
+      "preferredName": "tenant_scope_hash",
+      "description": "Source-safe deterministic hash of the trusted tenant scope.",
+      "example": "sha256:advisory-evidence",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -41679,18 +41882,482 @@
           {
             "name": "metadata",
             "location": "body",
-            "required": false,
-            "type": "object",
+            "required": true,
+            "type": "PolicyEvaluationWorkflowMetadata",
             "semanticId": "lotus.metadata",
             "attributeRef": "#/attributeCatalog/lotus.metadata"
           },
           {
-            "name": "replay_metadata",
+            "name": "metadata.product_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.product_id",
+            "attributeRef": "#/attributeCatalog/lotus.product_id"
+          },
+          {
+            "name": "metadata.product_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
+          },
+          {
+            "name": "metadata.source_system",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.source_system",
+            "attributeRef": "#/attributeCatalog/lotus.source_system"
+          },
+          {
+            "name": "metadata.evaluation_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.evaluation_id",
+            "attributeRef": "#/attributeCatalog/lotus.evaluation_id"
+          },
+          {
+            "name": "metadata.proposal_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_id"
+          },
+          {
+            "name": "metadata.proposal_version_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_version_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_version_id"
+          },
+          {
+            "name": "metadata.portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "metadata.policy_pack_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_pack_id",
+            "attributeRef": "#/attributeCatalog/lotus.policy_pack_id"
+          },
+          {
+            "name": "metadata.policy_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_version",
+            "attributeRef": "#/attributeCatalog/lotus.policy_version"
+          },
+          {
+            "name": "metadata.as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "metadata.generated_at",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.generated_at",
+            "attributeRef": "#/attributeCatalog/lotus.generated_at"
+          },
+          {
+            "name": "metadata.content_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.content_hash",
+            "attributeRef": "#/attributeCatalog/lotus.content_hash"
+          },
+          {
+            "name": "metadata.evaluation_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.evaluation_hash",
+            "attributeRef": "#/attributeCatalog/lotus.evaluation_hash"
+          },
+          {
+            "name": "metadata.source_evidence_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.source_evidence_hash",
+            "attributeRef": "#/attributeCatalog/lotus.source_evidence_hash"
+          },
+          {
+            "name": "metadata.policy_content_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_content_hash",
+            "attributeRef": "#/attributeCatalog/lotus.policy_content_hash"
+          },
+          {
+            "name": "metadata.freshness_state",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.freshness_state",
+            "attributeRef": "#/attributeCatalog/lotus.freshness_state"
+          },
+          {
+            "name": "metadata.data_quality_status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.data_quality_status",
+            "attributeRef": "#/attributeCatalog/lotus.data_quality_status"
+          },
+          {
+            "name": "metadata.source_gap_count",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.source_gap_count",
+            "attributeRef": "#/attributeCatalog/lotus.source_gap_count"
+          },
+          {
+            "name": "metadata.source_gaps",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.source_gaps",
+            "attributeRef": "#/attributeCatalog/lotus.source_gaps"
+          },
+          {
+            "name": "metadata.client_ready_publication",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.client_ready_publication",
+            "attributeRef": "#/attributeCatalog/lotus.client_ready_publication"
+          },
+          {
+            "name": "metadata.scope_identity",
+            "location": "body",
+            "required": true,
+            "type": "PolicyEvaluationReceiptScopeIdentity",
+            "semanticId": "lotus.scope_identity",
+            "attributeRef": "#/attributeCatalog/lotus.scope_identity"
+          },
+          {
+            "name": "metadata.scope_identity.identity_contract_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.identity_contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.identity_contract_version"
+          },
+          {
+            "name": "metadata.scope_identity.authority_source",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.authority_source",
+            "attributeRef": "#/attributeCatalog/lotus.authority_source"
+          },
+          {
+            "name": "metadata.scope_identity.tenant_scope_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.tenant_scope_hash",
+            "attributeRef": "#/attributeCatalog/lotus.tenant_scope_hash"
+          },
+          {
+            "name": "metadata.scope_identity.legal_entity_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.legal_entity_code",
+            "attributeRef": "#/attributeCatalog/lotus.legal_entity_code"
+          },
+          {
+            "name": "metadata.scope_identity.booking_center_code",
             "location": "body",
             "required": false,
-            "type": "object",
+            "type": "string",
+            "semanticId": "lotus.booking_center_code",
+            "attributeRef": "#/attributeCatalog/lotus.booking_center_code"
+          },
+          {
+            "name": "metadata.scope_identity.service_identity_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.service_identity_hash",
+            "attributeRef": "#/attributeCatalog/lotus.service_identity_hash"
+          },
+          {
+            "name": "metadata.scope_identity.proposal_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_id"
+          },
+          {
+            "name": "metadata.scope_identity.proposal_version_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_version_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_version_id"
+          },
+          {
+            "name": "metadata.scope_identity.portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "metadata.observed_correlation_id_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.observed_correlation_id_hash",
+            "attributeRef": "#/attributeCatalog/lotus.observed_correlation_id_hash"
+          },
+          {
+            "name": "metadata.observed_trace_id_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.observed_trace_id_hash",
+            "attributeRef": "#/attributeCatalog/lotus.observed_trace_id_hash"
+          },
+          {
+            "name": "replay_metadata",
+            "location": "body",
+            "required": true,
+            "type": "PolicyEvaluationWorkflowReplayMetadata",
             "semanticId": "lotus.replay_metadata",
             "attributeRef": "#/attributeCatalog/lotus.replay_metadata"
+          },
+          {
+            "name": "replay_metadata.receipt_contract_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.receipt_contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.receipt_contract_version"
+          },
+          {
+            "name": "replay_metadata.evaluation_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.evaluation_id",
+            "attributeRef": "#/attributeCatalog/lotus.evaluation_id"
+          },
+          {
+            "name": "replay_metadata.proposal_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_id"
+          },
+          {
+            "name": "replay_metadata.proposal_version_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_version_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_version_id"
+          },
+          {
+            "name": "replay_metadata.portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "replay_metadata.as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "replay_metadata.policy_pack_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_pack_id",
+            "attributeRef": "#/attributeCatalog/lotus.policy_pack_id"
+          },
+          {
+            "name": "replay_metadata.policy_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_version",
+            "attributeRef": "#/attributeCatalog/lotus.policy_version"
+          },
+          {
+            "name": "replay_metadata.source_refs",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.source_refs",
+            "attributeRef": "#/attributeCatalog/lotus.source_refs"
+          },
+          {
+            "name": "replay_metadata.source_gaps",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.source_gaps",
+            "attributeRef": "#/attributeCatalog/lotus.source_gaps"
+          },
+          {
+            "name": "replay_metadata.source_evidence_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.source_evidence_hash",
+            "attributeRef": "#/attributeCatalog/lotus.source_evidence_hash"
+          },
+          {
+            "name": "replay_metadata.evaluation_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.evaluation_hash",
+            "attributeRef": "#/attributeCatalog/lotus.evaluation_hash"
+          },
+          {
+            "name": "replay_metadata.policy_content_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_content_hash",
+            "attributeRef": "#/attributeCatalog/lotus.policy_content_hash"
+          },
+          {
+            "name": "replay_metadata.replay_policy",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.replay_policy",
+            "attributeRef": "#/attributeCatalog/lotus.replay_policy"
+          },
+          {
+            "name": "replay_metadata.scope_identity",
+            "location": "body",
+            "required": true,
+            "type": "PolicyEvaluationReceiptScopeIdentity",
+            "semanticId": "lotus.scope_identity",
+            "attributeRef": "#/attributeCatalog/lotus.scope_identity"
+          },
+          {
+            "name": "replay_metadata.scope_identity.identity_contract_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.identity_contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.identity_contract_version"
+          },
+          {
+            "name": "replay_metadata.scope_identity.authority_source",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.authority_source",
+            "attributeRef": "#/attributeCatalog/lotus.authority_source"
+          },
+          {
+            "name": "replay_metadata.scope_identity.tenant_scope_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.tenant_scope_hash",
+            "attributeRef": "#/attributeCatalog/lotus.tenant_scope_hash"
+          },
+          {
+            "name": "replay_metadata.scope_identity.legal_entity_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.legal_entity_code",
+            "attributeRef": "#/attributeCatalog/lotus.legal_entity_code"
+          },
+          {
+            "name": "replay_metadata.scope_identity.booking_center_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.booking_center_code",
+            "attributeRef": "#/attributeCatalog/lotus.booking_center_code"
+          },
+          {
+            "name": "replay_metadata.scope_identity.service_identity_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.service_identity_hash",
+            "attributeRef": "#/attributeCatalog/lotus.service_identity_hash"
+          },
+          {
+            "name": "replay_metadata.scope_identity.proposal_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_id"
+          },
+          {
+            "name": "replay_metadata.scope_identity.proposal_version_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_version_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_version_id"
+          },
+          {
+            "name": "replay_metadata.scope_identity.portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "replay_metadata.observed_correlation_id_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.observed_correlation_id_hash",
+            "attributeRef": "#/attributeCatalog/lotus.observed_correlation_id_hash"
+          },
+          {
+            "name": "replay_metadata.observed_trace_id_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.observed_trace_id_hash",
+            "attributeRef": "#/attributeCatalog/lotus.observed_trace_id_hash"
           }
         ]
       }
@@ -42166,18 +42833,482 @@
           {
             "name": "workflow.metadata",
             "location": "body",
-            "required": false,
-            "type": "object",
+            "required": true,
+            "type": "PolicyEvaluationWorkflowMetadata",
             "semanticId": "lotus.metadata",
             "attributeRef": "#/attributeCatalog/lotus.metadata"
           },
           {
-            "name": "workflow.replay_metadata",
+            "name": "workflow.metadata.product_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.product_id",
+            "attributeRef": "#/attributeCatalog/lotus.product_id"
+          },
+          {
+            "name": "workflow.metadata.product_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.product_version",
+            "attributeRef": "#/attributeCatalog/lotus.product_version"
+          },
+          {
+            "name": "workflow.metadata.source_system",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.source_system",
+            "attributeRef": "#/attributeCatalog/lotus.source_system"
+          },
+          {
+            "name": "workflow.metadata.evaluation_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.evaluation_id",
+            "attributeRef": "#/attributeCatalog/lotus.evaluation_id"
+          },
+          {
+            "name": "workflow.metadata.proposal_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_id"
+          },
+          {
+            "name": "workflow.metadata.proposal_version_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_version_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_version_id"
+          },
+          {
+            "name": "workflow.metadata.portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "workflow.metadata.policy_pack_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_pack_id",
+            "attributeRef": "#/attributeCatalog/lotus.policy_pack_id"
+          },
+          {
+            "name": "workflow.metadata.policy_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_version",
+            "attributeRef": "#/attributeCatalog/lotus.policy_version"
+          },
+          {
+            "name": "workflow.metadata.as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "workflow.metadata.generated_at",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.generated_at",
+            "attributeRef": "#/attributeCatalog/lotus.generated_at"
+          },
+          {
+            "name": "workflow.metadata.content_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.content_hash",
+            "attributeRef": "#/attributeCatalog/lotus.content_hash"
+          },
+          {
+            "name": "workflow.metadata.evaluation_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.evaluation_hash",
+            "attributeRef": "#/attributeCatalog/lotus.evaluation_hash"
+          },
+          {
+            "name": "workflow.metadata.source_evidence_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.source_evidence_hash",
+            "attributeRef": "#/attributeCatalog/lotus.source_evidence_hash"
+          },
+          {
+            "name": "workflow.metadata.policy_content_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_content_hash",
+            "attributeRef": "#/attributeCatalog/lotus.policy_content_hash"
+          },
+          {
+            "name": "workflow.metadata.freshness_state",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.freshness_state",
+            "attributeRef": "#/attributeCatalog/lotus.freshness_state"
+          },
+          {
+            "name": "workflow.metadata.data_quality_status",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.data_quality_status",
+            "attributeRef": "#/attributeCatalog/lotus.data_quality_status"
+          },
+          {
+            "name": "workflow.metadata.source_gap_count",
+            "location": "body",
+            "required": true,
+            "type": "integer",
+            "semanticId": "lotus.source_gap_count",
+            "attributeRef": "#/attributeCatalog/lotus.source_gap_count"
+          },
+          {
+            "name": "workflow.metadata.source_gaps",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.source_gaps",
+            "attributeRef": "#/attributeCatalog/lotus.source_gaps"
+          },
+          {
+            "name": "workflow.metadata.client_ready_publication",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.client_ready_publication",
+            "attributeRef": "#/attributeCatalog/lotus.client_ready_publication"
+          },
+          {
+            "name": "workflow.metadata.scope_identity",
+            "location": "body",
+            "required": true,
+            "type": "PolicyEvaluationReceiptScopeIdentity",
+            "semanticId": "lotus.scope_identity",
+            "attributeRef": "#/attributeCatalog/lotus.scope_identity"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.identity_contract_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.identity_contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.identity_contract_version"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.authority_source",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.authority_source",
+            "attributeRef": "#/attributeCatalog/lotus.authority_source"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.tenant_scope_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.tenant_scope_hash",
+            "attributeRef": "#/attributeCatalog/lotus.tenant_scope_hash"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.legal_entity_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.legal_entity_code",
+            "attributeRef": "#/attributeCatalog/lotus.legal_entity_code"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.booking_center_code",
             "location": "body",
             "required": false,
-            "type": "object",
+            "type": "string",
+            "semanticId": "lotus.booking_center_code",
+            "attributeRef": "#/attributeCatalog/lotus.booking_center_code"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.service_identity_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.service_identity_hash",
+            "attributeRef": "#/attributeCatalog/lotus.service_identity_hash"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.proposal_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_id"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.proposal_version_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_version_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_version_id"
+          },
+          {
+            "name": "workflow.metadata.scope_identity.portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "workflow.metadata.observed_correlation_id_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.observed_correlation_id_hash",
+            "attributeRef": "#/attributeCatalog/lotus.observed_correlation_id_hash"
+          },
+          {
+            "name": "workflow.metadata.observed_trace_id_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.observed_trace_id_hash",
+            "attributeRef": "#/attributeCatalog/lotus.observed_trace_id_hash"
+          },
+          {
+            "name": "workflow.replay_metadata",
+            "location": "body",
+            "required": true,
+            "type": "PolicyEvaluationWorkflowReplayMetadata",
             "semanticId": "lotus.replay_metadata",
             "attributeRef": "#/attributeCatalog/lotus.replay_metadata"
+          },
+          {
+            "name": "workflow.replay_metadata.receipt_contract_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.receipt_contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.receipt_contract_version"
+          },
+          {
+            "name": "workflow.replay_metadata.evaluation_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.evaluation_id",
+            "attributeRef": "#/attributeCatalog/lotus.evaluation_id"
+          },
+          {
+            "name": "workflow.replay_metadata.proposal_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_id"
+          },
+          {
+            "name": "workflow.replay_metadata.proposal_version_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_version_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_version_id"
+          },
+          {
+            "name": "workflow.replay_metadata.portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "workflow.replay_metadata.as_of_date",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.as_of_date"
+          },
+          {
+            "name": "workflow.replay_metadata.policy_pack_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_pack_id",
+            "attributeRef": "#/attributeCatalog/lotus.policy_pack_id"
+          },
+          {
+            "name": "workflow.replay_metadata.policy_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_version",
+            "attributeRef": "#/attributeCatalog/lotus.policy_version"
+          },
+          {
+            "name": "workflow.replay_metadata.source_refs",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.source_refs",
+            "attributeRef": "#/attributeCatalog/lotus.source_refs"
+          },
+          {
+            "name": "workflow.replay_metadata.source_gaps",
+            "location": "body",
+            "required": true,
+            "type": "array",
+            "semanticId": "lotus.source_gaps",
+            "attributeRef": "#/attributeCatalog/lotus.source_gaps"
+          },
+          {
+            "name": "workflow.replay_metadata.source_evidence_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.source_evidence_hash",
+            "attributeRef": "#/attributeCatalog/lotus.source_evidence_hash"
+          },
+          {
+            "name": "workflow.replay_metadata.evaluation_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.evaluation_hash",
+            "attributeRef": "#/attributeCatalog/lotus.evaluation_hash"
+          },
+          {
+            "name": "workflow.replay_metadata.policy_content_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.policy_content_hash",
+            "attributeRef": "#/attributeCatalog/lotus.policy_content_hash"
+          },
+          {
+            "name": "workflow.replay_metadata.replay_policy",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.replay_policy",
+            "attributeRef": "#/attributeCatalog/lotus.replay_policy"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity",
+            "location": "body",
+            "required": true,
+            "type": "PolicyEvaluationReceiptScopeIdentity",
+            "semanticId": "lotus.scope_identity",
+            "attributeRef": "#/attributeCatalog/lotus.scope_identity"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.identity_contract_version",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.identity_contract_version",
+            "attributeRef": "#/attributeCatalog/lotus.identity_contract_version"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.authority_source",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.authority_source",
+            "attributeRef": "#/attributeCatalog/lotus.authority_source"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.tenant_scope_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.tenant_scope_hash",
+            "attributeRef": "#/attributeCatalog/lotus.tenant_scope_hash"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.legal_entity_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.legal_entity_code",
+            "attributeRef": "#/attributeCatalog/lotus.legal_entity_code"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.booking_center_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.booking_center_code",
+            "attributeRef": "#/attributeCatalog/lotus.booking_center_code"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.service_identity_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.service_identity_hash",
+            "attributeRef": "#/attributeCatalog/lotus.service_identity_hash"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.proposal_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_id"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.proposal_version_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.proposal_version_id",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_version_id"
+          },
+          {
+            "name": "workflow.replay_metadata.scope_identity.portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
+            "name": "workflow.replay_metadata.observed_correlation_id_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.observed_correlation_id_hash",
+            "attributeRef": "#/attributeCatalog/lotus.observed_correlation_id_hash"
+          },
+          {
+            "name": "workflow.replay_metadata.observed_trace_id_hash",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.observed_trace_id_hash",
+            "attributeRef": "#/attributeCatalog/lotus.observed_trace_id_hash"
           },
           {
             "name": "sign_off_event",
