@@ -44,6 +44,7 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[list[str], dict[str, Any]]] = []
+    monkeypatch.setenv("PIP_CONFIG_FILE", "ambient-pip.conf")
     monkeypatch.setenv("PYTHONHOME", "ambient-python-home")
     monkeypatch.setenv("PYTHONPATH", "ambient-python-path")
 
@@ -96,6 +97,8 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     )
     assert "--no-isolation" in calls[4][0]
     assert calls[4][1]["env"][ISOLATED_ENV_FLAG] == "1"
+    for pip_call in calls[1:4]:
+        assert pip_call[1]["env"]["PIP_CONFIG_FILE"] == os.devnull
     for _, kwargs in calls:
         assert "PYTHONHOME" not in kwargs["env"]
         assert "PYTHONPATH" not in kwargs["env"]
@@ -133,6 +136,29 @@ def test_governed_python_command_selects_python_311_launcher(
     assert _governed_python_command(env={"PATH": "test-path"}) == expected_candidate
     assert calls[0][0] == [*expected_candidate, "--version"]
     assert calls[0][1]["env"] == {"PATH": "test-path"}
+
+
+def test_governed_python_command_skips_missing_launcher_candidate(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr("scripts.license_ip_evidence.os.name", "nt")
+    monkeypatch.setattr(
+        "scripts.license_ip_evidence.sys.version_info",
+        (3, 13, 0, "final", 0),
+    )
+
+    def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        del kwargs
+        calls.append(command)
+        if command[:2] == ["py", "-3.11"]:
+            raise FileNotFoundError("py launcher missing")
+        return subprocess.CompletedProcess(command, 0, stdout="Python 3.11.9\n")
+
+    monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
+
+    assert _governed_python_command(env={}) == ("python3.11",)
+    assert calls == [["py", "-3.11", "--version"], ["python3.11", "--version"]]
 
 
 def test_isolated_license_inventory_stops_on_install_failure(
