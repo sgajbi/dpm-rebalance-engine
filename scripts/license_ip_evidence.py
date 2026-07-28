@@ -28,6 +28,8 @@ LICENSE_OPERATOR_RE = re.compile(r"\s+(?:AND|OR|WITH)\s+|[()]")
 ISOLATED_ENV_FLAG = "LOTUS_ADVISE_LICENSE_IP_ISOLATED"
 PIP_BOOTSTRAP_PACKAGES = ("pip==25.0.1", "setuptools==83.0.0")
 PIP_ENVIRONMENT = {"PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+GOVERNED_PYTHON_VERSION = (3, 11)
+GOVERNED_PYTHON_VERSION_TEXT = "3.11"
 
 
 @dataclass(frozen=True)
@@ -658,8 +660,14 @@ def _run_in_isolated_environment(
 
 def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
     base_env = _python_isolated_subprocess_env()
+    try:
+        governed_python = _governed_python_command(env=base_env)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
     create_result = subprocess.run(
-        [sys.executable, "-I", "-m", "venv", str(venv_root)],
+        [*governed_python, "-I", "-m", "venv", str(venv_root)],
         cwd=REPO_ROOT,
         env=base_env,
         check=False,
@@ -748,6 +756,36 @@ def _python_isolated_subprocess_env(extra: dict[str, str] | None = None) -> dict
     if extra:
         env.update(extra)
     return env
+
+
+def _governed_python_command(*, env: dict[str, str]) -> tuple[str, ...]:
+    if sys.version_info[:2] == GOVERNED_PYTHON_VERSION:
+        return (sys.executable,)
+
+    candidates: tuple[tuple[str, ...], ...]
+    if os.name == "nt":
+        candidates = (("py", f"-{GOVERNED_PYTHON_VERSION_TEXT}"), ("python3.11",))
+    else:
+        candidates = (("python3.11",),)
+
+    for candidate in candidates:
+        result = subprocess.run(
+            [*candidate, "--version"],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        output = f"{result.stdout} {result.stderr}"
+        if result.returncode == 0 and f"Python {GOVERNED_PYTHON_VERSION_TEXT}." in output:
+            return candidate
+
+    raise RuntimeError(
+        "license/IP isolated evidence requires Python "
+        f"{GOVERNED_PYTHON_VERSION_TEXT}; install it or invoke this script with the "
+        "repository-supported Python runtime."
+    )
 
 
 def _venv_python(venv_root: Path) -> Path:
