@@ -1,4 +1,9 @@
+from threading import Lock
+from time import time_ns
 from uuid import uuid4
+
+_ASYNC_OPERATION_ID_LOCK = Lock()
+_last_async_operation_time_ns = 0
 
 
 def new_proposal_id() -> str:
@@ -14,7 +19,7 @@ def new_workflow_event_id() -> str:
 
 
 def new_async_operation_id() -> str:
-    return _new_prefixed_id("pop")
+    return _new_time_ordered_prefixed_id("pop")
 
 
 def new_execution_request_id() -> str:
@@ -35,3 +40,13 @@ def new_memo_event_id() -> str:
 
 def _new_prefixed_id(prefix: str) -> str:
     return f"{prefix}_{uuid4().hex[:12]}"
+
+
+def _new_time_ordered_prefixed_id(prefix: str) -> str:
+    global _last_async_operation_time_ns
+    with _ASYNC_OPERATION_ID_LOCK:
+        current_time_ns = time_ns()
+        if current_time_ns <= _last_async_operation_time_ns:
+            current_time_ns = _last_async_operation_time_ns + 1
+        _last_async_operation_time_ns = current_time_ns
+    return f"{prefix}_{current_time_ns:016x}{uuid4().hex[:8]}"
