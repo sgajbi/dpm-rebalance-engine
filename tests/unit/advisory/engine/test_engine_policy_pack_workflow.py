@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -18,6 +19,9 @@ from src.core.policy_packs import (
 )
 from src.core.policy_packs.persistence_models import PolicyEvaluationAuditEvent
 from src.core.policy_packs.workflow_conflict_projection import conflict_posture_for_workflow
+from src.core.policy_packs.workflow_projection import (
+    build_policy_evaluation_workflow_projection,
+)
 from src.core.proposals.exceptions import ProposalValidationError
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -280,6 +284,44 @@ def test_policy_workflow_projects_open_approval_disclosure_consent_and_sla_postu
     assert (
         workflow.replay_metadata.observed_trace_id_hash == workflow.metadata.observed_trace_id_hash
     )
+
+
+def test_policy_workflow_projects_legacy_records_without_receipt_identity() -> None:
+    record = SimpleNamespace(
+        evaluation_id="pev_legacy_policy",
+        proposal_id="pp_legacy_policy",
+        proposal_version_id="ppv_legacy_policy",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+        policy_version="2026.05",
+        generated_at="2026-05-26T01:00:00+00:00",
+        evaluation_status="PENDING_REVIEW",
+        evaluation_hash="sha256:legacy-evaluation",
+        source_evidence_hash="sha256:legacy-source",
+        policy_content_hash="sha256:legacy-policy",
+        source_refs=[],
+        source_gaps=[],
+        approval_dependencies=[],
+        disclosure_requirements=[],
+        consent_requirements=[],
+        evaluation_json={"rule_results": []},
+        replay_metadata_json={
+            "as_of_date": "2026-05-26",
+            "replay_policy": "PIN_POLICY_VERSION_AND_COMPARE_SOURCE_HASHES",
+        },
+    )
+
+    workflow = build_policy_evaluation_workflow_projection(
+        record=record,
+        events=[],
+        now=datetime(2026, 5, 26, 2, tzinfo=timezone.utc),
+        client_ready_publication="READY",
+    )
+
+    assert workflow.metadata.as_of_date == "2026-05-26"
+    assert workflow.metadata.scope_identity.legal_entity_code == "LEGACY_UNAVAILABLE"
+    assert workflow.metadata.scope_identity.tenant_scope_hash.startswith("sha256:")
+    assert workflow.replay_metadata.observed_trace_id_hash.startswith("sha256:")
 
 
 def test_policy_sign_off_requires_maker_checker_and_all_requirements_resolved() -> None:

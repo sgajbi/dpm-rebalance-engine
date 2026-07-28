@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +26,7 @@ from src.core.policy_packs import (
     validate_policy_pack_version,
 )
 from src.core.policy_packs.catalog_reference_packs import reference_policy_packs
+from src.core.policy_packs.receipt_identity import build_policy_evaluation_receipt_identity
 from src.core.proposals.exceptions import ProposalIdempotencyConflictError, ProposalValidationError
 
 SOURCE_ROOT = Path(__file__).resolve().parents[4] / "src" / "core" / "policy_packs"
@@ -299,6 +301,26 @@ def test_policy_evaluation_record_is_immutable_hash_backed_and_idempotent() -> N
     assert receipt_identity["scope_identity"]["booking_center_code"] == "SG"
     assert receipt_identity["observed_correlation_id_hash"].startswith("sha256:")
     assert receipt_identity["observed_trace_id_hash"].startswith("sha256:")
+    assert receipt_identity["trace_identity_source"] == "trusted_policy_control_principal"
+    assert (
+        "subject" not in created.record.replay_metadata_json["creation_reason"]["trusted_principal"]
+    )
+    assert (
+        "tenant_id"
+        not in created.record.replay_metadata_json["creation_reason"]["trusted_principal"]
+    )
+    assert (
+        "correlation_id"
+        not in created.record.replay_metadata_json["creation_reason"]["trusted_principal"]
+    )
+    assert (
+        "trace_id"
+        not in created.record.replay_metadata_json["creation_reason"]["trusted_principal"]
+    )
+    assert (
+        "service_identity"
+        not in created.record.replay_metadata_json["creation_reason"]["trusted_principal"]
+    )
     assert created.record.evaluation_json["supportability"]["policy_evaluation_persistence"] == (
         "SUPPORTED_BY_RFC0025_SLICE7_INTERNAL"
     )
@@ -435,6 +457,65 @@ def test_policy_evaluation_receipt_identity_fails_closed_without_source_as_of() 
             idempotency_key="policy-eval-no-as-of",
             reason=_trusted_reason("missing source as-of"),
         )
+
+
+def test_policy_evaluation_receipt_identity_reads_canonical_resolved_context_as_of() -> None:
+    evidence = _base_evidence_bundle()
+    evidence["context_resolution"].pop("as_of_date")
+    evidence["context_resolution"]["resolved_context"] = {"as_of": "2026-05-26"}
+    evidence["inputs"]["portfolio_snapshot"].pop("as_of_date")
+    evidence["inputs"]["market_data_snapshot"].pop("as_of_date")
+
+    receipt_identity = build_policy_evaluation_receipt_identity(
+        evidence_bundle=evidence,
+        proposal_id="pp_policy_canonical_as_of",
+        proposal_version_id="ppv_policy_canonical_as_of",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        reason=_trusted_reason("canonical resolved context as-of"),
+        observed_trace_id="trace-observed-canonical-as-of",
+        observed_at=datetime(2026, 5, 26, 1, tzinfo=UTC),
+    )
+
+    assert receipt_identity.as_of_date == "2026-05-26"
+    assert receipt_identity.trace_identity_source == "advise_observability_context"
+
+
+def test_policy_evaluation_receipt_identity_preserves_source_local_timestamp_date() -> None:
+    evidence = _base_evidence_bundle()
+    evidence["context_resolution"]["as_of_date"] = "2026-05-26T00:30:00+08:00"
+    evidence["inputs"]["portfolio_snapshot"].pop("as_of_date")
+    evidence["inputs"]["market_data_snapshot"].pop("as_of_date")
+
+    receipt_identity = build_policy_evaluation_receipt_identity(
+        evidence_bundle=evidence,
+        proposal_id="pp_policy_source_local_date",
+        proposal_version_id="ppv_policy_source_local_date",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        reason=_trusted_reason("source local timestamp"),
+        observed_trace_id="trace-observed-source-local",
+        observed_at=datetime(2026, 5, 25, 17, tzinfo=UTC),
+    )
+
+    assert receipt_identity.as_of_date == "2026-05-26"
+
+
+def test_policy_evaluation_receipt_identity_allows_booking_center_local_today() -> None:
+    evidence = _base_evidence_bundle()
+    evidence["context_resolution"]["as_of_date"] = "2026-07-29"
+    evidence["inputs"]["portfolio_snapshot"]["as_of_date"] = "2026-07-29"
+    evidence["inputs"]["market_data_snapshot"]["as_of_date"] = "2026-07-29"
+
+    receipt_identity = build_policy_evaluation_receipt_identity(
+        evidence_bundle=evidence,
+        proposal_id="pp_policy_booking_center_today",
+        proposal_version_id="ppv_policy_booking_center_today",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        reason=_trusted_reason("booking center local business date"),
+        observed_trace_id="trace-observed-booking-center",
+        observed_at=datetime(2026, 7, 28, 16, 30, tzinfo=UTC),
+    )
+
+    assert receipt_identity.as_of_date == "2026-07-29"
 
 
 def test_policy_evaluation_receipt_identity_rejects_source_as_of_drift() -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 from typing import Any, Literal, cast
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -76,9 +77,10 @@ class PolicyEvaluationReceiptIdentity(BaseModel):
     correlation_identity_source: Literal["trusted_policy_control_principal"] = Field(
         description="Producer-observed source for correlation identity."
     )
-    trace_identity_source: Literal["advise_observability_context"] = Field(
-        description="Producer-observed source for trace identity."
-    )
+    trace_identity_source: Literal[
+        "advise_observability_context",
+        "trusted_policy_control_principal",
+    ] = Field(description="Producer-observed source for trace identity.")
 
 
 def build_policy_evaluation_receipt_identity(
@@ -93,9 +95,9 @@ def build_policy_evaluation_receipt_identity(
 ) -> PolicyEvaluationReceiptIdentity:
     trusted_principal = _trusted_principal(reason)
     as_of_date = _source_owned_as_of_date(evidence_bundle, observed_at=observed_at)
-    trace_id = _required_identity_value(
-        observed_trace_id or trusted_principal.get("trace_id"),
-        "POLICY_EVALUATION_OBSERVED_TRACE_ID_REQUIRED",
+    trace_id, trace_identity_source = _trace_identity(
+        observed_trace_id=observed_trace_id,
+        trusted_principal=trusted_principal,
     )
     tenant_id = _required_identity_value(
         trusted_principal.get("tenant_id"),
@@ -131,14 +133,14 @@ def build_policy_evaluation_receipt_identity(
         observed_correlation_id_hash=_safe_hash("correlation_id", correlation_id),
         observed_trace_id_hash=_safe_hash("trace_id", trace_id),
         correlation_identity_source="trusted_policy_control_principal",
-        trace_identity_source="advise_observability_context",
+        trace_identity_source=trace_identity_source,
     )
 
 
 def receipt_identity_from_record(record: Any) -> PolicyEvaluationReceiptIdentity:
     identity = record.replay_metadata_json.get("receipt_identity")
     if not isinstance(identity, dict):
-        raise ProposalValidationError("POLICY_EVALUATION_RECEIPT_IDENTITY_REQUIRED")
+        return _legacy_receipt_identity_from_record(record)
     return cast(
         PolicyEvaluationReceiptIdentity,
         PolicyEvaluationReceiptIdentity.model_validate(identity),
@@ -153,6 +155,21 @@ def idempotency_stable_reason(reason: dict[str, Any]) -> dict[str, Any]:
             key: value for key, value in trusted_principal.items() if key != "trace_id"
         }
     return stable
+
+
+def replay_safe_reason(reason: dict[str, Any]) -> dict[str, Any]:
+    safe_reason = dict(reason)
+    trusted_principal = safe_reason.get("trusted_principal")
+    if isinstance(trusted_principal, dict):
+        safe_reason["trusted_principal"] = {
+            "authority_source": "trusted_policy_control_principal",
+            **{
+                key: value
+                for key, value in trusted_principal.items()
+                if key in {"role", "capability", "legal_entity_code"}
+            },
+        }
+    return safe_reason
 
 
 def _trusted_principal(reason: dict[str, Any]) -> dict[str, Any]:
@@ -170,6 +187,8 @@ def _source_owned_as_of_date(
     candidates = [
         _nested_value(evidence_bundle, ("context_resolution", "as_of_date")),
         _nested_value(evidence_bundle, ("context_resolution", "as_of")),
+        _nested_value(evidence_bundle, ("context_resolution", "resolved_context", "as_of_date")),
+        _nested_value(evidence_bundle, ("context_resolution", "resolved_context", "as_of")),
         _nested_value(evidence_bundle, ("inputs", "portfolio_snapshot", "as_of_date")),
         _nested_value(evidence_bundle, ("inputs", "portfolio_snapshot", "as_of")),
         _nested_value(evidence_bundle, ("inputs", "portfolio_snapshot", "snapshot_date")),
@@ -185,7 +204,10 @@ def _source_owned_as_of_date(
     unique_dates = list(dict.fromkeys(normalized))
     if len(unique_dates) != 1:
         raise ProposalValidationError("POLICY_EVALUATION_SOURCE_AS_OF_DATE_MISMATCH")
-    if date.fromisoformat(unique_dates[0]) > observed_at.astimezone(UTC).date():
+    if date.fromisoformat(unique_dates[0]) > _observed_business_date(
+        evidence_bundle=evidence_bundle,
+        observed_at=observed_at,
+    ):
         raise ProposalValidationError("POLICY_EVALUATION_SOURCE_AS_OF_DATE_IN_FUTURE")
     return unique_dates[0]
 
@@ -215,7 +237,7 @@ def _parse_source_datetime(value: str) -> datetime:
         raise ProposalValidationError("POLICY_EVALUATION_SOURCE_AS_OF_DATE_INVALID") from exc
     if parsed.tzinfo is None:
         raise ProposalValidationError("POLICY_EVALUATION_SOURCE_AS_OF_DATE_TIMEZONE_REQUIRED")
-    return parsed.astimezone(UTC)
+    return parsed
 
 
 def _booking_center_code(evidence_bundle: dict[str, Any]) -> str | None:
@@ -226,6 +248,80 @@ def _booking_center_code(evidence_bundle: dict[str, Any]) -> str | None:
     if isinstance(value, str) and value.strip():
         return value.strip().upper()
     return None
+
+
+def _observed_business_date(
+    *,
+    evidence_bundle: dict[str, Any],
+    observed_at: datetime,
+) -> date:
+    observed = observed_at if observed_at.tzinfo is not None else observed_at.replace(tzinfo=UTC)
+    source_location_code = _booking_center_code(evidence_bundle)
+    timezone_name = {
+        "SG": "Asia/Singapore",
+        "HK": "Asia/Hong_Kong",
+        "CH": "Europe/Zurich",
+        "UK": "Europe/London",
+        "US": "America/New_York",
+    }.get(source_location_code or "")
+    if timezone_name is None:
+        return observed.astimezone(UTC).date()
+    try:
+        return observed.astimezone(ZoneInfo(timezone_name)).date()
+    except ZoneInfoNotFoundError:
+        return observed.astimezone(UTC).date()
+
+
+def _trace_identity(
+    *,
+    observed_trace_id: str | None,
+    trusted_principal: dict[str, Any],
+) -> tuple[str, Literal["advise_observability_context", "trusted_policy_control_principal"]]:
+    if isinstance(observed_trace_id, str) and observed_trace_id.strip():
+        return observed_trace_id.strip(), "advise_observability_context"
+    trace_id = _required_identity_value(
+        trusted_principal.get("trace_id"),
+        "POLICY_EVALUATION_OBSERVED_TRACE_ID_REQUIRED",
+    )
+    return trace_id, "trusted_policy_control_principal"
+
+
+def _legacy_receipt_identity_from_record(record: Any) -> PolicyEvaluationReceiptIdentity:
+    as_of_date = _legacy_as_of_date(record)
+    return PolicyEvaluationReceiptIdentity(
+        receipt_contract_version=POLICY_EVALUATION_RECEIPT_IDENTITY_CONTRACT_VERSION,
+        as_of_date=as_of_date,
+        scope_identity=PolicyEvaluationReceiptScopeIdentity(
+            identity_contract_version=POLICY_EVALUATION_RECEIPT_IDENTITY_CONTRACT_VERSION,
+            authority_source="trusted_policy_control_principal",
+            tenant_scope_hash=_safe_hash("legacy_tenant_scope", str(record.evaluation_id)),
+            legal_entity_code="LEGACY_UNAVAILABLE",
+            booking_center_code=None,
+            service_identity_hash=_safe_hash("legacy_service_identity", "legacy_record"),
+            proposal_id=str(record.proposal_id),
+            proposal_version_id=str(record.proposal_version_id),
+            portfolio_id=str(record.portfolio_id),
+        ),
+        observed_correlation_id_hash=_safe_hash(
+            "legacy_correlation_id",
+            str(record.evaluation_id),
+        ),
+        observed_trace_id_hash=_safe_hash("legacy_trace_id", str(record.evaluation_id)),
+        correlation_identity_source="trusted_policy_control_principal",
+        trace_identity_source="trusted_policy_control_principal",
+    )
+
+
+def _legacy_as_of_date(record: Any) -> str:
+    replay_metadata = getattr(record, "replay_metadata_json", {})
+    if isinstance(replay_metadata, dict):
+        value = replay_metadata.get("as_of_date")
+        if isinstance(value, str) and value.strip():
+            return _normalize_source_date(value)
+    generated_at = getattr(record, "generated_at", "")
+    if isinstance(generated_at, str) and generated_at.strip():
+        return _normalize_source_date(generated_at)
+    raise ProposalValidationError("POLICY_EVALUATION_RECEIPT_IDENTITY_REQUIRED")
 
 
 def _nested_value(payload: dict[str, Any], path: tuple[str, ...]) -> Any:
@@ -248,12 +344,15 @@ def _required_identity_value(value: Any, error_code: str) -> str:
 
 
 def _safe_hash(field: str, value: str) -> str:
-    return hash_canonical_payload(
-        {
-            "contract_version": POLICY_EVALUATION_RECEIPT_IDENTITY_CONTRACT_VERSION,
-            "field": field,
-            "value": value,
-        }
+    return cast(
+        str,
+        hash_canonical_payload(
+            {
+                "contract_version": POLICY_EVALUATION_RECEIPT_IDENTITY_CONTRACT_VERSION,
+                "field": field,
+                "value": value,
+            }
+        ),
     )
 
 
@@ -264,4 +363,5 @@ __all__ = [
     "build_policy_evaluation_receipt_identity",
     "idempotency_stable_reason",
     "receipt_identity_from_record",
+    "replay_safe_reason",
 ]
