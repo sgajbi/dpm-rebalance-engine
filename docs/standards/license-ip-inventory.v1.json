@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-28T13:00:30Z",
-  "git_commit_sha": "d21d839e53bfb7a1a9b23f9b7958a8d1db8726ef",
+  "generated_at_utc": "2026-07-28T22:27:23Z",
+  "git_commit_sha": "d33d9b2464a3c76ead260439d65ea4b2291073ce",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -13,7 +13,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.0.4",
+      "installed_version": "0.0.5",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -21,7 +21,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "0.0.4"
+      "version": "0.0.5"
     },
     {
       "declared_name": "annotated-types",
@@ -382,7 +382,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.140.9",
+      "installed_version": "0.140.13",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -392,7 +392,7 @@
       "source_files": [
         "requirements-prod.txt"
       ],
-      "version": "0.140.9"
+      "version": "0.140.13"
     },
     {
       "declared_name": "filelock",
@@ -901,7 +901,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "24.0",
+      "installed_version": "25.0.1",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -909,7 +909,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "24.0"
+      "version": "25.0.1"
     },
     {
       "declared_name": "pip-api",
@@ -1398,7 +1398,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "1.17.1",
+      "installed_version": "1.18.0",
       "license_term": "BSD-3-Clause",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1406,7 +1406,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "1.17.1"
+      "version": "1.18.0"
     },
     {
       "declared_name": "scs",
@@ -1436,7 +1436,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "65.5.0",
+      "installed_version": "83.0.0",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1444,7 +1444,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "65.5.0"
+      "version": "83.0.0"
     },
     {
       "declared_name": "six",
