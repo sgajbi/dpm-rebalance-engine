@@ -7,6 +7,8 @@ import json
 import os
 import re
 import subprocess
+import sys
+import tempfile
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from importlib import metadata
@@ -23,6 +25,7 @@ POLICY_PATH = Path("docs/standards/license-ip-policy.v1.json")
 INVENTORY_PATH = Path("docs/standards/license-ip-inventory.v1.json")
 NOTICE_PATH = Path("NOTICE.md")
 LICENSE_OPERATOR_RE = re.compile(r"\s+(?:AND|OR|WITH)\s+|[()]")
+ISOLATED_ENV_FLAG = "LOTUS_ADVISE_LICENSE_IP_ISOLATED"
 
 
 @dataclass(frozen=True)
@@ -632,6 +635,89 @@ def _build_inventory_from_args(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
+def _run_in_isolated_environment(
+    args: argparse.Namespace,
+    *,
+    venv_root: Path | None = None,
+) -> int:
+    if os.environ.get(ISOLATED_ENV_FLAG) == "1":
+        raise RuntimeError("nested license/IP isolated execution is not supported")
+
+    if venv_root is not None:
+        return _run_with_isolated_venv(args, venv_root)
+
+    with tempfile.TemporaryDirectory(prefix="lotus-advise-license-ip-") as temp_dir:
+        return _run_with_isolated_venv(args, Path(temp_dir) / "venv")
+
+
+def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
+    create_result = subprocess.run(
+        [sys.executable, "-m", "venv", str(venv_root)],
+        cwd=REPO_ROOT,
+        check=False,
+    )
+    if create_result.returncode != 0:
+        return create_result.returncode
+
+    venv_python = _venv_python(venv_root)
+    install_env = {**os.environ, "PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+    for requirement_file in (
+        args.runtime_requirements,
+        args.development_requirements,
+    ):
+        install_result = subprocess.run(
+            [
+                str(venv_python),
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                str(REPO_ROOT / requirement_file),
+            ],
+            cwd=REPO_ROOT,
+            env=install_env,
+            check=False,
+        )
+        if install_result.returncode != 0:
+            return install_result.returncode
+
+    execution_env = {**os.environ, ISOLATED_ENV_FLAG: "1"}
+    execution_result = subprocess.run(
+        [
+            str(venv_python),
+            str(REPO_ROOT / "scripts" / "license_ip_evidence.py"),
+            args.command,
+            "--runtime-requirements",
+            str(args.runtime_requirements),
+            "--development-requirements",
+            str(args.development_requirements),
+            "--policy",
+            str(args.policy),
+            "--inventory",
+            str(args.inventory),
+            "--repository-url",
+            str(args.repository_url),
+            "--commit-sha",
+            str(args.commit_sha),
+            "--image-digest",
+            str(args.image_digest),
+            "--generated-at-utc",
+            str(args.generated_at_utc),
+            "--no-isolation",
+        ],
+        cwd=REPO_ROOT,
+        env=execution_env,
+        check=False,
+    )
+    return execution_result.returncode
+
+
+def _venv_python(venv_root: Path) -> Path:
+    if os.name == "nt":
+        return venv_root / "Scripts" / "python.exe"
+    return venv_root / "bin" / "python"
+
+
 def _add_inventory_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--runtime-requirements", default="requirements-prod.txt")
     parser.add_argument("--development-requirements", default="requirements-dev.txt")
@@ -644,6 +730,21 @@ def _add_inventory_arguments(parser: argparse.ArgumentParser) -> None:
         "--generated-at-utc",
         default=datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
     )
+    parser.add_argument(
+        "--isolated",
+        action="store_true",
+        help=(
+            "Build or check evidence in a temporary venv installed from the governed "
+            "requirements files instead of the caller's ambient Python environment."
+        ),
+    )
+    parser.add_argument(
+        "--no-isolation",
+        action="store_false",
+        dest="isolated",
+        help=argparse.SUPPRESS,
+    )
+    parser.set_defaults(isolated=False)
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -658,6 +759,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main() -> int:
     args = _build_parser().parse_args()
+    if args.isolated:
+        return _run_in_isolated_environment(args)
     expected_inventory = _build_inventory_from_args(args)
     policy = load_policy(REPO_ROOT / args.policy)
     if args.command == "write-inventory":

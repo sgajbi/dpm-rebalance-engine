@@ -325,7 +325,8 @@ startup/readiness instead of falling back silently.
   support-safe build metadata names
 - `make license-ip-gate`
   validates runtime/development dependency license inventory, approved exceptions, and NOTICE
-  posture
+  posture in a temporary virtual environment installed from the governed runtime/development
+  requirements files
 - `make dependency-lock-gate`
   validates `uv.lock` as the generated mirror of requirements files plus dependency inventory
 - `make trust-telemetry-freshness-gate`

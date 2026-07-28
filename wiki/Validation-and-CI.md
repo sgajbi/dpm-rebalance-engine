@@ -129,7 +129,8 @@ The current blocking posture is intentionally high-signal:
      dependency inventory.
 15. `make license-ip-gate`
      validates the committed runtime/development dependency license inventory and owner-approved
-     expiring exceptions.
+     expiring exceptions in a temporary virtual environment installed from governed
+     runtime/development requirements files.
 16. `make coverage-combined`
      enforces the combined coverage floor across unit, integration, and e2e suites.
 17. `make postgres-runtime-contracts-local` and `make production-profile-guardrail-negatives-local`

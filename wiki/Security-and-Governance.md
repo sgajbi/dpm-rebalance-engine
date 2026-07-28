@@ -222,6 +222,11 @@ Use `make license-ip-inventory` to regenerate the committed inventory after depe
 `make license-ip-gate` to verify release posture. New unclassified, prohibited, missing-metadata, or
 expired-exception findings fail CI.
 
+Both commands run the license/IP evidence generator inside a temporary virtual environment installed
+from the governed runtime/development requirements files. This keeps release evidence tied to the
+CI-installed graph and prevents ambient developer or runner site-packages from changing the
+inventory.
+
 ## Dependency Lock Governance
 
 `uv.lock` is the generated lock mirror for the current requirements-based install strategy. It

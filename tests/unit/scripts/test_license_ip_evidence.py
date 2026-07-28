@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import argparse
+import subprocess
 from email.message import Message
 from pathlib import Path
+from typing import Any
+
+import pytest
 
 from scripts.license_ip_evidence import (
     LicensePolicy,
+    _run_in_isolated_environment,
     build_license_inventory,
     validate_license_inventory,
     validate_license_inventory_against_expected,
@@ -26,6 +32,57 @@ class FakeDistribution:
             self.metadata["License-Expression"] = license_expression
         self.version = version
         self.requires = requires or []
+
+
+def test_isolated_license_inventory_uses_governed_requirement_install(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[list[str], dict[str, Any]]] = []
+
+    def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append((command, kwargs))
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
+
+    result = _run_in_isolated_environment(
+        _isolated_args("check-inventory"),
+        venv_root=tmp_path / "venv",
+    )
+
+    assert result == 0
+    assert calls[0][0][1:3] == ["-m", "venv"]
+    assert calls[1][0][-2] == "-r"
+    assert Path(calls[1][0][-1]).name == "requirements-prod.txt"
+    assert calls[2][0][-2] == "-r"
+    assert Path(calls[2][0][-1]).name == "requirements-dev.txt"
+    assert calls[3][0][1].endswith("scripts/license_ip_evidence.py") or calls[3][0][1].endswith(
+        "scripts\\license_ip_evidence.py"
+    )
+    assert "--no-isolation" in calls[3][0]
+    assert calls[3][1]["env"]["LOTUS_ADVISE_LICENSE_IP_ISOLATED"] == "1"
+
+
+def test_isolated_license_inventory_stops_on_install_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 17 if "pip" in command else 0)
+
+    monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
+
+    result = _run_in_isolated_environment(
+        _isolated_args("write-inventory"),
+        venv_root=tmp_path / "venv",
+    )
+
+    assert result == 17
+    assert len(calls) == 2
 
 
 def test_license_inventory_includes_transitive_dependency(tmp_path: Path) -> None:
@@ -515,4 +572,19 @@ def _policy(*, exception_expiry: str = "2099-01-01") -> LicensePolicy:
                 "expires_on": exception_expiry,
             },
         ),
+    )
+
+
+def _isolated_args(command: str) -> argparse.Namespace:
+    return argparse.Namespace(
+        command=command,
+        runtime_requirements="requirements-prod.txt",
+        development_requirements="requirements-dev.txt",
+        policy="docs/standards/license-ip-policy.v1.json",
+        inventory="docs/standards/license-ip-inventory.v1.json",
+        repository_url="https://github.com/sgajbi/lotus-advise",
+        commit_sha="abc123",
+        image_digest="sha256:abc123",
+        generated_at_utc="2026-07-11T00:00:00Z",
+        isolated=True,
     )
