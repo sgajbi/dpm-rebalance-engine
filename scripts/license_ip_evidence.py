@@ -602,9 +602,13 @@ def _transitive_package_freshness_map(
         if not name:
             continue
         packages[name] = {
+            "version": package.get("version"),
+            "installed_version": package.get("installed_version"),
             "dependency_groups": sorted(
                 str(group) for group in package.get("dependency_groups", [])
             ),
+            "license_term": package.get("license_term"),
+            "policy_classification": package.get("policy_classification"),
             "exception_id": package.get("exception_id"),
             "exception_owner": package.get("exception_owner"),
             "exception_expires_on": package.get("exception_expires_on"),
