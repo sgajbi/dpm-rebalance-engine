@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "e4e9033687e2c8756bbaa7d5b26815740d24b1fc1b9399f75e7446755670c631"
+license-inventory-sha256 = "b3d0d298d4491191280f6dfe1602786d2b25e714e189832e85e965d3fedfa6f9"
 
 [[requirement-files]]
 group = "development"
@@ -671,7 +671,7 @@ requirement-hashes = ["a4799383481d36de015513fc016b781d83b9b1837110e6d96534a2305
 
 [[package]]
 name = "scipy"
-version = "1.18.0"
+version = "1.17.1"
 direct = false
 groups = ["development", "runtime"]
 requirement-files = []
