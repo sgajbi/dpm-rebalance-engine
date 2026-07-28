@@ -6,7 +6,10 @@ from typing import Any, cast
 from src.core.common.canonical import hash_canonical_payload
 from src.core.policy_packs.evaluation_models import PolicyPackEvaluationResponse
 from src.core.policy_packs.persistence_models import PolicyEvaluationRecord
-from src.core.policy_packs.receipt_identity import build_policy_evaluation_receipt_identity
+from src.core.policy_packs.receipt_identity import (
+    build_policy_evaluation_receipt_identity,
+    replay_safe_reason,
+)
 from src.core.policy_packs.supportability import POLICY_EVALUATION_PERSISTENCE_CONTRACT_VERSION
 from src.core.proposals.exceptions import ProposalValidationError
 
@@ -90,7 +93,7 @@ def build_policy_evaluation_record(
             "receipt_identity": receipt_identity.model_dump(mode="json"),
             "as_of_date": receipt_identity.as_of_date,
             "idempotency_key": idempotency_key,
-            "creation_reason": reason,
+            "creation_reason": replay_safe_reason(reason),
             "replay_policy": "PIN_POLICY_VERSION_AND_COMPARE_SOURCE_HASHES",
         },
     )
