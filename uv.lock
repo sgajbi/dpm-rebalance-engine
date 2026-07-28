@@ -4,22 +4,22 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "5b8857c651cc1584334e2c20fdc8bc63d618cb02a4ceafde2f1171aaa826d6c5"
+license-inventory-sha256 = "ecb0bc879073282f6ff2c772b0cf05adcba8ebb9e54f8f2102ca7d01d6ccd947"
 
 [[requirement-files]]
 group = "development"
 path = "requirements-dev.txt"
-sha256 = "ab8f7900d1b058c041c43b349d8386e3b8d9158e35491ddbc4e013e2b1468f6f"
+sha256 = "31b0b9cf56427eee34165f2da89a09879890631864afb81e764da5b7bb0f81c5"
 
 [[requirement-files]]
 group = "install"
 path = "requirements.txt"
-sha256 = "0106c7afdcf7bbe485929a594d3e94d83e0886d5d3f02f71bd2c53e85f19dcf8"
+sha256 = "b45d64fd3093e6712fbd97c276915e2a440f3646f0941d7808bb39a08aff193d"
 
 [[requirement-files]]
 group = "runtime"
 path = "requirements-prod.txt"
-sha256 = "ebb15f402e6130a15a82b24033e430275d9deed19952bb08d8eee786ed708492"
+sha256 = "4ee43efc85d9779693ec717a29b9881254b4c5bcf0fec6ecc705fe6c3b0ff132"
 
 [[package]]
 name = "annotated-doc"
@@ -32,12 +32,12 @@ requirement-hashes = []
 
 [[package]]
 name = "annotated-types"
-version = "0.7.0"
+version = "0.8.0"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["20d9452f7f9bb616dd9c6fa59c2638d3bb69f80e4dc538d5635ef4660c9f8884"]
+requirement-hashes = ["137cffb8adab68d937a7412338a7e3d8209ce4c4706bbe47c02dd0dd6d8d922c"]
 
 [[package]]
 name = "anyio"
@@ -194,12 +194,12 @@ requirement-hashes = ["f2e34bb219519b1a3f889bae70eecf9ed2d2b06629a3c8ce1c8d574ef
 
 [[package]]
 name = "fastapi"
-version = "0.139.2"
+version = "0.140.8"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["a9c967e2c4c9ba669e8c7803091a7a99c9a9aa584ab84e183018894b99bae361"]
+requirement-hashes = ["4700c578304ad357efddeca63ecf255decdc19a73d44ea3ca0bbc551e949b047"]
 
 [[package]]
 name = "filelock"
@@ -491,21 +491,21 @@ requirement-hashes = ["ab0be69d1a1bde3794d486d613137d5d20ac87896592eeb5579dc475d
 
 [[package]]
 name = "prometheus-client"
-version = "0.25.0"
+version = "0.26.0"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["d697f7a85c6b63f263a92656db733b5d639dac7fe26cbc7ea9580bd14e9f4f43"]
+requirement-hashes = ["b88e7acc879ae4cbdb5b491e7e980a9fe94e5b0bb0d59970e674ff19a0974c7b"]
 
 [[package]]
 name = "prometheus-fastapi-instrumentator"
-version = "8.0.2"
+version = "8.1.0"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["1bf0fa377624cf398dba5996d75c500454e4368ebe2aab3ce53401092278a717"]
+requirement-hashes = ["4f68753c40e7988af0e1f94fb451149e0641056b3e64dbd2480177597e870fb5"]
 
 [[package]]
 name = "psycopg"
@@ -662,12 +662,12 @@ requirement-hashes = []
 
 [[package]]
 name = "ruff"
-version = "0.15.22"
+version = "0.16.0"
 direct = true
 groups = ["development", "install"]
 requirement-files = ["requirements-dev.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["a2cf785bbe4b3fa7f5956b1b1573869ad3bb0e6c18d9284781e2f4399231f4d8"]
+requirement-hashes = ["a4799383481d36de015513fc016b781d83b9b1837110e6d96534a23059060cf6"]
 
 [[package]]
 name = "scipy"
