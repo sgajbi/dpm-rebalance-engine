@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-28T12:26:13Z",
-  "git_commit_sha": "1c814aa932624fe05cdce34eb069a45b6c91deb5",
+  "generated_at_utc": "2026-07-28T13:00:30Z",
+  "git_commit_sha": "d21d839e53bfb7a1a9b23f9b7958a8d1db8726ef",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -382,7 +382,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.140.8",
+      "installed_version": "0.140.9",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -392,7 +392,7 @@
       "source_files": [
         "requirements-prod.txt"
       ],
-      "version": "0.140.8"
+      "version": "0.140.9"
     },
     {
       "declared_name": "filelock",

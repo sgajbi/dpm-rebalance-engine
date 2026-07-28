@@ -28,4 +28,4 @@ repos:
         pass_filenames: false
         additional_dependencies:
           - "pydantic==2.13.4"
-          - "fastapi==0.140.8"
+          - "fastapi==0.140.9"
