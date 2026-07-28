@@ -224,7 +224,7 @@ bandit-severity-regression-gate:
 
 bandit-high-severity-gate: bandit-severity-regression-gate
 
-dependency-lock:
+dependency-lock: license-ip-inventory
 	python scripts/dependency_lock_evidence.py write-lock
 
 dependency-lock-gate:
