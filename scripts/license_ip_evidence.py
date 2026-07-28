@@ -27,7 +27,10 @@ NOTICE_PATH = Path("NOTICE.md")
 LICENSE_OPERATOR_RE = re.compile(r"\s+(?:AND|OR|WITH)\s+|[()]")
 ISOLATED_ENV_FLAG = "LOTUS_ADVISE_LICENSE_IP_ISOLATED"
 PIP_BOOTSTRAP_PACKAGES = ("pip==25.0.1", "setuptools==83.0.0")
-PIP_ENVIRONMENT = {"PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+PIP_ENVIRONMENT = {
+    "PIP_CONFIG_FILE": os.devnull,
+    "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+}
 GOVERNED_PYTHON_VERSION = (3, 11)
 GOVERNED_PYTHON_VERSION_TEXT = "3.11"
 
@@ -769,14 +772,17 @@ def _governed_python_command(*, env: dict[str, str]) -> tuple[str, ...]:
         candidates = (("python3.11",),)
 
     for candidate in candidates:
-        result = subprocess.run(
-            [*candidate, "--version"],
-            cwd=REPO_ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+        try:
+            result = subprocess.run(
+                [*candidate, "--version"],
+                cwd=REPO_ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            continue
         output = f"{result.stdout} {result.stderr}"
         if result.returncode == 0 and f"Python {GOVERNED_PYTHON_VERSION_TEXT}." in output:
             return candidate
