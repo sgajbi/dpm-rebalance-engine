@@ -326,7 +326,8 @@ startup/readiness instead of falling back silently.
 - `make license-ip-gate`
   validates runtime/development dependency license inventory, approved exceptions, and NOTICE
   posture in a temporary virtual environment installed from the governed runtime/development
-  requirements files
+  requirements files with pinned pip/setuptools bootstrap tooling and pip isolated from caller
+  configuration
 - `make dependency-lock-gate`
   validates `uv.lock` as the generated mirror of requirements files plus dependency inventory
 - `make trust-telemetry-freshness-gate`

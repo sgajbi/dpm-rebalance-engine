@@ -224,8 +224,9 @@ expired-exception findings fail CI.
 
 Both commands run the license/IP evidence generator inside a temporary virtual environment installed
 from the governed runtime/development requirements files. This keeps release evidence tied to the
-CI-installed graph and prevents ambient developer or runner site-packages from changing the
-inventory.
+CI-installed graph, pins pip/setuptools bootstrap tooling, runs pip in isolated mode, and prevents
+ambient developer or runner site-packages, pip environment variables, or pip user configuration from
+changing the inventory.
 
 ## Dependency Lock Governance
 
