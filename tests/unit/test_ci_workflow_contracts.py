@@ -97,6 +97,12 @@ def test_local_ci_targets_enforce_release_image_provenance_contract() -> None:
         assert "release-image-provenance-gate" in _makefile_target_dependencies(makefile, target)
 
 
+def test_dependency_lock_refreshes_license_ip_inventory_first() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+
+    assert "license-ip-inventory" in _makefile_target_dependencies(makefile, "dependency-lock")
+
+
 def test_local_check_and_feature_lane_enforce_bandit_severity_regression_scan() -> None:
     makefile = Path("Makefile").read_text(encoding="utf-8")
     feature_lane = _workflow_text("feature-lane.yml")
