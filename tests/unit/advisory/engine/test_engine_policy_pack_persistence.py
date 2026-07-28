@@ -111,6 +111,7 @@ def test_policy_evaluation_persistence_store_stays_focused() -> None:
 def _base_evidence_bundle() -> dict:
     return {
         "context_resolution": {
+            "as_of_date": "2026-05-26",
             "advisory_policy_context": {
                 "household_id": "HH-PB-001",
                 "jurisdiction": "SG",
@@ -123,15 +124,17 @@ def _base_evidence_bundle() -> dict:
                 "mandate_id": "MANDATE-BALANCED-001",
                 "objectives": ["capital_preservation", "balanced_growth"],
                 "restrictions": ["no_single_name_above_10pct"],
-            }
+            },
         },
         "inputs": {
             "portfolio_snapshot": {
                 "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "as_of_date": "2026-05-26",
                 "positions": [{"instrument_id": "US_EQ_ETF", "quantity": "100"}],
                 "cash_balances": [{"currency": "USD", "amount": "50000"}],
             },
             "market_data_snapshot": {
+                "as_of_date": "2026-05-26",
                 "prices": [{"instrument_id": "US_EQ_ETF", "price": "100", "currency": "USD"}],
                 "fx_rates": [{"pair": "USD/SGD", "rate": "1.35"}],
             },
@@ -169,6 +172,26 @@ def _base_evidence_bundle() -> dict:
             },
         },
         "conflict_evidence": {"material_conflict": False, "review_ref": "conflict-review-001"},
+    }
+
+
+def _trusted_reason(
+    purpose: str,
+    *,
+    trace_id: str = "trace-policy-evaluation-test",
+) -> dict[str, Any]:
+    return {
+        "purpose": purpose,
+        "trusted_principal": {
+            "subject": "advisor_1",
+            "role": "ADVISOR",
+            "tenant_id": "tenant_sg_001",
+            "legal_entity_code": "REFERENCE",
+            "correlation_id": "corr-policy-evaluation-test",
+            "trace_id": trace_id,
+            "service_identity": "lotus-gateway",
+            "capability": "advisory.policy_evaluation.finalize",
+        },
     }
 
 
@@ -221,7 +244,7 @@ def test_policy_evaluation_record_is_immutable_hash_backed_and_idempotent() -> N
         proposal_version_id="ppv_policy_persist_001",
         created_by="advisor_1",
         idempotency_key="  policy-eval-finalize-001  ",
-        reason={"purpose": "advisor policy review"},
+        reason=_trusted_reason("advisor policy review"),
     )
     replayed = finalize_policy_evaluation_record(
         evidence_bundle=_base_evidence_bundle(),
@@ -231,7 +254,10 @@ def test_policy_evaluation_record_is_immutable_hash_backed_and_idempotent() -> N
         proposal_version_id="ppv_policy_persist_001",
         created_by="advisor_1",
         idempotency_key="policy-eval-finalize-001",
-        reason={"purpose": "advisor policy review"},
+        reason=_trusted_reason(
+            "advisor policy review",
+            trace_id="trace-policy-evaluation-test-retry",
+        ),
     )
     duplicate_identity = finalize_policy_evaluation_record(
         evidence_bundle=_base_evidence_bundle(),
@@ -241,7 +267,7 @@ def test_policy_evaluation_record_is_immutable_hash_backed_and_idempotent() -> N
         proposal_version_id="ppv_policy_persist_001",
         created_by="advisor_1",
         idempotency_key="policy-eval-finalize-duplicate-identity",
-        reason={"purpose": "advisor policy review"},
+        reason=_trusted_reason("advisor policy review"),
     )
 
     assert created.created is True
@@ -259,6 +285,20 @@ def test_policy_evaluation_record_is_immutable_hash_backed_and_idempotent() -> N
     assert created.record.replay_metadata_json["replay_policy"] == (
         "PIN_POLICY_VERSION_AND_COMPARE_SOURCE_HASHES"
     )
+    receipt_identity = created.record.replay_metadata_json["receipt_identity"]
+    assert created.record.replay_metadata_json["as_of_date"] == "2026-05-26"
+    assert receipt_identity["receipt_contract_version"] == (
+        "rfc0002.policy-evaluation-receipt-identity.v1"
+    )
+    assert receipt_identity["as_of_date"] == "2026-05-26"
+    assert receipt_identity["scope_identity"]["authority_source"] == (
+        "trusted_policy_control_principal"
+    )
+    assert receipt_identity["scope_identity"]["tenant_scope_hash"].startswith("sha256:")
+    assert receipt_identity["scope_identity"]["legal_entity_code"] == "REFERENCE"
+    assert receipt_identity["scope_identity"]["booking_center_code"] == "SG"
+    assert receipt_identity["observed_correlation_id_hash"].startswith("sha256:")
+    assert receipt_identity["observed_trace_id_hash"].startswith("sha256:")
     assert created.record.evaluation_json["supportability"]["policy_evaluation_persistence"] == (
         "SUPPORTED_BY_RFC0025_SLICE7_INTERNAL"
     )
@@ -274,6 +314,10 @@ def test_policy_evaluation_record_is_immutable_hash_backed_and_idempotent() -> N
     assert replayed.record.evaluation_id == created.record.evaluation_id
     assert duplicate_identity.created is False
     assert duplicate_identity.record.evaluation_id == created.record.evaluation_id
+    assert (
+        replayed.record.replay_metadata_json["receipt_identity"]
+        == created.record.replay_metadata_json["receipt_identity"]
+    )
 
 
 def test_policy_evaluation_repository_port_survives_reinstantiation() -> None:
@@ -289,7 +333,7 @@ def test_policy_evaluation_repository_port_survives_reinstantiation() -> None:
         proposal_version_id="ppv_policy_restart",
         created_by="advisor_1",
         idempotency_key="policy-eval-restart",
-        reason={"purpose": "restart proof"},
+        reason=_trusted_reason("restart proof"),
     )
     review = append_policy_evaluation_event(
         evaluation_id=created.record.evaluation_id,
@@ -327,7 +371,7 @@ def test_policy_evaluation_idempotency_rejects_payload_drift() -> None:
         proposal_version_id="ppv_policy_conflict",
         created_by="advisor_1",
         idempotency_key="policy-eval-conflict",
-        reason={"purpose": "first request"},
+        reason=_trusted_reason("first request"),
     )
 
     with pytest.raises(ProposalIdempotencyConflictError):
@@ -339,7 +383,112 @@ def test_policy_evaluation_idempotency_rejects_payload_drift() -> None:
             proposal_version_id="ppv_policy_conflict",
             created_by="advisor_1",
             idempotency_key="policy-eval-conflict",
-            reason={"purpose": "changed request"},
+            reason=_trusted_reason("changed request"),
+        )
+
+
+def test_policy_evaluation_receipt_identity_fails_closed_without_trusted_principal() -> None:
+    with pytest.raises(ProposalValidationError, match="TRUSTED_PRINCIPAL_REQUIRED"):
+        finalize_policy_evaluation_record(
+            evidence_bundle=_base_evidence_bundle(),
+            policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_no_principal",
+            proposal_version_id="ppv_policy_no_principal",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-no-principal",
+            reason={"purpose": "missing principal"},
+        )
+
+
+def test_policy_evaluation_receipt_identity_fails_closed_without_trace() -> None:
+    reason = _trusted_reason("missing trace")
+    reason["trusted_principal"].pop("trace_id")
+
+    with pytest.raises(ProposalValidationError, match="OBSERVED_TRACE_ID_REQUIRED"):
+        finalize_policy_evaluation_record(
+            evidence_bundle=_base_evidence_bundle(),
+            policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_no_trace",
+            proposal_version_id="ppv_policy_no_trace",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-no-trace",
+            reason=reason,
+        )
+
+
+def test_policy_evaluation_receipt_identity_fails_closed_without_source_as_of() -> None:
+    evidence = _base_evidence_bundle()
+    evidence["context_resolution"].pop("as_of_date")
+    evidence["inputs"]["portfolio_snapshot"].pop("as_of_date")
+    evidence["inputs"]["market_data_snapshot"].pop("as_of_date")
+
+    with pytest.raises(ProposalValidationError, match="SOURCE_AS_OF_DATE_REQUIRED"):
+        finalize_policy_evaluation_record(
+            evidence_bundle=evidence,
+            policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_no_as_of",
+            proposal_version_id="ppv_policy_no_as_of",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-no-as-of",
+            reason=_trusted_reason("missing source as-of"),
+        )
+
+
+def test_policy_evaluation_receipt_identity_rejects_source_as_of_drift() -> None:
+    evidence = _base_evidence_bundle()
+    evidence["inputs"]["market_data_snapshot"]["as_of_date"] = "2026-05-27"
+
+    with pytest.raises(ProposalValidationError, match="SOURCE_AS_OF_DATE_MISMATCH"):
+        finalize_policy_evaluation_record(
+            evidence_bundle=evidence,
+            policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_as_of_mismatch",
+            proposal_version_id="ppv_policy_as_of_mismatch",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-as-of-mismatch",
+            reason=_trusted_reason("mismatched source as-of"),
+        )
+
+
+def test_policy_evaluation_receipt_identity_rejects_naive_source_datetime() -> None:
+    evidence = _base_evidence_bundle()
+    evidence["context_resolution"]["as_of_date"] = "2026-05-26T00:00:00"
+    evidence["inputs"]["portfolio_snapshot"].pop("as_of_date")
+    evidence["inputs"]["market_data_snapshot"].pop("as_of_date")
+
+    with pytest.raises(ProposalValidationError, match="SOURCE_AS_OF_DATE_TIMEZONE_REQUIRED"):
+        finalize_policy_evaluation_record(
+            evidence_bundle=evidence,
+            policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_naive_as_of",
+            proposal_version_id="ppv_policy_naive_as_of",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-naive-as-of",
+            reason=_trusted_reason("naive source as-of"),
+        )
+
+
+def test_policy_evaluation_receipt_identity_rejects_future_source_as_of() -> None:
+    evidence = _base_evidence_bundle()
+    evidence["context_resolution"]["as_of_date"] = "2999-01-01"
+    evidence["inputs"]["portfolio_snapshot"]["as_of_date"] = "2999-01-01"
+    evidence["inputs"]["market_data_snapshot"]["as_of_date"] = "2999-01-01"
+
+    with pytest.raises(ProposalValidationError, match="SOURCE_AS_OF_DATE_IN_FUTURE"):
+        finalize_policy_evaluation_record(
+            evidence_bundle=evidence,
+            policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_future_as_of",
+            proposal_version_id="ppv_policy_future_as_of",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-future-as-of",
+            reason=_trusted_reason("future source as-of"),
         )
 
 
@@ -352,7 +501,7 @@ def test_policy_evaluation_review_events_are_append_only_without_mutating_final_
         proposal_version_id="ppv_policy_events",
         created_by="advisor_1",
         idempotency_key="policy-eval-events",
-        reason={"purpose": "event audit test"},
+        reason=_trusted_reason("event audit test"),
     )
     immutable_hash = persisted.record.evaluation_hash
 
@@ -389,7 +538,7 @@ def test_policy_evaluation_privileged_events_require_specialized_command_authori
         proposal_version_id="ppv_policy_privileged_events",
         created_by="advisor_1",
         idempotency_key="policy-eval-privileged-events",
-        reason={"purpose": "event authority test"},
+        reason=_trusted_reason("event authority test"),
     )
 
     privileged_events = [
@@ -463,7 +612,7 @@ def test_policy_evaluation_replay_compares_policy_source_and_evaluation_hashes()
         proposal_version_id="ppv_policy_replay",
         created_by="advisor_1",
         idempotency_key="policy-eval-replay",
-        reason={"purpose": "replay proof"},
+        reason=_trusted_reason("replay proof"),
     )
     matching = replay_policy_evaluation_record(
         evaluation_id=persisted.record.evaluation_id,
@@ -499,7 +648,7 @@ def test_policy_evaluation_replay_allows_superseded_policy_version() -> None:
         proposal_version_id="ppv_policy_replay_superseded",
         created_by="advisor_1",
         idempotency_key="policy-eval-replay-superseded",
-        reason={"purpose": "superseded replay proof"},
+        reason=_trusted_reason("superseded replay proof"),
     )
     new_detail = get_policy_pack_version(
         policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
@@ -569,7 +718,7 @@ def test_policy_evaluation_persists_disclosure_consent_and_approval_dependencies
         proposal_version_id="ppv_policy_requirements",
         created_by="advisor_1",
         idempotency_key="policy-eval-requirements",
-        reason={"purpose": "requirement mapping proof"},
+        reason=_trusted_reason("requirement mapping proof"),
     )
 
     assert persisted.record.evaluation_status == "PENDING_REVIEW"
@@ -589,7 +738,7 @@ def test_policy_evaluation_record_listing_filters_orders_and_returns_copies() ->
         proposal_version_id="ppv_policy_list_first",
         created_by="advisor_1",
         idempotency_key="policy-eval-list-first",
-        reason={"purpose": "record listing first"},
+        reason=_trusted_reason("record listing first"),
     )
     other_portfolio_evidence = _base_evidence_bundle()
     other_portfolio_evidence["inputs"]["portfolio_snapshot"]["portfolio_id"] = "PB_SG_ALT_BAL_002"
@@ -601,7 +750,7 @@ def test_policy_evaluation_record_listing_filters_orders_and_returns_copies() ->
         proposal_version_id="ppv_policy_list_second",
         created_by="advisor_1",
         idempotency_key="policy-eval-list-second",
-        reason={"purpose": "record listing second"},
+        reason=_trusted_reason("record listing second"),
     )
     _activate_sg_policy_pack()
     pending_evidence = _base_evidence_bundle()
@@ -620,7 +769,7 @@ def test_policy_evaluation_record_listing_filters_orders_and_returns_copies() ->
         proposal_version_id="ppv_policy_list_pending",
         created_by="advisor_1",
         idempotency_key="policy-eval-list-pending",
-        reason={"purpose": "record listing pending"},
+        reason=_trusted_reason("record listing pending"),
     )
 
     all_records = list_policy_evaluation_records()

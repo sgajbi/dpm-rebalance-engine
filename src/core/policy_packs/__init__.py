@@ -80,6 +80,8 @@ from src.core.policy_packs.workflow_models import (
     PolicyEvaluationRequirementProjection,
     PolicyEvaluationSignOffDecisionRequest,
     PolicyEvaluationSignOffDecisionResponse,
+    PolicyEvaluationWorkflowMetadata,
+    PolicyEvaluationWorkflowReplayMetadata,
     PolicyEvaluationWorkflowResponse,
 )
 
@@ -114,6 +116,8 @@ __all__ = [
     "PolicyEvaluationSignOffDecisionResponse",
     "PolicyEvaluationSignOffPackageResponse",
     "PolicyEvaluationWorkflowResponse",
+    "PolicyEvaluationWorkflowMetadata",
+    "PolicyEvaluationWorkflowReplayMetadata",
     "PolicyPackEvaluationResponse",
     "PolicyPackListResponse",
     "PolicyPackSummary",

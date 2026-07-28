@@ -118,6 +118,7 @@ class PolicyEvidenceApplicationService:
         created_by: str,
         idempotency_key: str,
         reason: dict[str, Any],
+        observed_trace_id: str | None = None,
     ) -> PolicyEvaluationPersistenceResult:
         return finalize_policy_evaluation_record(
             evidence_bundle=evidence_bundle,
@@ -128,6 +129,7 @@ class PolicyEvidenceApplicationService:
             created_by=created_by,
             idempotency_key=idempotency_key,
             reason=reason,
+            observed_trace_id=observed_trace_id,
         )
 
     def append_policy_evaluation_event(

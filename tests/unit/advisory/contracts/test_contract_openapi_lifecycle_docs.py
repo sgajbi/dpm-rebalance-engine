@@ -350,6 +350,72 @@ def test_lifecycle_async_and_support_schemas_have_descriptions_and_examples():
     _assert_property_has_docs(policy_workflow_schema, "maker_checker_required")
     _assert_property_has_docs(policy_workflow_schema, "latest_sign_off_event")
     _assert_property_has_docs(policy_workflow_schema, "client_ready_publication")
+    _assert_property_has_docs(policy_workflow_schema, "metadata")
+    _assert_property_has_docs(policy_workflow_schema, "replay_metadata")
+
+    policy_workflow_metadata_schema = schemas["PolicyEvaluationWorkflowMetadata"]
+    for property_name in (
+        "product_id",
+        "product_version",
+        "source_system",
+        "evaluation_id",
+        "proposal_id",
+        "proposal_version_id",
+        "portfolio_id",
+        "policy_pack_id",
+        "policy_version",
+        "as_of_date",
+        "generated_at",
+        "content_hash",
+        "evaluation_hash",
+        "source_evidence_hash",
+        "policy_content_hash",
+        "freshness_state",
+        "data_quality_status",
+        "source_gap_count",
+        "source_gaps",
+        "client_ready_publication",
+        "scope_identity",
+        "observed_correlation_id_hash",
+        "observed_trace_id_hash",
+    ):
+        _assert_property_has_docs(policy_workflow_metadata_schema, property_name)
+
+    policy_workflow_replay_schema = schemas["PolicyEvaluationWorkflowReplayMetadata"]
+    for property_name in (
+        "receipt_contract_version",
+        "evaluation_id",
+        "proposal_id",
+        "proposal_version_id",
+        "portfolio_id",
+        "as_of_date",
+        "policy_pack_id",
+        "policy_version",
+        "source_refs",
+        "source_gaps",
+        "source_evidence_hash",
+        "evaluation_hash",
+        "policy_content_hash",
+        "replay_policy",
+        "scope_identity",
+        "observed_correlation_id_hash",
+        "observed_trace_id_hash",
+    ):
+        _assert_property_has_docs(policy_workflow_replay_schema, property_name)
+
+    policy_receipt_scope_schema = schemas["PolicyEvaluationReceiptScopeIdentity"]
+    for property_name in (
+        "identity_contract_version",
+        "authority_source",
+        "tenant_scope_hash",
+        "legal_entity_code",
+        "booking_center_code",
+        "service_identity_hash",
+        "proposal_id",
+        "proposal_version_id",
+        "portfolio_id",
+    ):
+        _assert_property_has_docs(policy_receipt_scope_schema, property_name)
 
     policy_signoff_request_schema = schemas["PolicyEvaluationSignOffDecisionRequest"]
     _assert_property_has_docs(policy_signoff_request_schema, "actor_id")

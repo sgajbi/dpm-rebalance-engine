@@ -118,9 +118,13 @@ Boundary rules that matter:
    sign-off, report-package, and AI-evidence commands now bind actor authority to trusted
    `X-Actor-Id`, `X-Role`, `X-Tenant-Id`, `X-Legal-Entity-Code`, `X-Correlation-Id`,
    service-identity, capability, proposal, and portfolio headers; request-body actor fields are
-   compatibility echoes and are rejected when they do not match the trusted principal. Completed
-   approval/waiver authority, client-ready policy publication, and external client communication
-   remain gated.
+   compatibility echoes and are rejected when they do not match the trusted principal. Finalized
+   policy workflow receipts also persist source-owned `as_of_date`, trusted legal-entity,
+   booking-center, proposal, version, and portfolio scope, plus source-safe tenant, service,
+   correlation, and trace hashes so `lotus-idea` can reconcile producer evidence without seeing raw
+   caller identifiers. Production identity-provider binding remains outside this local/dev trusted
+   header boundary. Completed approval/waiver authority, client-ready policy publication, and
+   external client communication remain gated.
 7. `AdvisoryCopilotInteractionRecord:v1` is active for governed internal advisor/reviewer copilot
    interactions. Completed copilot output must pass the Advise-owned approved provider/model
    inventory in `contracts/advisory-copilot/approved-model-inventory.v1.json`, return matching
@@ -382,10 +386,11 @@ Contract rules that are easy to get wrong:
 5. tactical house-view cohort responses must preserve upstream source refs and supportability posture
    instead of recomputing portfolio source facts locally
 6. policy evaluation endpoints preserve selector applicability, source/policy/evaluation/replay
-   hashes, trusted policy-control principal metadata, and must not imply legal advice, completed
-   approval/waiver authority, completed sign-off authority, or client-ready publication. Policy
-   command body actor fields are not authoritative identity; they must match the trusted
-   policy-control principal and authorized scope headers
+   hashes, source-owned as-of date, trusted scope identity, source-safe
+   tenant/service/correlation/trace hashes, trusted policy-control principal metadata, and must not imply legal advice, completed
+   approval/waiver authority, completed sign-off authority, production IdP binding, or client-ready
+   publication. Policy command body actor fields are not authoritative identity; they must match the
+   trusted policy-control principal and authorized scope headers
 7. advisor cockpit endpoints preserve source refs, action lineage, SLA/acknowledgement posture, and
    unsupported-claim boundaries; acknowledgements do not approve policy, clear blockers, contact
    clients, create CRM tasks, or initiate orders

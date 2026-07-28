@@ -36,6 +36,7 @@ class PolicyEvaluationRepository(Protocol):
         created_by: str,
         idempotency_key: str,
         reason: dict[str, Any],
+        observed_trace_id: str | None = None,
     ) -> PolicyEvaluationPersistenceResult: ...
 
     def get_policy_evaluation_record(self, *, evaluation_id: str) -> PolicyEvaluationRecord: ...

@@ -4,9 +4,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.core.policy_packs.persistence_models import PolicyEvaluationAuditEvent
+from src.core.policy_packs.receipt_identity import receipt_identity_from_record
 from src.core.policy_packs.workflow_conflict_projection import conflict_posture_for_workflow
 from src.core.policy_packs.workflow_models import (
     PolicyEvaluationRequirementProjection,
+    PolicyEvaluationWorkflowMetadata,
+    PolicyEvaluationWorkflowReplayMetadata,
     PolicyEvaluationWorkflowResponse,
 )
 
@@ -312,45 +315,62 @@ def parse_datetime(value: str) -> datetime:
     return parsed
 
 
-def workflow_lineage_metadata(*, record: Any, client_ready_publication: str) -> dict[str, Any]:
+def workflow_lineage_metadata(
+    *, record: Any, client_ready_publication: str
+) -> PolicyEvaluationWorkflowMetadata:
     source_gaps = list(record.source_gaps)
-    return {
-        "product_id": "lotus-advise:AdvisoryPolicyEvaluationRecord:v1",
-        "product_version": "v1",
-        "source_system": "LOTUS_ADVISE",
-        "evaluation_id": record.evaluation_id,
-        "proposal_id": record.proposal_id,
-        "proposal_version_id": record.proposal_version_id,
-        "portfolio_id": record.portfolio_id,
-        "policy_pack_id": record.policy_pack_id,
-        "policy_version": record.policy_version,
-        "generated_at": record.generated_at,
-        "content_hash": record.evaluation_hash,
-        "evaluation_hash": record.evaluation_hash,
-        "source_evidence_hash": record.source_evidence_hash,
-        "policy_content_hash": record.policy_content_hash,
-        "freshness_state": "current",
-        "data_quality_status": "incomplete" if source_gaps else "complete",
-        "source_gap_count": len(source_gaps),
-        "source_gaps": source_gaps,
-        "client_ready_publication": client_ready_publication,
-    }
+    receipt_identity = receipt_identity_from_record(record)
+    return PolicyEvaluationWorkflowMetadata(
+        product_id="lotus-advise:AdvisoryPolicyEvaluationRecord:v1",
+        product_version="v1",
+        source_system="LOTUS_ADVISE",
+        evaluation_id=record.evaluation_id,
+        proposal_id=record.proposal_id,
+        proposal_version_id=record.proposal_version_id,
+        portfolio_id=record.portfolio_id,
+        policy_pack_id=record.policy_pack_id,
+        policy_version=record.policy_version,
+        as_of_date=receipt_identity.as_of_date,
+        generated_at=record.generated_at,
+        content_hash=record.evaluation_hash,
+        evaluation_hash=record.evaluation_hash,
+        source_evidence_hash=record.source_evidence_hash,
+        policy_content_hash=record.policy_content_hash,
+        freshness_state="current",
+        data_quality_status="incomplete" if source_gaps else "complete",
+        source_gap_count=len(source_gaps),
+        source_gaps=source_gaps,
+        client_ready_publication=client_ready_publication,
+        scope_identity=receipt_identity.scope_identity,
+        observed_correlation_id_hash=receipt_identity.observed_correlation_id_hash,
+        observed_trace_id_hash=receipt_identity.observed_trace_id_hash,
+    )
 
 
-def workflow_replay_metadata(*, record: Any) -> dict[str, Any]:
-    return {
-        "policy_pack_id": record.policy_pack_id,
-        "policy_version": record.policy_version,
-        "source_refs": list(record.source_refs),
-        "source_gaps": list(record.source_gaps),
-        "source_evidence_hash": record.source_evidence_hash,
-        "evaluation_hash": record.evaluation_hash,
-        "policy_content_hash": record.policy_content_hash,
-        "replay_policy": record.replay_metadata_json.get(
+def workflow_replay_metadata(*, record: Any) -> PolicyEvaluationWorkflowReplayMetadata:
+    receipt_identity = receipt_identity_from_record(record)
+    return PolicyEvaluationWorkflowReplayMetadata(
+        receipt_contract_version=receipt_identity.receipt_contract_version,
+        evaluation_id=record.evaluation_id,
+        proposal_id=record.proposal_id,
+        proposal_version_id=record.proposal_version_id,
+        portfolio_id=record.portfolio_id,
+        as_of_date=receipt_identity.as_of_date,
+        policy_pack_id=record.policy_pack_id,
+        policy_version=record.policy_version,
+        source_refs=list(record.source_refs),
+        source_gaps=list(record.source_gaps),
+        source_evidence_hash=record.source_evidence_hash,
+        evaluation_hash=record.evaluation_hash,
+        policy_content_hash=record.policy_content_hash,
+        replay_policy=record.replay_metadata_json.get(
             "replay_policy",
             "EXACT_SOURCE_HASH_MATCH",
         ),
-    }
+        scope_identity=receipt_identity.scope_identity,
+        observed_correlation_id_hash=receipt_identity.observed_correlation_id_hash,
+        observed_trace_id_hash=receipt_identity.observed_trace_id_hash,
+    )
 
 
 def unique(values: list[str]) -> list[str]:

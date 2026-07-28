@@ -58,6 +58,8 @@ from src.core.policy_packs.models import (
     PolicyEvaluationSignOffDecisionRequest,
     PolicyEvaluationSignOffDecisionResponse,
     PolicyEvaluationSignOffPackageResponse,
+    PolicyEvaluationWorkflowMetadata,
+    PolicyEvaluationWorkflowReplayMetadata,
     PolicyEvaluationWorkflowResponse,
     PolicyPackActivationRequest,
     PolicyPackActivationResponse,
@@ -117,6 +119,12 @@ from src.core.policy_packs.workflow_models import (
     PolicyEvaluationSignOffDecisionResponse as WorkflowPolicyEvaluationSignOffDecisionResponse,
 )
 from src.core.policy_packs.workflow_models import (
+    PolicyEvaluationWorkflowMetadata as WorkflowPolicyEvaluationWorkflowMetadata,
+)
+from src.core.policy_packs.workflow_models import (
+    PolicyEvaluationWorkflowReplayMetadata as WorkflowPolicyEvaluationWorkflowReplayMetadata,
+)
+from src.core.policy_packs.workflow_models import (
     PolicyEvaluationWorkflowResponse as WorkflowPolicyEvaluationWorkflowResponse,
 )
 
@@ -158,6 +166,8 @@ def test_policy_pack_models_preserves_workflow_model_import_contract():
         PolicyEvaluationSignOffDecisionResponse is WorkflowPolicyEvaluationSignOffDecisionResponse
     )
     assert PolicyEvaluationWorkflowResponse is WorkflowPolicyEvaluationWorkflowResponse
+    assert PolicyEvaluationWorkflowMetadata is WorkflowPolicyEvaluationWorkflowMetadata
+    assert PolicyEvaluationWorkflowReplayMetadata is WorkflowPolicyEvaluationWorkflowReplayMetadata
 
 
 def test_policy_pack_models_preserves_reporting_model_import_contract():
