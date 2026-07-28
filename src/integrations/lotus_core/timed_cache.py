@@ -47,7 +47,7 @@ class TimedCache(Generic[K, V]):
                 self._misses += 1
                 return None
             expires_at, value = cached_entry
-            if expires_at < now:
+            if expires_at <= now:
                 self._values.pop(key, None)
                 self._misses += 1
                 self._expirations += 1
