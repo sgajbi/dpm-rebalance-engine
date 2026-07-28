@@ -1,16 +1,16 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-07-22T10:35:35.152906+00:00`
+- Generated At: `2026-07-28T11:52:51.111860+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `baseline/report-only`
 
 ## Code Size
 
-- Python files: `1052`
+- Python files: `1053`
 - Packages: `41`
-- Modules: `1011`
-- Total Python lines: `183298`
+- Modules: `1012`
+- Total Python lines: `184062`
 
 ## Largest Files
 
@@ -25,7 +25,7 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1863 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
 | 9 | `scripts/quality_baseline_report.py` | 1615 |
-| 10 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1517 |
+| 10 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1567 |
 
 ## Largest Functions And Maintainability Hotspots
 
@@ -33,7 +33,7 @@
 | ---: | --- | --- | ---: | ---: |
 | 1 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 63 | 508 |
 | 2 | `render_refactor_health_report` | `scripts/quality_baseline_report.py` | 805 | 494 |
-| 3 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 332 |
+| 3 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 398 |
 | 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 304 |
 | 5 | `validate_live_cross_service_parity` | `scripts/validate_cross_service_parity_live.py` | 3695 | 274 |
 | 6 | `_assert_persisted_read_surfaces` | `scripts/validate_cross_service_parity_live.py` | 3422 | 271 |
@@ -47,8 +47,8 @@
 - Current baseline uses largest-function and router-hotspot evidence as deterministic
   complexity proxies.
 - Radon config executable: `True`
-- Radon analyzed block inventory: `4899`
-- Radon complexity rank inventory: `A=4787, B=112`
+- Radon analyzed block inventory: `4915`
+- Radon complexity rank inventory: `A=4800, B=115`
 - Radon worst complexity: `rank=B, complexity=10`
 - Radon C/D/E/F-ranked block enforcement is repo-native through
   `make complexity-regression-gate` and the `lint` lane.
@@ -121,7 +121,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5439, missing=5388, covered=51, coverage=0.9%`
+- Interrogate docstring inventory: `total=5456, missing=5405, covered=51, coverage=0.9%`
 - Interrogate remains report-only until public API and module ownership thresholds
   are classified.
 
