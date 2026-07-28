@@ -27,6 +27,7 @@ NOTICE_PATH = Path("NOTICE.md")
 LICENSE_OPERATOR_RE = re.compile(r"\s+(?:AND|OR|WITH)\s+|[()]")
 ISOLATED_ENV_FLAG = "LOTUS_ADVISE_LICENSE_IP_ISOLATED"
 PIP_BOOTSTRAP_PACKAGES = ("pip==25.0.1", "setuptools==83.0.0")
+PIP_ENVIRONMENT = {"PIP_DISABLE_PIP_VERSION_CHECK": "1"}
 
 
 @dataclass(frozen=True)
@@ -656,19 +657,22 @@ def _run_in_isolated_environment(
 
 
 def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
+    base_env = _python_isolated_subprocess_env()
     create_result = subprocess.run(
-        [sys.executable, "-m", "venv", str(venv_root)],
+        [sys.executable, "-I", "-m", "venv", str(venv_root)],
         cwd=REPO_ROOT,
+        env=base_env,
         check=False,
     )
     if create_result.returncode != 0:
         return create_result.returncode
 
     venv_python = _venv_python(venv_root)
-    install_env = {**os.environ, "PIP_DISABLE_PIP_VERSION_CHECK": "1"}
+    install_env = _python_isolated_subprocess_env(PIP_ENVIRONMENT)
     bootstrap_result = subprocess.run(
         [
             str(venv_python),
+            "-I",
             "-m",
             "pip",
             "--isolated",
@@ -691,6 +695,7 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
         install_result = subprocess.run(
             [
                 str(venv_python),
+                "-I",
                 "-m",
                 "pip",
                 "--isolated",
@@ -706,10 +711,11 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
         if install_result.returncode != 0:
             return install_result.returncode
 
-    execution_env = {**os.environ, ISOLATED_ENV_FLAG: "1"}
+    execution_env = _python_isolated_subprocess_env({ISOLATED_ENV_FLAG: "1"})
     execution_result = subprocess.run(
         [
             str(venv_python),
+            "-I",
             str(REPO_ROOT / "scripts" / "license_ip_evidence.py"),
             args.command,
             "--runtime-requirements",
@@ -735,6 +741,13 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
         check=False,
     )
     return execution_result.returncode
+
+
+def _python_isolated_subprocess_env(extra: dict[str, str] | None = None) -> dict[str, str]:
+    env = {key: value for key, value in os.environ.items() if not key.upper().startswith("PYTHON")}
+    if extra:
+        env.update(extra)
+    return env
 
 
 def _venv_python(venv_root: Path) -> Path:

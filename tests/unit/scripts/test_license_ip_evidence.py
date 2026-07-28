@@ -41,6 +41,8 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     calls: list[tuple[list[str], dict[str, Any]]] = []
+    monkeypatch.setenv("PYTHONHOME", "ambient-python-home")
+    monkeypatch.setenv("PYTHONPATH", "ambient-python-path")
 
     def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append((command, kwargs))
@@ -54,8 +56,9 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     )
 
     assert result == 0
-    assert calls[0][0][1:3] == ["-m", "venv"]
-    assert calls[1][0][1:6] == [
+    assert calls[0][0][1:4] == ["-I", "-m", "venv"]
+    assert calls[1][0][1:7] == [
+        "-I",
         "-m",
         "pip",
         "--isolated",
@@ -64,7 +67,8 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     ]
     assert "--upgrade" in calls[1][0]
     assert calls[1][0][-2:] == list(PIP_BOOTSTRAP_PACKAGES)
-    assert calls[2][0][1:6] == [
+    assert calls[2][0][1:7] == [
+        "-I",
         "-m",
         "pip",
         "--isolated",
@@ -73,7 +77,8 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     ]
     assert calls[2][0][-2] == "-r"
     assert Path(calls[2][0][-1]).name == "requirements-prod.txt"
-    assert calls[3][0][1:6] == [
+    assert calls[3][0][1:7] == [
+        "-I",
         "-m",
         "pip",
         "--isolated",
@@ -82,11 +87,15 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     ]
     assert calls[3][0][-2] == "-r"
     assert Path(calls[3][0][-1]).name == "requirements-dev.txt"
-    assert calls[4][0][1].endswith("scripts/license_ip_evidence.py") or calls[4][0][1].endswith(
+    assert calls[4][0][1] == "-I"
+    assert calls[4][0][2].endswith("scripts/license_ip_evidence.py") or calls[4][0][2].endswith(
         "scripts\\license_ip_evidence.py"
     )
     assert "--no-isolation" in calls[4][0]
     assert calls[4][1]["env"][ISOLATED_ENV_FLAG] == "1"
+    for _, kwargs in calls:
+        assert "PYTHONHOME" not in kwargs["env"]
+        assert "PYTHONPATH" not in kwargs["env"]
 
 
 def test_isolated_license_inventory_stops_on_install_failure(
