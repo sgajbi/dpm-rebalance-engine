@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "7c430c29afa03ca1561d1d0172f9b2084180af6e708f5a0f2269dcb52e06631a"
+license-inventory-sha256 = "5b8857c651cc1584334e2c20fdc8bc63d618cb02a4ceafde2f1171aaa826d6c5"
 
 [[requirement-files]]
 group = "development"
