@@ -11,9 +11,9 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
 
-  # Ruff: Fast Python linter & formatter (matches requirements.txt v0.15.1)
+  # Ruff: Fast Python linter & formatter (matches requirements.txt)
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.1
+    rev: v0.16.0
     hooks:
       - id: ruff
         args: ["--fix"]
@@ -27,5 +27,5 @@ repos:
         args: ["--config-file", "mypy.ini"]
         pass_filenames: false
         additional_dependencies:
-          - "pydantic==2.11.9"
-          - "fastapi==0.129.0"
+          - "pydantic==2.13.4"
+          - "fastapi==0.140.8"
