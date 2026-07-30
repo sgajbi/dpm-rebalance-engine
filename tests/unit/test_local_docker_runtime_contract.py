@@ -80,7 +80,8 @@ def test_local_docker_compose_wires_required_workspace_postgres_dsn() -> None:
 
     assert (
         "WORKSPACE_POSTGRES_DSN=${WORKSPACE_POSTGRES_DSN:"
-        "-postgresql://advise:advise@postgres:5432/advise_supportability}" in compose_text
+        "-${PROPOSAL_POSTGRES_DSN:"
+        "-postgresql://advise:advise@postgres:5432/advise_supportability}}" in compose_text
     )
 
 
