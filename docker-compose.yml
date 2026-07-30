@@ -21,6 +21,7 @@ services:
       - DPM_SUPPORTABILITY_POSTGRES_DSN=${DPM_SUPPORTABILITY_POSTGRES_DSN:-postgresql://advise:advise@postgres:5432/advise_supportability}
       - PROPOSAL_STORE_BACKEND=${PROPOSAL_STORE_BACKEND:-POSTGRES}
       - PROPOSAL_POSTGRES_DSN=${PROPOSAL_POSTGRES_DSN:-postgresql://advise:advise@postgres:5432/advise_supportability}
+      - WORKSPACE_POSTGRES_DSN=${WORKSPACE_POSTGRES_DSN:-postgresql://advise:advise@postgres:5432/advise_supportability}
       - DPM_POLICY_PACK_CATALOG_BACKEND=${DPM_POLICY_PACK_CATALOG_BACKEND:-POSTGRES}
       - DPM_POLICY_PACK_POSTGRES_DSN=${DPM_POLICY_PACK_POSTGRES_DSN:-postgresql://advise:advise@postgres:5432/advise_supportability}
     extra_hosts:
@@ -65,7 +66,3 @@ services:
 
 volumes:
   advise-postgres-data:
-
-
-
-

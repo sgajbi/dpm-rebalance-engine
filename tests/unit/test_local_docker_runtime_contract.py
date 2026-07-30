@@ -75,6 +75,15 @@ def test_local_docker_compose_does_not_publish_internal_postgres_port() -> None:
     assert '"5432:5432"' not in compose_text
 
 
+def test_local_docker_compose_wires_required_workspace_postgres_dsn() -> None:
+    compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
+
+    assert (
+        "WORKSPACE_POSTGRES_DSN=${WORKSPACE_POSTGRES_DSN:"
+        "-postgresql://advise:advise@postgres:5432/advise_supportability}" in compose_text
+    )
+
+
 def test_readme_documents_canonical_local_docker_urls() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
 
