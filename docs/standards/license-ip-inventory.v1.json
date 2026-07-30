@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-28T23:19:39Z",
-  "git_commit_sha": "1e074ea512cd5a921188d7e8457bbe24aacccf55",
+  "generated_at_utc": "2026-07-30T11:20:06Z",
+  "git_commit_sha": "43bccb636806bb23b763da01d8c805cdfaedbb14",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -402,7 +402,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "3.32.0",
+      "installed_version": "3.32.2",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -410,7 +410,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "3.32.0"
+      "version": "3.32.2"
     },
     {
       "declared_name": "grimp",
