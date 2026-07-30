@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "b3d0d298d4491191280f6dfe1602786d2b25e714e189832e85e965d3fedfa6f9"
+license-inventory-sha256 = "dd250d4910fd92c38980847617da2f077dcd813e34b59d9de553ba2c8f3dc4b4"
 
 [[requirement-files]]
 group = "development"
@@ -203,7 +203,7 @@ requirement-hashes = ["8426aaee9575e65163756658195f8e9f6ac91d2710db9c7bb3f4dca0d
 
 [[package]]
 name = "filelock"
-version = "3.32.0"
+version = "3.32.2"
 direct = false
 groups = ["development"]
 requirement-files = []
