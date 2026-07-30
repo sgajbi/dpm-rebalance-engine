@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "dd250d4910fd92c38980847617da2f077dcd813e34b59d9de553ba2c8f3dc4b4"
+license-inventory-sha256 = "fb0035d7d7d3a7bb8e40c6424a678999195c42291db20d737a4fff4d372a07a6"
 
 [[requirement-files]]
 group = "development"
@@ -14,12 +14,12 @@ sha256 = "31b0b9cf56427eee34165f2da89a09879890631864afb81e764da5b7bb0f81c5"
 [[requirement-files]]
 group = "install"
 path = "requirements.txt"
-sha256 = "7abdb763960d037753a2bef2aac16d4cf22aa2462b76a5453185d711f687b94b"
+sha256 = "e627b3ae15599abcd49536a6c371e9a87d2dddfbf797c2f5a732534e4682bad2"
 
 [[requirement-files]]
 group = "runtime"
 path = "requirements-prod.txt"
-sha256 = "f07203f7ab915beba266068e13c0019e6f3419a9784b05e2303b7a3665473a75"
+sha256 = "b89acaff2f1d19e3a8b22500d7a7ec85c3bf2287691efbd891d80390fbefb794"
 
 [[package]]
 name = "annotated-doc"
@@ -194,12 +194,12 @@ requirement-hashes = ["f2e34bb219519b1a3f889bae70eecf9ed2d2b06629a3c8ce1c8d574ef
 
 [[package]]
 name = "fastapi"
-version = "0.140.13"
+version = "0.141.1"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["8426aaee9575e65163756658195f8e9f6ac91d2710db9c7bb3f4dca0de3407ec"]
+requirement-hashes = ["0f940ebfb8bf2679f96c96fe73fc7937362c493ff2666e33833d6975a87c958f"]
 
 [[package]]
 name = "filelock"
@@ -815,12 +815,12 @@ requirement-hashes = []
 
 [[package]]
 name = "uvicorn"
-version = "0.51.0"
+version = "0.52.0"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["2712ab0ea0287742c9baa6a8cab8c5dba1bdf7ddca138f7da1e09b8e82fc3ff9"]
+requirement-hashes = ["de023cb8c247e55ce5ba1656f61001ddc38b0f455a1d215ea7c5ddb093c2efe5"]
 
 [[package]]
 name = "vulture"
