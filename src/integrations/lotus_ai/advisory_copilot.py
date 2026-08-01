@@ -56,8 +56,14 @@ from src.integrations.lotus_ai.output_safety import (
     map_bounded_string_list,
     map_review_required_sections,
 )
-from src.integrations.lotus_ai.runtime_config import resolve_lotus_ai_base_url
-from src.integrations.lotus_ai.workflow_request import workflow_pack_environment
+from src.integrations.lotus_ai.runtime_config import (
+    LotusAITenantIdentityError,
+    resolve_lotus_ai_base_url,
+)
+from src.integrations.lotus_ai.workflow_request import (
+    workflow_pack_authenticated_headers,
+    workflow_pack_environment,
+)
 from src.integrations.lotus_ai.workflow_response import (
     extract_error_detail,
     extract_model_version,
@@ -150,6 +156,14 @@ def generate_advisory_copilot_draft_with_lotus_ai(
             requested_by=requested_by,
             reason=reason,
             model_approval=approval_decision.approval,
+        )
+    except LotusAITenantIdentityError as exc:
+        return build_advisory_copilot_unavailable_draft(
+            evidence_packet=evidence_packet,
+            fallback_reason=str(exc) or "LOTUS_AI_TENANT_ID_UNAVAILABLE",
+            caused_by=None,
+            model_approval=approval_decision.approval,
+            model_environment=environment,
         )
     except AdvisoryCopilotRuntimeBudgetExceeded as exc:
         return build_advisory_copilot_unavailable_draft(
@@ -264,9 +278,12 @@ def _post_workflow_pack_with_budget(
                 response = client.post(
                     f"{base_url}/platform/workflow-packs/execute",
                     json=request_payload,
+                    headers=workflow_pack_authenticated_headers(),
                 )
                 payload = response.json()
-                output_usage = advisory_copilot_payload_usage(payload)
+                output_usage = advisory_copilot_payload_usage(
+                    _workflow_pack_generated_output_payload(payload)
+                )
                 telemetry = advisory_copilot_runtime_budget_telemetry(
                     budget=runtime_budget,
                     attempt_count=attempt_count,
@@ -336,6 +353,17 @@ def _post_workflow_pack_with_budget(
     )
 
 
+def _workflow_pack_generated_output_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    execution = safe_dict(payload.get("execution"))
+    result = safe_dict(execution.get("result"))
+    if not result:
+        return payload
+    return {
+        "message": result.get("message"),
+        "structured_output": result.get("structured_output"),
+    }
+
+
 def _draft_from_workflow_response(
     *,
     evidence_packet: CopilotEvidencePacket,
@@ -381,8 +409,17 @@ def _draft_from_workflow_response(
         )
 
     result = safe_dict(execution.get("result"))
-    provider_id = extract_provider_id(result, max_length=MAX_COPILOT_LINEAGE_REF_LENGTH)
-    model_version = extract_model_version(result, max_length=MAX_COPILOT_LINEAGE_REF_LENGTH)
+    audit = safe_dict(execution.get("audit"))
+    provider_id = extract_provider_id(
+        result,
+        audit=audit,
+        max_length=MAX_COPILOT_LINEAGE_REF_LENGTH,
+    )
+    model_version = extract_model_version(
+        result,
+        audit=audit,
+        max_length=MAX_COPILOT_LINEAGE_REF_LENGTH,
+    )
     response_model_decision = validate_advisory_copilot_model_response(
         expected_approval=model_approval,
         provider_id=provider_id,
@@ -508,10 +545,7 @@ def _draft_from_completed_workflow_output(
                 payload,
                 max_length=MAX_COPILOT_LINEAGE_REF_LENGTH,
             ),
-            model_version=extract_model_version(
-                result,
-                max_length=MAX_COPILOT_LINEAGE_REF_LENGTH,
-            ),
+            model_version=model_version,
             provider_id=provider_id,
             model_approval=model_approval,
             model_environment=model_environment,

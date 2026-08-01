@@ -27,7 +27,10 @@ from src.integrations.lotus_ai.runtime_config import (
     LotusAITenantIdentityError,
     resolve_lotus_ai_base_url,
 )
-from src.integrations.lotus_ai.workflow_request import build_workflow_pack_execute_request
+from src.integrations.lotus_ai.workflow_request import (
+    build_workflow_pack_execute_request,
+    workflow_pack_authenticated_headers,
+)
 from src.integrations.lotus_ai.workflow_response import (
     extract_model_version,
     extract_workflow_run_id,
@@ -89,6 +92,7 @@ def _post_workflow_pack_request(
             response = client.post(
                 f"{base_url}/platform/workflow-packs/execute",
                 json=request_payload,
+                headers=workflow_pack_authenticated_headers(),
             )
             payload = safe_dict(response.json())
     except (httpx.HTTPError, ValueError) as exc:

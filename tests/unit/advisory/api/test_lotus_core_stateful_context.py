@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 from src.core.advisory_engine import run_proposal_simulation
+from src.core.common.canonical import hash_canonical_payload
 from src.core.models import (
     EngineOptions,
     MarketDataSnapshot,
@@ -883,6 +884,71 @@ def test_resolve_stateful_context_preserves_upstream_source_provenance(monkeypat
     lineage_payload = result.lineage.model_dump(mode="json")
     assert "positions" not in str(lineage_payload)
     assert "cash_accounts" not in str(lineage_payload)
+
+
+def test_resolve_stateful_context_accepts_componentized_market_data_hashes(monkeypatch) -> None:
+    from src.core.workspace.models import WorkspaceStatefulInput
+
+    base_url = "http://host.docker.internal:8201"
+    control_plane_base_url = "http://host.docker.internal:8202"
+    monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", control_plane_base_url)
+    positions_hash = "sha256:positions-source"
+    cash_hash = "sha256:cash-source"
+    responses = {
+        ("GET", f"{base_url}/portfolios/PB_SG_GLOBAL_BAL_001"): _FakeResponse(
+            {
+                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "base_currency": "USD",
+            }
+        ),
+        ("GET", f"{base_url}/portfolios/PB_SG_GLOBAL_BAL_001/positions"): _FakeResponse(
+            {
+                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "snapshot_id": "holdings_as_of:positions",
+                "content_hash": positions_hash,
+                "generated_at": "2026-08-01T11:46:22.074848Z",
+                "freshness_status": "CURRENT",
+                "positions": [],
+            }
+        ),
+        ("GET", f"{base_url}/portfolios/PB_SG_GLOBAL_BAL_001/cash-balances"): _FakeResponse(
+            {
+                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "resolved_as_of_date": "2026-04-10",
+                "snapshot_id": "holdings_as_of_cash_balances:cash",
+                "content_hash": cash_hash,
+                "generated_at": "2026-08-01T11:46:22.097731Z",
+                "freshness_status": "CURRENT",
+                "cash_accounts": [],
+            }
+        ),
+    }
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.stateful_context.httpx.Client",
+        lambda timeout: _FakeClient(responses),
+    )
+
+    resolved = resolve_stateful_context_with_lotus_core(
+        WorkspaceStatefulInput(portfolio_id="PB_SG_GLOBAL_BAL_001", as_of="2026-04-10")
+    )
+
+    provenance = resolved.resolved_context.source_provenance
+    assert provenance is not None
+    expected_market_hash = hash_canonical_payload(
+        {
+            "source_system": "LOTUS_CORE",
+            "source_kind": "MARKET_DATA",
+            "component_hashes": sorted([positions_hash, cash_hash]),
+        }
+    )
+    assert provenance.market_data.source_hash == expected_market_hash
+    assert provenance.market_data.source_id == (
+        f"lotus-core:market-data:PB_SG_GLOBAL_BAL_001:2026-04-10:{expected_market_hash}"
+    )
+    assert provenance.market_data.valuation_timestamp == "2026-08-01T11:46:22.097731Z"
+    assert provenance.market_data.freshness_status == "CURRENT"
+    assert resolved.resolved_context.market_data_snapshot_id == provenance.market_data.source_id
 
 
 def test_lotus_core_source_completeness_counts_rejections_without_raw_payloads() -> None:

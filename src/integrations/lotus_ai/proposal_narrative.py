@@ -21,7 +21,10 @@ from src.integrations.lotus_ai.output_safety import (
     map_review_required_sections,
 )
 from src.integrations.lotus_ai.runtime_config import resolve_lotus_ai_base_url
-from src.integrations.lotus_ai.workflow_request import build_workflow_pack_execute_request
+from src.integrations.lotus_ai.workflow_request import (
+    build_workflow_pack_execute_request,
+    workflow_pack_authenticated_headers,
+)
 from src.integrations.lotus_ai.workflow_response import (
     extract_error_detail,
     extract_model_version,
@@ -63,6 +66,7 @@ def generate_proposal_narrative_draft_with_lotus_ai(
             response = client.post(
                 f"{base_url}/platform/workflow-packs/execute",
                 json=request_payload,
+                headers=workflow_pack_authenticated_headers(),
             )
             payload = response.json()
     except (httpx.HTTPError, ValueError) as exc:

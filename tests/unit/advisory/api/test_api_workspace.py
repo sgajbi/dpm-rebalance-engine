@@ -2163,9 +2163,17 @@ class _FakeLotusAIClient:
     def __exit__(self, exc_type, exc, tb):  # noqa: ANN001, ANN201
         return False
 
-    def post(self, url: str, json: dict[str, Any]) -> _FakeLotusAIResponse:
+    def post(
+        self,
+        url: str,
+        json: dict[str, Any],
+        headers: dict[str, str] | None = None,
+    ) -> _FakeLotusAIResponse:
         self._record["url"] = url
         self._record["json"] = json
+        self._record["headers"] = headers
+        if headers != {"X-Caller-App": "lotus-advise"}:
+            raise AssertionError(f"unexpected authenticated caller headers: {headers}")
         response = self._responses.get(url)
         if response is None:
             raise AssertionError(f"unexpected request url: {url}")

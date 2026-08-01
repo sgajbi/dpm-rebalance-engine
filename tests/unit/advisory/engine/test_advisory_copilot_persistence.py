@@ -119,7 +119,10 @@ from src.core.advisory_copilot.run_review_policy import (
 from src.core.advisory_copilot.service import (
     persist_advisory_copilot_run as service_persist_advisory_copilot_run,
 )
-from src.core.advisory_copilot.structured_payload import assert_safe_structured_payload
+from src.core.advisory_copilot.structured_payload import (
+    assert_safe_lineage_payload,
+    assert_safe_structured_payload,
+)
 from src.infrastructure.advisory_copilot import InMemoryAdvisoryCopilotRepository
 from src.infrastructure.advisory_copilot.postgres import PostgresAdvisoryCopilotRepository
 
@@ -334,6 +337,18 @@ def test_advisory_copilot_structured_payload_safety_has_focused_owner() -> None:
     assert_safe_structured_payload({"business_reason": "Prepare advisor review."})
     with pytest.raises(ValueError, match="COPILOT_RAW_AI_PAYLOAD_NOT_ALLOWED"):
         assert_safe_structured_payload({"raw-prompt": "provider payload"})
+    assert_safe_lineage_payload(
+        {
+            "runtime_budget_telemetry": {
+                "input_token_estimate": 1200,
+                "output_token_estimate": 220,
+                "max_prompt_tokens": 8000,
+                "fallback_reason": "COPILOT_AI_PROMPT_TOKEN_BUDGET_EXHAUSTED",
+            }
+        }
+    )
+    with pytest.raises(ValueError, match="COPILOT_RAW_AI_PAYLOAD_NOT_ALLOWED"):
+        assert_safe_lineage_payload({"raw_payload": "source provider detail"})
 
 
 def test_advisory_copilot_run_request_hashing_has_focused_owner() -> None:
@@ -849,6 +864,35 @@ def test_persisted_copilot_run_is_replayable_and_excludes_raw_prompt() -> None:
     )
     assert result.run.retention_expires_at is not None
     assert result.run.retention_expires_at.year == 2033
+
+
+def test_persisted_copilot_run_accepts_governed_runtime_budget_lineage() -> None:
+    repository = InMemoryAdvisoryCopilotRepository()
+
+    result = _persist_run(
+        repository,
+        lineage={
+            "workflow_pack_id": "advisory_copilot_proposal_explanation.pack",
+            "workflow_pack_version": "v1",
+            "workflow_run_id": "packrun_copilot_001",
+            "model_provider_id": "lotus-ai",
+            "model_version": "lotus-ai-governed-model.v1",
+            "runtime_budget_telemetry": {
+                "contract_version": "advisory-copilot-runtime-budget.v1",
+                "input_token_estimate": 1200,
+                "output_token_estimate": 220,
+                "max_prompt_tokens": 8000,
+                "max_completion_tokens": 1200,
+                "max_total_tokens": 9200,
+                "fallback_reason": "COPILOT_AI_PROMPT_TOKEN_BUDGET_EXHAUSTED",
+            },
+        },
+        idempotency_key="copilot-action-runtime-budget-lineage-001",
+    )
+
+    telemetry = result.run.lineage_json["runtime_budget_telemetry"]
+    assert telemetry["input_token_estimate"] == 1200
+    assert telemetry["fallback_reason"] == "COPILOT_AI_PROMPT_TOKEN_BUDGET_EXHAUSTED"
 
 
 def test_persisted_copilot_run_stores_claim_grounding_audit_posture() -> None:

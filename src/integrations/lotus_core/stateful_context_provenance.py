@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal, cast
 
+from src.core.common.canonical import hash_canonical_payload
 from src.core.source_provenance_models import (
     SourceFreshnessStatus,
     SourceProvenanceEnvelope,
@@ -13,6 +14,12 @@ from src.integrations.lotus_core.contracts import ADVISORY_SIMULATION_CONTRACT_V
 
 _SOURCE_SYSTEM = "LOTUS_CORE"
 _FRESHNESS_VALUES: set[SourceFreshnessStatus] = {"CURRENT", "STALE", "PARTIAL", "UNKNOWN"}
+_FRESHNESS_PRECEDENCE: tuple[SourceFreshnessStatus, ...] = (
+    "STALE",
+    "PARTIAL",
+    "UNKNOWN",
+    "CURRENT",
+)
 
 
 @dataclass(frozen=True)
@@ -53,6 +60,9 @@ def build_lotus_core_source_provenance(
         metadata_payloads=(positions_payload, cash_payload),
         id_keys=("market_data_snapshot_id", "valuation_snapshot_id"),
         fallback_payload=positions_payload,
+        allow_component_hashes=True,
+        aggregate_freshness=True,
+        aggregate_latest_timestamp=True,
     )
     return SourceProvenanceEnvelope(
         source_system=_SOURCE_SYSTEM,
@@ -77,6 +87,9 @@ def _source_identity(
     metadata_payloads: tuple[dict[str, Any], ...],
     id_keys: tuple[str, ...],
     fallback_payload: dict[str, Any],
+    allow_component_hashes: bool = False,
+    aggregate_freshness: bool = False,
+    aggregate_latest_timestamp: bool = False,
 ) -> _SourceIdentity:
     source_version = _consistent_payload_text(
         source_kind,
@@ -93,18 +106,18 @@ def _source_identity(
         metadata_payloads,
         keys=("source_batch_id", "batch_id", "ingestion_batch_id"),
     )
-    source_hash = _consistent_payload_text(
+    source_hash = _source_hash(
         source_kind,
         metadata_payloads,
-        keys=("source_hash", "content_hash", "snapshot_hash"),
+        allow_component_hashes=allow_component_hashes,
     )
-    valuation_timestamp = _consistent_payload_text(
+    valuation_timestamp = _valuation_timestamp(
         source_kind,
         metadata_payloads,
-        keys=("valuation_timestamp", "valuation_as_of", "source_generated_at", "generated_at"),
+        aggregate_latest_timestamp=aggregate_latest_timestamp,
     )
     explicit_source_id = _consistent_payload_text(source_kind, identity_payloads, keys=id_keys)
-    if explicit_source_id is None:
+    if explicit_source_id is None and not allow_component_hashes:
         explicit_source_id = _normalized_text(fallback_payload.get("snapshot_id"))
     source_id = explicit_source_id or _fallback_source_id(
         fallback_id=fallback_id,
@@ -123,8 +136,51 @@ def _source_identity(
         freshness_status=_freshness_status(
             source_kind=source_kind,
             payloads=metadata_payloads,
+            aggregate=aggregate_freshness,
         ),
     )
+
+
+def _source_hash(
+    source_kind: Literal["PORTFOLIO", "MARKET_DATA"],
+    payloads: tuple[dict[str, Any], ...],
+    *,
+    allow_component_hashes: bool,
+) -> str | None:
+    values = _payload_text_values(
+        source_kind,
+        payloads,
+        keys=("source_hash", "content_hash", "snapshot_hash"),
+    )
+    if len(values) <= 1:
+        return next(iter(values), None)
+    if not allow_component_hashes:
+        raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
+    return hash_canonical_payload(
+        {
+            "source_system": _SOURCE_SYSTEM,
+            "source_kind": source_kind,
+            "component_hashes": values,
+        }
+    )
+
+
+def _valuation_timestamp(
+    source_kind: Literal["PORTFOLIO", "MARKET_DATA"],
+    payloads: tuple[dict[str, Any], ...],
+    *,
+    aggregate_latest_timestamp: bool,
+) -> str | None:
+    values = _payload_text_values(
+        source_kind,
+        payloads,
+        keys=("valuation_timestamp", "valuation_as_of", "source_generated_at", "generated_at"),
+    )
+    if len(values) <= 1:
+        return next(iter(values), None)
+    if aggregate_latest_timestamp:
+        return max(values)
+    raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
 
 
 def _record(
@@ -154,15 +210,29 @@ def _consistent_payload_text(
     *,
     keys: tuple[str, ...],
 ) -> str | None:
-    values = {
-        value
-        for payload in payloads
-        for key in keys
-        if (value := _normalized_text(payload.get(key))) is not None
-    }
+    values = _payload_text_values(source_kind, payloads, keys=keys)
     if len(values) > 1:
         raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
     return next(iter(values), None)
+
+
+def _payload_text_values(
+    source_kind: Literal["PORTFOLIO", "MARKET_DATA"],
+    payloads: tuple[dict[str, Any], ...],
+    *,
+    keys: tuple[str, ...],
+) -> tuple[str, ...]:
+    del source_kind
+    return tuple(
+        sorted(
+            {
+                value
+                for payload in payloads
+                for key in keys
+                if (value := _normalized_text(payload.get(key))) is not None
+            }
+        )
+    )
 
 
 def _fallback_source_id(
@@ -183,7 +253,24 @@ def _freshness_status(
     *,
     source_kind: Literal["PORTFOLIO", "MARKET_DATA"],
     payloads: tuple[dict[str, Any], ...],
+    aggregate: bool = False,
 ) -> SourceFreshnessStatus:
+    values = tuple(
+        cast(SourceFreshnessStatus, value.upper())
+        for value in _payload_text_values(
+            source_kind,
+            payloads,
+            keys=("freshness_status", "valuation_freshness_status"),
+        )
+        if value.upper() in _FRESHNESS_VALUES
+    )
+    if not values:
+        return "UNKNOWN"
+    if aggregate:
+        for freshness in _FRESHNESS_PRECEDENCE:
+            if freshness in values:
+                return freshness
+        return "UNKNOWN"
     value = _consistent_payload_text(
         source_kind,
         payloads,

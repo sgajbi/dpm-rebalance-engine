@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from datetime import UTC, date, datetime
 from typing import Any, Literal, cast
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -12,6 +13,7 @@ from src.core.proposals.exceptions import ProposalValidationError
 POLICY_EVALUATION_RECEIPT_IDENTITY_CONTRACT_VERSION = (
     "rfc0002.policy-evaluation-receipt-identity.v1"
 )
+_VOLATILE_TRUSTED_PRINCIPAL_FIELDS = {"correlation_id", "trace_id"}
 
 
 class PolicyEvaluationReceiptScopeIdentity(BaseModel):
@@ -148,17 +150,14 @@ def receipt_identity_from_record(record: Any) -> PolicyEvaluationReceiptIdentity
 
 
 def idempotency_stable_reason(reason: dict[str, Any]) -> dict[str, Any]:
-    stable = dict(reason)
-    trusted_principal = stable.get("trusted_principal")
-    if isinstance(trusted_principal, dict):
-        stable["trusted_principal"] = {
-            key: value for key, value in trusted_principal.items() if key != "trace_id"
-        }
+    stable = deepcopy(reason)
+    _strip_volatile_trusted_principal_fields(stable)
     return stable
 
 
 def replay_safe_reason(reason: dict[str, Any]) -> dict[str, Any]:
-    safe_reason = dict(reason)
+    safe_reason = deepcopy(reason)
+    safe_reason.pop("system_repair_intent", None)
     trusted_principal = safe_reason.get("trusted_principal")
     if isinstance(trusted_principal, dict):
         safe_reason["trusted_principal"] = {
@@ -170,6 +169,22 @@ def replay_safe_reason(reason: dict[str, Any]) -> dict[str, Any]:
             },
         }
     return safe_reason
+
+
+def _strip_volatile_trusted_principal_fields(value: Any) -> None:
+    if isinstance(value, dict):
+        trusted_principal = value.get("trusted_principal")
+        if isinstance(trusted_principal, dict):
+            value["trusted_principal"] = {
+                key: nested_value
+                for key, nested_value in trusted_principal.items()
+                if key not in _VOLATILE_TRUSTED_PRINCIPAL_FIELDS
+            }
+        for nested_value in value.values():
+            _strip_volatile_trusted_principal_fields(nested_value)
+    elif isinstance(value, list):
+        for item in value:
+            _strip_volatile_trusted_principal_fields(item)
 
 
 def _trusted_principal(reason: dict[str, Any]) -> dict[str, Any]:

@@ -12,6 +12,7 @@ def test_local_docker_compose_uses_canonical_upstream_urls() -> None:
         in compose_text
     )
     assert "LOTUS_RISK_BASE_URL=${LOTUS_RISK_BASE_URL:-http://risk.dev.lotus}" in compose_text
+    assert "LOTUS_ADVISE_TENANT_ID=${LOTUS_ADVISE_TENANT_ID:-tenant-sg-001}" in compose_text
     assert '"core-control.dev.lotus:host-gateway"' in compose_text
     assert '"core-query.dev.lotus:host-gateway"' in compose_text
     assert '"risk.dev.lotus:host-gateway"' in compose_text
@@ -134,6 +135,7 @@ def test_production_compose_is_environment_neutral_and_secret_safe() -> None:
         "LOTUS_RISK_BASE_URL=${LOTUS_RISK_BASE_URL:?",
         "LOTUS_REPORT_BASE_URL=${LOTUS_REPORT_BASE_URL:?",
         "LOTUS_AI_BASE_URL=${LOTUS_AI_BASE_URL:?",
+        "LOTUS_ADVISE_TENANT_ID=${LOTUS_ADVISE_TENANT_ID:?",
         "PROPOSAL_POSTGRES_DSN=${PROPOSAL_POSTGRES_DSN:?",
         "POLICY_POSTGRES_DSN=${POLICY_POSTGRES_DSN:?",
         "WORKSPACE_POSTGRES_DSN=${WORKSPACE_POSTGRES_DSN:?",

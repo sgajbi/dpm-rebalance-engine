@@ -319,6 +319,106 @@ def test_stateful_create_can_request_advisor_review_narrative(monkeypatch):
     assert body["version"]["evidence_bundle"]["context_resolution"]["input_mode"] == "stateful"
 
 
+def test_stateful_create_idempotency_replays_same_command_without_source_reresolution(monkeypatch):
+    resolver_calls: list[str] = []
+
+    def _resolve(stateful_input):  # noqa: ANN001
+        resolver_calls.append(stateful_input.portfolio_id)
+        resolved = _resolved_stateful_context(
+            portfolio_id=stateful_input.portfolio_id,
+            as_of=stateful_input.as_of,
+        )
+        volatile_snapshot_id = f"md_{stateful_input.as_of}_volatile_{len(resolver_calls)}"
+        resolved["resolved_context"]["market_data_snapshot_id"] = volatile_snapshot_id
+        resolved["simulate_request"]["market_data_snapshot"]["snapshot_id"] = volatile_snapshot_id
+        return resolved
+
+    monkeypatch.setattr(
+        "src.api.main.resolve_lotus_core_advisory_context",
+        _resolve,
+        raising=False,
+    )
+    payload = {
+        "created_by": "advisor_1",
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": "pf_stateful_idempotent_001",
+            "as_of": "2026-03-25",
+            "mandate_id": "mandate_stateful_idempotent_001",
+        },
+        "metadata": {
+            "title": "Stateful idempotency proposal",
+            "advisor_notes": "Replay should not re-resolve volatile source context",
+            "jurisdiction": "SG",
+        },
+    }
+
+    with TestClient(app) as client:
+        first = client.post(
+            "/advisory/proposals",
+            json=payload,
+            headers={"Idempotency-Key": "lifecycle-create-stateful-idempotent"},
+        )
+        replay = client.post(
+            "/advisory/proposals",
+            json=payload,
+            headers={"Idempotency-Key": "lifecycle-create-stateful-idempotent"},
+        )
+
+    assert first.status_code == 200
+    assert replay.status_code == 200
+    assert replay.json() == first.json()
+    assert resolver_calls == ["pf_stateful_idempotent_001"]
+
+
+def test_stateful_create_idempotency_rejects_changed_command_before_source_reresolution(
+    monkeypatch,
+):
+    resolver_calls: list[str] = []
+
+    def _resolve(stateful_input):  # noqa: ANN001
+        resolver_calls.append(stateful_input.portfolio_id)
+        return _resolved_stateful_context(
+            portfolio_id=stateful_input.portfolio_id,
+            as_of=stateful_input.as_of,
+        )
+
+    monkeypatch.setattr(
+        "src.api.main.resolve_lotus_core_advisory_context",
+        _resolve,
+        raising=False,
+    )
+    payload = {
+        "created_by": "advisor_1",
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": "pf_stateful_idempotent_conflict",
+            "as_of": "2026-03-25",
+        },
+        "metadata": {
+            "title": "Original stateful command",
+            "jurisdiction": "SG",
+        },
+    }
+
+    with TestClient(app) as client:
+        first = client.post(
+            "/advisory/proposals",
+            json=payload,
+            headers={"Idempotency-Key": "lifecycle-create-stateful-idempotent-conflict"},
+        )
+        conflict = client.post(
+            "/advisory/proposals",
+            json=payload | {"metadata": payload["metadata"] | {"title": "Changed command"}},
+            headers={"Idempotency-Key": "lifecycle-create-stateful-idempotent-conflict"},
+        )
+
+    assert first.status_code == 200
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"] == "IDEMPOTENCY_KEY_CONFLICT: request hash mismatch"
+    assert resolver_calls == ["pf_stateful_idempotent_conflict"]
+
+
 def test_stateful_simulate_and_create_share_warm_lotus_core_context(monkeypatch):
     base_url = "http://host.docker.internal:8201"
     monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)

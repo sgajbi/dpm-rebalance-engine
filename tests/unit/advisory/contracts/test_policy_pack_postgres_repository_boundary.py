@@ -88,10 +88,14 @@ def test_policy_pack_postgres_state_helper_guards_transactional_writes() -> None
     assert "connection.rollback()" in source
     assert "POLICY_EVALUATION_IDEMPOTENCY_KEY_CONFLICT" in source
     assert "POLICY_PACK_IDEMPOTENCY_KEY_CONFLICT" in source
-    assert "policy_evaluation_idempotency.request_hash = excluded.request_hash" in source
+    assert "request_hash=excluded.request_hash" in source
     assert "policy_pack_catalog_idempotency.request_hash = excluded.request_hash" in source
     assert "policy_evaluation_audit_events.request_hash = excluded.request_hash" in source
     assert "policy_pack_catalog_audit_events.request_hash = excluded.request_hash" in source
+    assert "old_record.evaluation_status = 'BLOCKED'" in source
+    assert "new_record.evaluation_status <> 'BLOCKED'" in source
+    assert "POLICY_APPLICABILITY_LEGAL_ENTITY_SOURCE_MISSING" in source
+    assert "'{replay_metadata_json,creation_reason}'" in source
     assert "SELECT COUNT(*) FROM policy_evaluation_audit_events" in " ".join(source.split())
     assert "SELECT COUNT(*) FROM policy_pack_catalog_audit_events" in " ".join(source.split())
 
