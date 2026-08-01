@@ -239,12 +239,52 @@ def _upsert_policy_evaluation_idempotency(
             created_at
         ) VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT (idempotency_key) DO UPDATE SET
-            request_hash=policy_evaluation_idempotency.request_hash,
-            evaluation_id=policy_evaluation_idempotency.evaluation_id,
-            event_id=policy_evaluation_idempotency.event_id
-        WHERE policy_evaluation_idempotency.request_hash = excluded.request_hash
-          AND policy_evaluation_idempotency.evaluation_id = excluded.evaluation_id
-          AND policy_evaluation_idempotency.event_id = excluded.event_id
+            request_hash=excluded.request_hash,
+            evaluation_id=excluded.evaluation_id,
+            event_id=excluded.event_id
+        WHERE (
+            policy_evaluation_idempotency.request_hash = excluded.request_hash
+            AND policy_evaluation_idempotency.evaluation_id = excluded.evaluation_id
+            AND policy_evaluation_idempotency.event_id = excluded.event_id
+        )
+        OR EXISTS (
+            SELECT 1
+            FROM policy_evaluation_records old_record
+            JOIN policy_evaluation_records new_record
+              ON new_record.evaluation_id = excluded.evaluation_id
+            WHERE old_record.evaluation_id = policy_evaluation_idempotency.evaluation_id
+              AND old_record.evaluation_status = 'BLOCKED'
+              AND new_record.evaluation_status <> 'BLOCKED'
+              AND old_record.proposal_id = new_record.proposal_id
+              AND old_record.proposal_version_id = new_record.proposal_version_id
+              AND old_record.portfolio_id = new_record.portfolio_id
+              AND old_record.policy_pack_id = new_record.policy_pack_id
+              AND old_record.policy_version = new_record.policy_version
+              AND old_record.record_json::jsonb #> '{replay_metadata_json,creation_reason}'
+                  = new_record.record_json::jsonb #> '{replay_metadata_json,creation_reason}'
+              AND COALESCE(
+                  (old_record.record_json::jsonb #> '{source_gaps}') ? 'legal_entity_code',
+                  false
+              )
+              AND COALESCE(
+                  (
+                      old_record.record_json::jsonb
+                      #> '{evaluation_json,applicability,reason_codes}'
+                  ) ? 'POLICY_APPLICABILITY_LEGAL_ENTITY_SOURCE_MISSING',
+                  false
+              )
+              AND NOT COALESCE(
+                  (new_record.record_json::jsonb #> '{source_gaps}') ? 'legal_entity_code',
+                  false
+              )
+              AND NOT COALESCE(
+                  (
+                      new_record.record_json::jsonb
+                      #> '{evaluation_json,applicability,reason_codes}'
+                  ) ? 'POLICY_APPLICABILITY_LEGAL_ENTITY_SOURCE_MISSING',
+                  false
+              )
+        )
         """,
         (
             idempotency["idempotency_key"],

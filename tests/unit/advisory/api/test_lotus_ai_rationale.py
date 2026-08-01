@@ -57,9 +57,16 @@ class _FakeClient:
     def __exit__(self, exc_type, exc, tb) -> bool:  # noqa: ANN001
         return False
 
-    def post(self, url: str, json: dict[str, object]) -> _FakeResponse:
+    def post(
+        self,
+        url: str,
+        json: dict[str, object],
+        headers: dict[str, str] | None = None,
+    ) -> _FakeResponse:
         if self._raised_error is not None:
             raise self._raised_error
+        if headers != {"X-Caller-App": "lotus-advise"}:
+            raise AssertionError(f"unexpected authenticated caller headers: {headers}")
         response = self._responses.get(url)
         if response is None:
             raise AssertionError(f"unexpected request url: {url}")

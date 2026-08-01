@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import UTC, datetime
 from types import SimpleNamespace
 
+import pytest
 from fastapi.testclient import TestClient
 
 from src.api.main import app
+from src.api.proposals import router as proposals_router
 from src.api.proposals.policy_control_principal import (
     ADVISOR_ROLE,
     COMPLIANCE_REVIEWER_ROLE,
@@ -39,12 +42,16 @@ from src.core.policy_packs.ai_models import (
     PolicyAiEvidenceDraft,
 )
 from src.core.policy_packs.workflow_projection import workflow_lineage_metadata
+from src.core.proposals.models import ProposalRecord, ProposalVersionRecord
 from src.core.proposals.response_models import ProposalReportResponse
+from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
 from src.integrations.lotus_report import LotusReportUnavailableError
 from src.runtime.policy_evaluation_clients import (
     set_policy_ai_evidence_client_for_tests,
     set_policy_report_package_client_for_tests,
 )
+
+NOW = datetime(2026, 5, 26, 9, 0, tzinfo=UTC)
 
 
 class _FakePolicyReportPackageClient:
@@ -135,6 +142,54 @@ def _base_evidence_bundle() -> dict:
         },
         "conflict_evidence": {"material_conflict": False, "review_ref": "conflict-review-001"},
     }
+
+
+def _proposal_bound_evidence_bundle(*, as_of: str = "2026-05-26") -> dict:
+    evidence = _base_evidence_bundle()
+    evidence["context_resolution"].pop("as_of_date", None)
+    evidence["context_resolution"]["resolved_context"] = {
+        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+        "as_of": as_of,
+    }
+    evidence["inputs"]["portfolio_snapshot"].pop("as_of_date", None)
+    evidence["inputs"]["market_data_snapshot"].pop("as_of_date", None)
+    return evidence
+
+
+def _proposal_repository_with_version(
+    *,
+    proposal_id: str,
+    proposal_version_id: str,
+    evidence_bundle: dict,
+) -> InMemoryProposalRepository:
+    repository = InMemoryProposalRepository()
+    repository.create_proposal(
+        ProposalRecord(
+            proposal_id=proposal_id,
+            portfolio_id="PB_SG_GLOBAL_BAL_001",
+            created_by="advisor_1",
+            created_at=NOW,
+            last_event_at=NOW,
+            current_state="DRAFT",
+            current_version_no=1,
+        )
+    )
+    repository.create_version(
+        ProposalVersionRecord(
+            proposal_version_id=proposal_version_id,
+            proposal_id=proposal_id,
+            version_no=1,
+            created_at=NOW,
+            request_hash="sha256:proposal-request",
+            artifact_hash="sha256:proposal-artifact",
+            simulation_hash="sha256:proposal-simulation",
+            status_at_creation="READY",
+            proposal_result_json={"status": "READY"},
+            artifact_json={"artifact_id": "proposal-artifact"},
+            evidence_bundle_json=evidence_bundle,
+        )
+    )
+    return repository
 
 
 def _create_payload(evidence: dict | None = None) -> dict:
@@ -437,6 +492,116 @@ def test_policy_sign_off_maker_checker_uses_trusted_principal_identity() -> None
         assert same_actor_signoff.json()["detail"] == (
             "POLICY_EVALUATION_SIGN_OFF_REQUIRES_MAKER_CHECKER"
         )
+
+
+def test_policy_evaluation_binds_missing_source_as_of_from_proposal_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    proposal_id = "pp_policy_bound_context"
+    proposal_version_id = "ppv_policy_bound_context"
+    repository = _proposal_repository_with_version(
+        proposal_id=proposal_id,
+        proposal_version_id=proposal_version_id,
+        evidence_bundle=_proposal_bound_evidence_bundle(as_of="2026-05-26"),
+    )
+    monkeypatch.setattr(proposals_router, "get_proposal_repository", lambda: repository)
+    payload = _create_payload()
+    payload["evidence_bundle"]["context_resolution"].pop("as_of_date", None)
+    payload["evidence_bundle"]["inputs"]["portfolio_snapshot"].pop("as_of_date", None)
+    payload["evidence_bundle"]["inputs"]["market_data_snapshot"].pop("as_of_date", None)
+
+    with TestClient(app) as client:
+        response = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/{proposal_version_id}/policy-evaluations",
+            json=payload,
+            headers=_policy_evaluation_create_headers(
+                proposal_id=proposal_id,
+                idempotency_key="api-policy-eval-bound-context",
+            ),
+        )
+
+    assert response.status_code == 200
+    record = response.json()["record"]
+    assert record["replay_metadata_json"]["as_of_date"] == "2026-05-26"
+    assert record["source_evidence_hash"].startswith("sha256:")
+
+
+def test_policy_evaluation_rejects_request_source_date_drift_from_proposal_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    proposal_id = "pp_policy_bound_context_drift"
+    proposal_version_id = "ppv_policy_bound_context_drift"
+    repository = _proposal_repository_with_version(
+        proposal_id=proposal_id,
+        proposal_version_id=proposal_version_id,
+        evidence_bundle=_proposal_bound_evidence_bundle(as_of="2026-05-26"),
+    )
+    monkeypatch.setattr(proposals_router, "get_proposal_repository", lambda: repository)
+    payload = _create_payload()
+    payload["evidence_bundle"]["context_resolution"]["as_of_date"] = "2026-05-27"
+    payload["evidence_bundle"]["inputs"]["portfolio_snapshot"]["as_of_date"] = "2026-05-27"
+    payload["evidence_bundle"]["inputs"]["market_data_snapshot"]["as_of_date"] = "2026-05-27"
+
+    with TestClient(app) as client:
+        response = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/{proposal_version_id}/policy-evaluations",
+            json=payload,
+            headers=_policy_evaluation_create_headers(
+                proposal_id=proposal_id,
+                idempotency_key="api-policy-eval-bound-context-drift",
+            ),
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "POLICY_EVALUATION_SOURCE_AS_OF_DATE_MISMATCH"
+
+
+def test_policy_evaluation_binds_missing_legal_entity_from_trusted_principal() -> None:
+    payload = _sg_pending_payload()
+    payload["evidence_bundle"]["context_resolution"]["advisory_policy_context"].pop(
+        "legal_entity_code"
+    )
+
+    with TestClient(app) as client:
+        _activate_sg_pack(client)
+        response = client.post(
+            "/advisory/proposals/pp_policy_trusted_legal/versions/"
+            "ppv_policy_trusted_legal/policy-evaluations",
+            json=payload,
+            headers=_policy_evaluation_create_headers(
+                proposal_id="pp_policy_trusted_legal",
+                idempotency_key="api-policy-eval-trusted-legal",
+            ),
+        )
+
+    assert response.status_code == 200
+    record = response.json()["record"]
+    assert record["evaluation_status"] == "PENDING_REVIEW"
+    assert (
+        record["evaluation_json"]["applicability"]["matched_selectors"]["legal_entity_code"]
+        == "REFERENCE"
+    )
+
+
+def test_policy_evaluation_rejects_legal_entity_body_scope_drift() -> None:
+    payload = _sg_pending_payload()
+    payload["evidence_bundle"]["context_resolution"]["advisory_policy_context"][
+        "legal_entity_code"
+    ] = "OTHER_ENTITY"
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/advisory/proposals/pp_policy_legal_drift/versions/"
+            "ppv_policy_legal_drift/policy-evaluations",
+            json=payload,
+            headers=_policy_evaluation_create_headers(
+                proposal_id="pp_policy_legal_drift",
+                idempotency_key="api-policy-eval-legal-drift",
+            ),
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == POLICY_CONTROL_SCOPE_FORBIDDEN
 
 
 def test_policy_evaluation_api_finalizes_reads_replays_and_records_events() -> None:

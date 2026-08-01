@@ -8,6 +8,7 @@ from src.integrations.lotus_ai.runtime_config import resolve_lotus_ai_tenant_id
 _WORKFLOW_PACK_ENVIRONMENT = "LOTUS_AI_WORKFLOW_PACK_ENVIRONMENT"
 _DEFAULT_WORKFLOW_PACK_ENVIRONMENT = "DEVELOPMENT"
 _CALLER_APP = "lotus-advise"
+_CALLER_APP_HEADER = "X-Caller-App"
 _CALLER_IDENTITY_CLASS = "INTERNAL_SERVICE"
 _DEFAULT_INPUT_MODE = "STRUCTURED_CONTEXT"
 
@@ -56,3 +57,7 @@ def workflow_pack_environment() -> str:
         _WORKFLOW_PACK_ENVIRONMENT,
         _DEFAULT_WORKFLOW_PACK_ENVIRONMENT,
     )
+
+
+def workflow_pack_authenticated_headers() -> dict[str, str]:
+    return {_CALLER_APP_HEADER: _CALLER_APP}

@@ -3,6 +3,7 @@ from __future__ import annotations
 from src.integrations.lotus_ai.workflow_response import (
     extract_error_detail,
     extract_model_version,
+    extract_provider_id,
     extract_workflow_run_id,
     optional_text,
     safe_dict,
@@ -25,6 +26,35 @@ def test_extract_workflow_run_id_and_model_version_trim_optional_lineage_values(
     assert extract_model_version(result) == "lotus-ai-governed-model.v1"
     assert extract_workflow_run_id({"workflow_pack_run": {"run_id": " "}}) is None
     assert extract_model_version({"model_version": 42}) is None
+
+
+def test_extract_provider_and_model_identity_falls_back_to_task_audit() -> None:
+    result = {"structured_output": {"state": "REVIEW_REQUIRED"}}
+    audit = {
+        "provider_id": " lotus-ai ",
+        "model_version": " lotus-ai-governed-model.v1 ",
+    }
+
+    assert extract_provider_id(result, audit=audit) == "lotus-ai"
+    assert extract_model_version(result, audit=audit) == "lotus-ai-governed-model.v1"
+
+
+def test_extract_provider_and_model_identity_from_model_risk_output() -> None:
+    result = {
+        "structured_output": {
+            "model_risk": {
+                "approved_provider_id": " lotus-ai ",
+                "approved_model_version": " lotus-ai-governed-model.v1 ",
+            }
+        }
+    }
+    audit = {
+        "provider_id": "text.stub",
+        "model_version": None,
+    }
+
+    assert extract_provider_id(result, audit=audit) == "lotus-ai"
+    assert extract_model_version(result, audit=audit) == "lotus-ai-governed-model.v1"
 
 
 def test_extract_error_detail_uses_default_for_blank_or_structured_details() -> None:

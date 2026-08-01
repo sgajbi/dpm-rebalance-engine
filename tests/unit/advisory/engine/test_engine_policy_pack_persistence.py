@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from src.core.common.canonical import hash_canonical_payload
 from src.core.policy_packs import (
     DurablePolicyEvaluationRepository,
     InMemoryPolicyEvaluationStateStore,
@@ -180,6 +181,7 @@ def _base_evidence_bundle() -> dict:
 def _trusted_reason(
     purpose: str,
     *,
+    correlation_id: str = "corr-policy-evaluation-test",
     trace_id: str = "trace-policy-evaluation-test",
 ) -> dict[str, Any]:
     return {
@@ -189,7 +191,7 @@ def _trusted_reason(
             "role": "ADVISOR",
             "tenant_id": "tenant_sg_001",
             "legal_entity_code": "REFERENCE",
-            "correlation_id": "corr-policy-evaluation-test",
+            "correlation_id": correlation_id,
             "trace_id": trace_id,
             "service_identity": "lotus-gateway",
             "capability": "advisory.policy_evaluation.finalize",
@@ -217,6 +219,34 @@ def _activate_sg_policy_pack() -> None:
         idempotency_key="activate-sg-for-persistence",
         reason={"purpose": "slice 7 persistence test"},
     )
+
+
+def _sg_structured_note_evidence() -> dict[str, Any]:
+    evidence = _base_evidence_bundle()
+    evidence["inputs"]["shelf_entries"][0]["instrument_id"] = "SG_STRUCTURED_NOTE"
+    evidence["inputs"]["shelf_entries"][0]["complexity"] = "COMPLEX"
+    evidence["inputs"]["shelf_entries"][0]["structured_product"] = True
+    evidence["inputs"]["proposed_trades"][0]["instrument_id"] = "SG_STRUCTURED_NOTE"
+    evidence["artifact"]["disclosures"]["product_docs"] = [
+        {"instrument_id": "SG_STRUCTURED_NOTE", "doc_ref": "Term sheet"}
+    ]
+    return evidence
+
+
+def _without_policy_legal_entity(evidence: dict[str, Any]) -> dict[str, Any]:
+    missing = deepcopy(evidence)
+    missing["context_resolution"]["advisory_policy_context"].pop("legal_entity_code")
+    return missing
+
+
+def _trusted_legal_entity_repair_reason(purpose: str) -> dict[str, Any]:
+    reason = _trusted_reason(purpose)
+    reason["system_repair_intent"] = {
+        "repair_code": "POLICY_EVALUATION_TRUSTED_LEGAL_ENTITY_BINDING_REPAIR",
+        "source_gap": "legal_entity_code",
+        "authority_source": "trusted_policy_control_principal",
+    }
+    return reason
 
 
 def _two_version_global_policy_pack_definitions() -> list[dict[str, Any]]:
@@ -258,6 +288,7 @@ def test_policy_evaluation_record_is_immutable_hash_backed_and_idempotent() -> N
         idempotency_key="policy-eval-finalize-001",
         reason=_trusted_reason(
             "advisor policy review",
+            correlation_id="corr-policy-evaluation-test-retry",
             trace_id="trace-policy-evaluation-test-retry",
         ),
     )
@@ -406,6 +437,192 @@ def test_policy_evaluation_idempotency_rejects_payload_drift() -> None:
             created_by="advisor_1",
             idempotency_key="policy-eval-conflict",
             reason=_trusted_reason("changed request"),
+        )
+
+
+def test_policy_evaluation_idempotency_repairs_trusted_legal_entity_gap_once() -> None:
+    _activate_sg_policy_pack()
+    state_store = InMemoryPolicyEvaluationStateStore()
+    configure_policy_evaluation_repository(
+        DurablePolicyEvaluationRepository(state_store=state_store)
+    )
+    repaired_evidence = _sg_structured_note_evidence()
+    pre_fix_evidence = _without_policy_legal_entity(repaired_evidence)
+    reason = _trusted_reason("trusted legal entity repair proof")
+
+    blocked = finalize_policy_evaluation_record(
+        evidence_bundle=pre_fix_evidence,
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legal_repair",
+        proposal_version_id="ppv_policy_legal_repair",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legal-repair",
+        reason=reason,
+    )
+    repaired = finalize_policy_evaluation_record(
+        evidence_bundle=repaired_evidence,
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legal_repair",
+        proposal_version_id="ppv_policy_legal_repair",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legal-repair",
+        reason=_trusted_legal_entity_repair_reason("trusted legal entity repair proof"),
+    )
+    replayed_repaired = finalize_policy_evaluation_record(
+        evidence_bundle=repaired_evidence,
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legal_repair",
+        proposal_version_id="ppv_policy_legal_repair",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legal-repair",
+        reason=_trusted_legal_entity_repair_reason("trusted legal entity repair proof"),
+    )
+    records = list_policy_evaluation_records()
+
+    assert blocked.record.evaluation_status == "BLOCKED"
+    assert "legal_entity_code" in blocked.record.source_gaps
+    assert repaired.created is True
+    assert repaired.replayed is False
+    assert repaired.record.evaluation_status == "PENDING_REVIEW"
+    assert "legal_entity_code" not in repaired.record.source_gaps
+    assert repaired.record.evaluation_id != blocked.record.evaluation_id
+    assert replayed_repaired.replayed is True
+    assert replayed_repaired.record.evaluation_id == repaired.record.evaluation_id
+    assert [record.evaluation_id for record in records] == [
+        blocked.record.evaluation_id,
+        repaired.record.evaluation_id,
+    ]
+    assert (
+        blocked.record.replay_metadata_json["creation_reason"]
+        == repaired.record.replay_metadata_json["creation_reason"]
+    )
+    assert "system_repair_intent" not in repaired.record.replay_metadata_json["creation_reason"]
+
+
+def test_policy_evaluation_idempotency_replays_legacy_correlation_sensitive_hash() -> None:
+    state_store = InMemoryPolicyEvaluationStateStore()
+    configure_policy_evaluation_repository(
+        DurablePolicyEvaluationRepository(state_store=state_store)
+    )
+    original_reason = _trusted_reason(
+        "legacy correlation replay proof",
+        correlation_id="corr-policy-evaluation-legacy",
+        trace_id="trace-policy-evaluation-legacy",
+    )
+    created = finalize_policy_evaluation_record(
+        evidence_bundle=_base_evidence_bundle(),
+        policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legacy_corr",
+        proposal_version_id="ppv_policy_legacy_corr",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legacy-correlation",
+        reason=original_reason,
+    )
+    legacy_reason = dict(original_reason)
+    legacy_reason["trusted_principal"] = {
+        key: value
+        for key, value in original_reason["trusted_principal"].items()
+        if key != "trace_id"
+    }
+    legacy_hash = hash_canonical_payload(
+        {
+            "operation": "POLICY_EVALUATION_FINALIZED",
+            "proposal_id": created.record.proposal_id,
+            "proposal_version_id": created.record.proposal_version_id,
+            "policy_pack_id": created.record.policy_pack_id,
+            "policy_version": created.record.policy_version,
+            "source_evidence_hash": created.record.source_evidence_hash,
+            "reason": legacy_reason,
+        }
+    )
+    snapshot = state_store.load_snapshot()
+    snapshot["idempotency"][0]["request_hash"] = legacy_hash
+    state_store.save_snapshot(snapshot)
+
+    replayed = finalize_policy_evaluation_record(
+        evidence_bundle=_base_evidence_bundle(),
+        policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legacy_corr",
+        proposal_version_id="ppv_policy_legacy_corr",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legacy-correlation",
+        reason=_trusted_reason(
+            "legacy correlation replay proof",
+            correlation_id="corr-policy-evaluation-new",
+            trace_id="trace-policy-evaluation-new",
+        ),
+    )
+
+    assert replayed.replayed is True
+    assert replayed.record.evaluation_id == created.record.evaluation_id
+
+
+def test_policy_evaluation_idempotency_repair_requires_server_repair_intent() -> None:
+    _activate_sg_policy_pack()
+    repaired_evidence = _sg_structured_note_evidence()
+    pre_fix_evidence = _without_policy_legal_entity(repaired_evidence)
+
+    finalize_policy_evaluation_record(
+        evidence_bundle=pre_fix_evidence,
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legal_repair_no_intent",
+        proposal_version_id="ppv_policy_legal_repair_no_intent",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legal-repair-no-intent",
+        reason=_trusted_reason("trusted legal entity repair proof"),
+    )
+
+    with pytest.raises(
+        ProposalIdempotencyConflictError,
+        match="POLICY_EVALUATION_IDEMPOTENCY_KEY_CONFLICT",
+    ):
+        finalize_policy_evaluation_record(
+            evidence_bundle=repaired_evidence,
+            policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_legal_repair_no_intent",
+            proposal_version_id="ppv_policy_legal_repair_no_intent",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-legal-repair-no-intent",
+            reason=_trusted_reason("trusted legal entity repair proof"),
+        )
+
+
+def test_policy_evaluation_idempotency_repair_rejects_business_reason_drift() -> None:
+    _activate_sg_policy_pack()
+    repaired_evidence = _sg_structured_note_evidence()
+    pre_fix_evidence = _without_policy_legal_entity(repaired_evidence)
+
+    finalize_policy_evaluation_record(
+        evidence_bundle=pre_fix_evidence,
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legal_repair_reason_drift",
+        proposal_version_id="ppv_policy_legal_repair_reason_drift",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legal-repair-reason-drift",
+        reason=_trusted_reason("trusted legal entity repair proof"),
+    )
+
+    with pytest.raises(
+        ProposalIdempotencyConflictError,
+        match="POLICY_EVALUATION_IDEMPOTENCY_KEY_CONFLICT",
+    ):
+        finalize_policy_evaluation_record(
+            evidence_bundle=repaired_evidence,
+            policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_legal_repair_reason_drift",
+            proposal_version_id="ppv_policy_legal_repair_reason_drift",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-legal-repair-reason-drift",
+            reason=_trusted_legal_entity_repair_reason("changed repair proof"),
         )
 
 
@@ -608,6 +825,143 @@ def test_policy_evaluation_review_events_are_append_only_without_mutating_final_
     assert len(stored.review_events_json) == 1
     assert stored.sign_off_events_json == []
     assert stored.report_archive_refs_json == []
+
+
+def test_policy_evaluation_event_idempotency_ignores_volatile_nested_trusted_principal() -> None:
+    persisted = finalize_policy_evaluation_record(
+        evidence_bundle=_base_evidence_bundle(),
+        policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_event_stable_reason",
+        proposal_version_id="ppv_policy_event_stable_reason",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-event-stable-reason",
+        reason=_trusted_reason("event stable reason"),
+    )
+    event_reason = {
+        "review_action": "REQUEST_MORE_EVIDENCE",
+        "reason": _trusted_reason(
+            "policy support action",
+            correlation_id="corr-policy-support-action-1",
+            trace_id="trace-policy-support-action-1",
+        ),
+    }
+
+    review = append_policy_evaluation_event(
+        evaluation_id=persisted.record.evaluation_id,
+        event_type="POLICY_EVALUATION_REVIEW_RECORDED",
+        actor_id="compliance_1",
+        idempotency_key="policy-eval-review-event-stable-reason",
+        reason=event_reason,
+    )
+    review_replay = append_policy_evaluation_event(
+        evaluation_id=persisted.record.evaluation_id,
+        event_type="POLICY_EVALUATION_REVIEW_RECORDED",
+        actor_id="compliance_1",
+        idempotency_key="policy-eval-review-event-stable-reason",
+        reason={
+            **event_reason,
+            "reason": _trusted_reason(
+                "policy support action",
+                correlation_id="corr-policy-support-action-2",
+                trace_id="trace-policy-support-action-2",
+            ),
+        },
+    )
+
+    assert review_replay.event_id == review.event_id
+    with pytest.raises(ProposalIdempotencyConflictError, match="POLICY_EVALUATION"):
+        append_policy_evaluation_event(
+            evaluation_id=persisted.record.evaluation_id,
+            event_type="POLICY_EVALUATION_REVIEW_RECORDED",
+            actor_id="compliance_1",
+            idempotency_key="policy-eval-review-event-stable-reason",
+            reason={
+                **event_reason,
+                "review_action": "DIFFERENT_BUSINESS_DECISION",
+                "reason": _trusted_reason(
+                    "policy support action",
+                    correlation_id="corr-policy-support-action-3",
+                    trace_id="trace-policy-support-action-3",
+                ),
+            },
+        )
+
+
+def test_policy_evaluation_event_idempotency_replays_legacy_volatile_event_hash() -> None:
+    state_store = InMemoryPolicyEvaluationStateStore()
+    configure_policy_evaluation_repository(
+        DurablePolicyEvaluationRepository(state_store=state_store)
+    )
+    persisted = finalize_policy_evaluation_record(
+        evidence_bundle=_base_evidence_bundle(),
+        policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legacy_event_hash",
+        proposal_version_id="ppv_policy_legacy_event_hash",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legacy-event-hash",
+        reason=_trusted_reason("legacy event hash"),
+    )
+    legacy_reason = {
+        "review_action": "REQUEST_MORE_EVIDENCE",
+        "reason": _trusted_reason(
+            "policy support action legacy hash",
+            correlation_id="corr-policy-support-action-legacy",
+            trace_id="trace-policy-support-action-legacy",
+        ),
+    }
+    review = append_policy_evaluation_event(
+        evaluation_id=persisted.record.evaluation_id,
+        event_type="POLICY_EVALUATION_REVIEW_RECORDED",
+        actor_id="compliance_1",
+        idempotency_key="policy-eval-review-event-legacy-hash",
+        reason=legacy_reason,
+    )
+    legacy_hash = hash_canonical_payload(
+        {
+            "operation": "POLICY_EVALUATION_REVIEW_RECORDED",
+            "evaluation_id": persisted.record.evaluation_id,
+            "actor_id": "compliance_1",
+            "reason": legacy_reason,
+            "evaluation_hash": persisted.record.evaluation_hash,
+        }
+    )
+    snapshot = state_store.load_snapshot()
+    for item in snapshot["idempotency"]:
+        if item["idempotency_key"] == "policy-eval-review-event-legacy-hash":
+            item["request_hash"] = legacy_hash
+            break
+    else:
+        raise AssertionError("legacy event idempotency row was not persisted")
+    for event in snapshot["events"][persisted.record.evaluation_id]:
+        if event["event_id"] == review.event_id:
+            event["reason_json"]["idempotency_request_hash"] = legacy_hash
+            break
+    for event in snapshot["records"][persisted.record.evaluation_id]["review_events_json"]:
+        if event["event_id"] == review.event_id:
+            event["reason_json"]["idempotency_request_hash"] = legacy_hash
+            break
+    state_store.save_snapshot(snapshot)
+
+    replayed = append_policy_evaluation_event(
+        evaluation_id=persisted.record.evaluation_id,
+        event_type="POLICY_EVALUATION_REVIEW_RECORDED",
+        actor_id="compliance_1",
+        idempotency_key="policy-eval-review-event-legacy-hash",
+        reason={
+            **legacy_reason,
+            "reason": _trusted_reason(
+                "policy support action legacy hash",
+                correlation_id="corr-policy-support-action-new",
+                trace_id="trace-policy-support-action-new",
+            ),
+        },
+    )
+    stored_events = list_policy_evaluation_events(evaluation_id=persisted.record.evaluation_id)
+
+    assert replayed.event_id == review.event_id
+    assert len(stored_events) == 2
 
 
 def test_policy_evaluation_privileged_events_require_specialized_command_authority() -> None:

@@ -1,4 +1,5 @@
-from typing import cast
+from copy import deepcopy
+from typing import Any, cast
 
 from fastapi import Depends, status
 
@@ -34,6 +35,9 @@ from src.core.policy_packs import (
     PolicyEvaluationPersistenceResult,
 )
 from src.core.proposals.exceptions import ProposalIdempotencyConflictError, ProposalValidationError
+
+_POLICY_EVALUATION_REPAIR_INTENT_KEY = "system_repair_intent"
+_TRUSTED_LEGAL_ENTITY_BINDING_REPAIR_CODE = "POLICY_EVALUATION_TRUSTED_LEGAL_ENTITY_BINDING_REPAIR"
 
 
 @shared.router.post(
@@ -122,21 +126,36 @@ def _create_or_replay_policy_evaluation_with_telemetry(
         proposal_id=proposal_id,
         evidence_bundle=payload.evidence_bundle,
     )
+    evidence_bundle = _bind_policy_evaluation_proposal_evidence(
+        proposal_id=proposal_id,
+        proposal_version_id=proposal_version_id,
+        evidence_bundle=payload.evidence_bundle,
+    )
+    trusted_scope_bound = _bind_trusted_policy_control_scope(
+        evidence_bundle=evidence_bundle,
+        principal=principal,
+    )
+    assert_policy_evaluation_create_scope(
+        principal=principal,
+        proposal_id=proposal_id,
+        evidence_bundle=evidence_bundle,
+    )
     try:
+        reason = _policy_evaluation_finalize_reason(
+            payload_reason=payload.reason,
+            principal=principal,
+            trusted_scope_bound=trusted_scope_bound,
+        )
         response = (
             shared.get_policy_evidence_application_service().finalize_policy_evaluation_record(
-                evidence_bundle=payload.evidence_bundle,
+                evidence_bundle=evidence_bundle,
                 policy_pack_id=payload.policy_pack_id,
                 policy_version=payload.policy_version,
                 proposal_id=proposal_id,
                 proposal_version_id=proposal_version_id,
                 created_by=bind_policy_control_actor(payload.created_by, principal),
                 idempotency_key=idempotency_key,
-                reason=policy_control_audit_reason(
-                    payload.reason,
-                    principal=principal,
-                    capability=POLICY_EVALUATION_FINALIZE_CAPABILITY,
-                ),
+                reason=reason,
                 observed_trace_id=trace_id_var.get() or None,
             )
         )
@@ -152,6 +171,170 @@ def _create_or_replay_policy_evaluation_with_telemetry(
         "replayed" if response.replayed else "finalized",
     )
     return response
+
+
+def _bind_policy_evaluation_proposal_evidence(
+    *,
+    proposal_id: str,
+    proposal_version_id: str,
+    evidence_bundle: dict[str, Any],
+) -> dict[str, Any]:
+    version = next(
+        (
+            candidate
+            for candidate in shared.get_proposal_repository().list_versions(proposal_id=proposal_id)
+            if candidate.proposal_version_id == proposal_version_id
+        ),
+        None,
+    )
+    if version is None:
+        return deepcopy(evidence_bundle)
+    if not isinstance(version.evidence_bundle_json, dict) or not version.evidence_bundle_json:
+        raise ProposalValidationError("PROPOSAL_VERSION_EVIDENCE_BUNDLE_REQUIRED")
+
+    bound = deepcopy(evidence_bundle)
+    _bind_context_resolution(
+        target=bound,
+        source=version.evidence_bundle_json,
+    )
+    _bind_source_snapshot_metadata(
+        target=bound,
+        source=version.evidence_bundle_json,
+        snapshot_key="portfolio_snapshot",
+        metadata_keys=("portfolio_id", "as_of_date", "as_of", "snapshot_date", "valuation_date"),
+    )
+    _bind_source_snapshot_metadata(
+        target=bound,
+        source=version.evidence_bundle_json,
+        snapshot_key="market_data_snapshot",
+        metadata_keys=("as_of_date", "as_of", "snapshot_date", "valuation_date"),
+    )
+    return bound
+
+
+def _bind_trusted_policy_control_scope(
+    *,
+    evidence_bundle: dict[str, Any],
+    principal: PolicyControlPrincipal,
+) -> bool:
+    context_resolution = evidence_bundle.setdefault("context_resolution", {})
+    if not isinstance(context_resolution, dict):
+        raise ProposalValidationError("POLICY_EVALUATION_PROPOSAL_EVIDENCE_MISMATCH")
+    policy_context = context_resolution.setdefault("advisory_policy_context", {})
+    if not isinstance(policy_context, dict):
+        raise ProposalValidationError("POLICY_EVALUATION_PROPOSAL_EVIDENCE_MISMATCH")
+    if not _has_bound_source_value(policy_context.get("legal_entity_code")):
+        policy_context["legal_entity_code"] = principal.legal_entity_code
+        return True
+    return False
+
+
+def _policy_evaluation_finalize_reason(
+    *,
+    payload_reason: dict[str, Any],
+    principal: PolicyControlPrincipal,
+    trusted_scope_bound: bool,
+) -> dict[str, Any]:
+    reason = dict(payload_reason)
+    reason.pop(_POLICY_EVALUATION_REPAIR_INTENT_KEY, None)
+    audit_reason = policy_control_audit_reason(
+        reason,
+        principal=principal,
+        capability=POLICY_EVALUATION_FINALIZE_CAPABILITY,
+    )
+    if trusted_scope_bound:
+        audit_reason[_POLICY_EVALUATION_REPAIR_INTENT_KEY] = {
+            "repair_code": _TRUSTED_LEGAL_ENTITY_BINDING_REPAIR_CODE,
+            "source_gap": "legal_entity_code",
+            "authority_source": "trusted_policy_control_principal",
+        }
+    return audit_reason
+
+
+def _bind_context_resolution(
+    *,
+    target: dict[str, Any],
+    source: dict[str, Any],
+) -> None:
+    source_context = source.get("context_resolution")
+    if not isinstance(source_context, dict):
+        return
+    target_context = target.setdefault("context_resolution", {})
+    if not isinstance(target_context, dict):
+        raise ProposalValidationError("POLICY_EVALUATION_PROPOSAL_EVIDENCE_MISMATCH")
+    _merge_missing_source_values(
+        target=target_context,
+        source=source_context,
+        mismatch_code="POLICY_EVALUATION_PROPOSAL_EVIDENCE_MISMATCH",
+    )
+
+
+def _bind_source_snapshot_metadata(
+    *,
+    target: dict[str, Any],
+    source: dict[str, Any],
+    snapshot_key: str,
+    metadata_keys: tuple[str, ...],
+) -> None:
+    source_snapshot = (
+        source.get("inputs", {}).get(snapshot_key, {})
+        if isinstance(source.get("inputs"), dict)
+        else {}
+    )
+    if not isinstance(source_snapshot, dict):
+        return
+    source_metadata = {
+        key: source_snapshot[key]
+        for key in metadata_keys
+        if _has_bound_source_value(source_snapshot.get(key))
+    }
+    if not source_metadata:
+        return
+    target_inputs = target.setdefault("inputs", {})
+    if not isinstance(target_inputs, dict):
+        raise ProposalValidationError("POLICY_EVALUATION_PROPOSAL_EVIDENCE_MISMATCH")
+    target_snapshot = target_inputs.setdefault(snapshot_key, {})
+    if not isinstance(target_snapshot, dict):
+        raise ProposalValidationError("POLICY_EVALUATION_PROPOSAL_EVIDENCE_MISMATCH")
+    _merge_missing_source_values(
+        target=target_snapshot,
+        source=source_metadata,
+        mismatch_code="POLICY_EVALUATION_PROPOSAL_EVIDENCE_MISMATCH",
+    )
+
+
+def _merge_missing_source_values(
+    *,
+    target: dict[str, Any],
+    source: dict[str, Any],
+    mismatch_code: str,
+) -> None:
+    for key, source_value in source.items():
+        if not _has_bound_source_value(source_value):
+            continue
+        target_value = target.get(key)
+        if not _has_bound_source_value(target_value):
+            target[key] = deepcopy(source_value)
+            continue
+        if isinstance(target_value, dict) and isinstance(source_value, dict):
+            _merge_missing_source_values(
+                target=target_value,
+                source=source_value,
+                mismatch_code=mismatch_code,
+            )
+            continue
+        if target_value != source_value:
+            raise ProposalValidationError(mismatch_code)
+
+
+def _has_bound_source_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
 
 
 def _record_policy_evaluation_event_with_telemetry(

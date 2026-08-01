@@ -6,7 +6,10 @@ from typing import Any
 
 from src.core.proposals.command_validation import validate_proposal_simulation_flag
 from src.core.proposals.context_evidence import build_context_resolution_evidence
-from src.core.proposals.context_hashing import build_create_request_hash
+from src.core.proposals.context_hashing import (
+    build_create_command_idempotency_hash,
+    build_create_request_hash,
+)
 from src.core.proposals.context_resolution import (
     ProposalContextResolutionError,
     resolve_create_request,
@@ -69,6 +72,27 @@ def create_proposal_command(
         raise ProposalValidationError(str(exc)) from exc
 
     now = utc_now()
+    idempotency_request_hash = build_create_command_idempotency_hash(payload=payload)
+    idempotency_read_model = load_proposal_idempotency_read_model(
+        repository=repository,
+        idempotency_key=idempotency_key,
+    )
+    existing = idempotency_read_model.record
+    if existing is not None:
+        if existing.request_hash == idempotency_request_hash or _is_matching_legacy_replay(
+            repository=repository,
+            payload=payload,
+            stored_request_hash=existing.request_hash,
+            proposal_id=existing.proposal_id,
+            proposal_version_no=existing.proposal_version_no,
+        ):
+            return build_create_response_from_replay_referents(
+                repository=repository,
+                proposal_id=existing.proposal_id,
+                version_no=existing.proposal_version_no,
+            )
+        raise ProposalIdempotencyConflictError("IDEMPOTENCY_KEY_CONFLICT: request hash mismatch")
+
     try:
         resolved_request = resolve_create_request(payload)
     except ProposalContextResolutionError as exc:
@@ -79,22 +103,6 @@ def create_proposal_command(
             )
         ) from exc
     request_hash = build_create_request_hash(payload=payload, resolved=resolved_request)
-
-    idempotency_read_model = load_proposal_idempotency_read_model(
-        repository=repository,
-        idempotency_key=idempotency_key,
-    )
-    existing = idempotency_read_model.record
-    if existing is not None:
-        if existing.request_hash != request_hash:
-            raise ProposalIdempotencyConflictError(
-                "IDEMPOTENCY_KEY_CONFLICT: request hash mismatch"
-            )
-        return build_create_response_from_replay_referents(
-            repository=repository,
-            proposal_id=existing.proposal_id,
-            version_no=existing.proposal_version_no,
-        )
 
     validate_proposal_simulation_flag(
         request=resolved_request.simulate_request,
@@ -136,7 +144,7 @@ def create_proposal_command(
         event_id=new_workflow_event_id(),
         correlation_id=correlation_id,
         idempotency_key=idempotency_key,
-        request_hash=request_hash,
+        request_hash=idempotency_request_hash,
     )
     proposal = command_state.proposal
     version = build_proposal_version_record(
@@ -159,6 +167,91 @@ def create_proposal_command(
     )
 
     return to_create_response(proposal=proposal, version=version, latest_event=created_event)
+
+
+def _is_matching_legacy_replay(
+    *,
+    repository: ProposalRepository,
+    payload: ProposalCreateRequest,
+    stored_request_hash: str,
+    proposal_id: str,
+    proposal_version_no: int,
+) -> bool:
+    if payload.input_mode != "stateful" or payload.stateful_input is None:
+        return False
+    proposal = repository.get_proposal(proposal_id=proposal_id)
+    version = repository.get_version(proposal_id=proposal_id, version_no=proposal_version_no)
+    if proposal is None or version is None or stored_request_hash != version.request_hash:
+        return False
+    if proposal.created_by != payload.created_by:
+        return False
+    stateful_input = payload.stateful_input
+    if proposal.portfolio_id != stateful_input.portfolio_id:
+        return False
+    if payload.metadata.title is not None and proposal.title != payload.metadata.title:
+        return False
+    if (
+        payload.metadata.advisor_notes is not None
+        and proposal.advisor_notes != payload.metadata.advisor_notes
+    ):
+        return False
+    if (
+        payload.metadata.jurisdiction is not None
+        and proposal.jurisdiction != payload.metadata.jurisdiction
+    ):
+        return False
+    expected_mandate_id = payload.metadata.mandate_id or stateful_input.mandate_id
+    if expected_mandate_id is not None and proposal.mandate_id != expected_mandate_id:
+        return False
+    context_resolution = version.evidence_bundle_json.get("context_resolution")
+    if not isinstance(context_resolution, dict):
+        return False
+    resolved_context = context_resolution.get("resolved_context")
+    if not isinstance(resolved_context, dict):
+        return False
+    if resolved_context.get("portfolio_id") != stateful_input.portfolio_id:
+        return False
+    if resolved_context.get("as_of") != stateful_input.as_of:
+        return False
+    return _legacy_narrative_request_matches(
+        artifact=version.artifact_json,
+        expected=stateful_input.narrative_request,
+        created_by=payload.created_by,
+    )
+
+
+def _legacy_narrative_request_matches(
+    *,
+    artifact: dict[str, Any],
+    expected: object | None,
+    created_by: str,
+) -> bool:
+    narrative = artifact.get("proposal_narrative")
+    if expected is None:
+        return narrative is None
+    if not isinstance(narrative, dict):
+        return False
+    expected_payload = expected.model_dump(mode="json") if hasattr(expected, "model_dump") else {}
+    if not isinstance(expected_payload, dict):
+        return False
+    narrative_policy = narrative.get("narrative_policy")
+    if not isinstance(narrative_policy, dict):
+        return False
+    narrative_context = narrative_policy.get("context")
+    if not isinstance(narrative_context, dict):
+        return False
+    section_keys = tuple(
+        section.get("section_key")
+        for section in narrative.get("sections", [])
+        if isinstance(section, dict)
+    )
+    return (
+        narrative.get("audience") == expected_payload.get("audience")
+        and narrative_context.get("jurisdiction") == expected_payload.get("jurisdiction")
+        and narrative_context.get("client_audience") == expected_payload.get("client_audience")
+        and list(section_keys) == expected_payload.get("sections")
+        and expected_payload.get("requested_by") == created_by
+    )
 
 
 __all__ = ["create_proposal_command"]

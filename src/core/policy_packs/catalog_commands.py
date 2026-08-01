@@ -38,7 +38,7 @@ def validate_policy_pack_catalog_definition(
             "policy_version": policy_version,
             "requested_by": requested_by,
             "content_hash": definition["content_hash"],
-            "reason": reason,
+            "reason": _idempotency_stable_catalog_reason(reason),
         }
     )
     replayed = find_replayed_policy_pack_catalog_event(
@@ -163,7 +163,7 @@ def _activation_request_hash(
             "policy_version": policy_version,
             "activated_by": activated_by,
             "source_content_hash": source_content_hash,
-            "reason": reason,
+            "reason": _idempotency_stable_catalog_reason(reason),
         }
     )
 
@@ -235,3 +235,9 @@ def _activation_event_reason(
         "reason": deepcopy(reason),
         "reference_posture": REFERENCE_POSTURE,
     }
+
+
+def _idempotency_stable_catalog_reason(reason: dict[str, Any]) -> dict[str, Any]:
+    stable_reason = deepcopy(reason)
+    stable_reason.pop("trusted_principal", None)
+    return stable_reason

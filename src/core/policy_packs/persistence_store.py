@@ -31,7 +31,7 @@ from src.core.policy_packs.projection_models import (
     PolicyEvaluationReviewQueueResponse,
     PolicyEvaluationSignOffPackageResponse,
 )
-from src.core.policy_packs.receipt_identity import idempotency_stable_reason
+from src.core.policy_packs.receipt_identity import idempotency_stable_reason, replay_safe_reason
 from src.core.policy_packs.supportability import (
     POLICY_EVALUATION_PERSISTENCE_CONTRACT_VERSION,
     policy_sign_off_package_posture,
@@ -42,6 +42,8 @@ from src.core.proposals.exceptions import (
 )
 
 _PERSISTENCE_CONTRACT_VERSION = POLICY_EVALUATION_PERSISTENCE_CONTRACT_VERSION
+_POLICY_EVALUATION_REPAIR_INTENT_KEY = "system_repair_intent"
+_TRUSTED_LEGAL_ENTITY_BINDING_REPAIR_CODE = "POLICY_EVALUATION_TRUSTED_LEGAL_ENTITY_BINDING_REPAIR"
 
 
 class PolicyEvaluationRecordStore:
@@ -136,6 +138,14 @@ class PolicyEvaluationRecordStore:
         replayed = self._find_replayed_event(
             idempotency_key=idempotency_key,
             request_hash=request_hash,
+            proposal_id=proposal_id,
+            proposal_version_id=proposal_version_id,
+            policy_pack_id=policy_pack_id,
+            policy_version=policy_version,
+            portfolio_id=_portfolio_id_from_evidence(evidence_bundle),
+            source_evidence_hash=source_evidence_hash,
+            evidence_bundle=evidence_bundle,
+            reason=reason,
         )
         if replayed is not None:
             _, record = replayed
@@ -294,7 +304,7 @@ class PolicyEvaluationRecordStore:
                 "operation": event_type,
                 "evaluation_id": evaluation_id,
                 "actor_id": actor_id,
-                "reason": reason,
+                "reason": idempotency_stable_reason(reason),
                 "evaluation_hash": record.evaluation_hash,
             }
         )
@@ -302,6 +312,11 @@ class PolicyEvaluationRecordStore:
             replayed = self._find_replayed_event(
                 idempotency_key=idempotency_key,
                 request_hash=request_hash,
+                event_type=event_type,
+                actor_id=actor_id,
+                evaluation_id=evaluation_id,
+                evaluation_hash=record.evaluation_hash,
+                reason=reason,
             )
             if replayed is not None:
                 return deepcopy(replayed[0])
@@ -366,13 +381,80 @@ class PolicyEvaluationRecordStore:
         )
 
     def _find_replayed_event(
-        self, *, idempotency_key: str, request_hash: str
+        self,
+        *,
+        idempotency_key: str,
+        request_hash: str,
+        event_type: PolicyEvaluationEventType | None = None,
+        actor_id: str | None = None,
+        evaluation_id: str | None = None,
+        evaluation_hash: str | None = None,
+        proposal_id: str | None = None,
+        proposal_version_id: str | None = None,
+        policy_pack_id: str | None = None,
+        policy_version: str | None = None,
+        portfolio_id: str | None = None,
+        source_evidence_hash: str | None = None,
+        evidence_bundle: dict[str, Any] | None = None,
+        reason: dict[str, Any] | None = None,
     ) -> tuple[PolicyEvaluationAuditEvent, PolicyEvaluationRecord] | None:
         stored = self._idempotency.get(idempotency_key)
         if stored is None:
             return None
         stored_hash, evaluation_id, event_id = stored
         if stored_hash != request_hash:
+            record = self._load_record(evaluation_id)
+            event = next(
+                event for event in self._events[evaluation_id] if event.event_id == event_id
+            )
+            if (
+                source_evidence_hash is not None
+                and reason is not None
+                and _matches_legacy_correlation_sensitive_replay(
+                    record=record,
+                    event=event,
+                    stored_hash=stored_hash,
+                    source_evidence_hash=source_evidence_hash,
+                    reason=reason,
+                )
+            ):
+                return event, record
+            if (
+                event_type is not None
+                and actor_id is not None
+                and evaluation_id is not None
+                and evaluation_hash is not None
+                and reason is not None
+                and _matches_legacy_event_stable_replay(
+                    record=record,
+                    event=event,
+                    stored_hash=stored_hash,
+                    event_type=event_type,
+                    actor_id=actor_id,
+                    evaluation_id=evaluation_id,
+                    evaluation_hash=evaluation_hash,
+                    reason=reason,
+                )
+            ):
+                return event, record
+            if (
+                proposal_id is not None
+                and proposal_version_id is not None
+                and policy_pack_id is not None
+                and policy_version is not None
+                and evidence_bundle is not None
+                and reason is not None
+            ) and _can_repair_trusted_legal_entity_gap(
+                record=record,
+                proposal_id=proposal_id,
+                proposal_version_id=proposal_version_id,
+                policy_pack_id=policy_pack_id,
+                policy_version=policy_version,
+                portfolio_id=portfolio_id,
+                evidence_bundle=evidence_bundle,
+                reason=reason,
+            ):
+                return None
             raise ProposalIdempotencyConflictError("POLICY_EVALUATION_IDEMPOTENCY_KEY_CONFLICT")
         record = self._load_record(evaluation_id)
         event = next(event for event in self._events[evaluation_id] if event.event_id == event_id)
@@ -442,6 +524,176 @@ def _trusted_principal_from_reason(reason: dict[str, Any]) -> dict[str, Any]:
     if isinstance(trusted_principal, dict):
         return {"trusted_principal": trusted_principal}
     return {}
+
+
+def _can_repair_trusted_legal_entity_gap(
+    *,
+    record: PolicyEvaluationRecord,
+    proposal_id: str,
+    proposal_version_id: str,
+    policy_pack_id: str,
+    policy_version: str,
+    portfolio_id: str | None,
+    evidence_bundle: dict[str, Any],
+    reason: dict[str, Any],
+) -> bool:
+    if not _has_trusted_legal_entity_binding_repair_intent(reason):
+        return False
+    if not _is_legal_entity_gap_blocked_record(record):
+        return False
+    if (
+        record.proposal_id != proposal_id
+        or record.proposal_version_id != proposal_version_id
+        or record.policy_pack_id != policy_pack_id
+        or record.policy_version != policy_version
+        or record.portfolio_id != portfolio_id
+    ):
+        return False
+    if record.replay_metadata_json.get("creation_reason") != _repair_base_replay_safe_reason(
+        reason
+    ):
+        return False
+    return _evidence_legal_entity_matches_trusted_principal(
+        evidence_bundle=evidence_bundle,
+        reason=reason,
+    )
+
+
+def _matches_legacy_correlation_sensitive_replay(
+    *,
+    record: PolicyEvaluationRecord,
+    event: PolicyEvaluationAuditEvent,
+    stored_hash: str,
+    source_evidence_hash: str,
+    reason: dict[str, Any],
+) -> bool:
+    finalization_reason = event.reason_json.get("finalization_reason")
+    if not isinstance(finalization_reason, dict):
+        return False
+    if record.source_evidence_hash != source_evidence_hash:
+        return False
+    if idempotency_stable_reason(finalization_reason) != idempotency_stable_reason(reason):
+        return False
+    return stored_hash == _legacy_correlation_sensitive_request_hash(
+        record=record,
+        reason=finalization_reason,
+    )
+
+
+def _legacy_correlation_sensitive_request_hash(
+    *, record: PolicyEvaluationRecord, reason: dict[str, Any]
+) -> str:
+    return hash_canonical_payload(
+        {
+            "operation": "POLICY_EVALUATION_FINALIZED",
+            "proposal_id": record.proposal_id,
+            "proposal_version_id": record.proposal_version_id,
+            "policy_pack_id": record.policy_pack_id,
+            "policy_version": record.policy_version,
+            "source_evidence_hash": record.source_evidence_hash,
+            "reason": _legacy_correlation_sensitive_reason(reason),
+        }
+    )
+
+
+def _legacy_correlation_sensitive_reason(reason: dict[str, Any]) -> dict[str, Any]:
+    stable = dict(reason)
+    trusted_principal = stable.get("trusted_principal")
+    if isinstance(trusted_principal, dict):
+        stable["trusted_principal"] = {
+            key: value for key, value in trusted_principal.items() if key != "trace_id"
+        }
+    return stable
+
+
+def _matches_legacy_event_stable_replay(
+    *,
+    record: PolicyEvaluationRecord,
+    event: PolicyEvaluationAuditEvent,
+    stored_hash: str,
+    event_type: PolicyEvaluationEventType,
+    actor_id: str,
+    evaluation_id: str,
+    evaluation_hash: str,
+    reason: dict[str, Any],
+) -> bool:
+    if (
+        record.evaluation_id != evaluation_id
+        or event.evaluation_id != evaluation_id
+        or event.event_type != event_type
+        or event.actor_id != actor_id
+        or event.content_hash != evaluation_hash
+    ):
+        return False
+    if event.reason_json.get("idempotency_request_hash") != stored_hash:
+        return False
+    return idempotency_stable_reason(_event_business_reason(event)) == idempotency_stable_reason(
+        reason
+    )
+
+
+def _event_business_reason(event: PolicyEvaluationAuditEvent) -> dict[str, Any]:
+    reason = dict(event.reason_json)
+    reason.pop("idempotency_request_hash", None)
+    reason.pop("persistence_contract_version", None)
+    return reason
+
+
+def _has_trusted_legal_entity_binding_repair_intent(reason: dict[str, Any]) -> bool:
+    intent = reason.get(_POLICY_EVALUATION_REPAIR_INTENT_KEY)
+    return (
+        isinstance(intent, dict)
+        and intent.get("repair_code") == _TRUSTED_LEGAL_ENTITY_BINDING_REPAIR_CODE
+        and intent.get("source_gap") == "legal_entity_code"
+        and intent.get("authority_source") == "trusted_policy_control_principal"
+    )
+
+
+def _is_legal_entity_gap_blocked_record(record: PolicyEvaluationRecord) -> bool:
+    reason_codes = record.evaluation_json.get("applicability", {}).get("reason_codes", [])
+    return (
+        record.evaluation_status == "BLOCKED"
+        and "legal_entity_code" in record.source_gaps
+        and "POLICY_APPLICABILITY_LEGAL_ENTITY_SOURCE_MISSING" in reason_codes
+    )
+
+
+def _repair_base_replay_safe_reason(reason: dict[str, Any]) -> dict[str, Any]:
+    safe_reason = replay_safe_reason(reason)
+    safe_reason.pop(_POLICY_EVALUATION_REPAIR_INTENT_KEY, None)
+    return safe_reason
+
+
+def _evidence_legal_entity_matches_trusted_principal(
+    *, evidence_bundle: dict[str, Any], reason: dict[str, Any]
+) -> bool:
+    trusted_principal = reason.get("trusted_principal")
+    if not isinstance(trusted_principal, dict):
+        return False
+    expected = _normalized_non_empty(trusted_principal.get("legal_entity_code"))
+    actual = _normalized_non_empty(
+        evidence_bundle.get("context_resolution", {})
+        .get("advisory_policy_context", {})
+        .get("legal_entity_code")
+    )
+    return expected is not None and actual == expected
+
+
+def _portfolio_id_from_evidence(evidence_bundle: dict[str, Any]) -> str | None:
+    portfolio = evidence_bundle.get("inputs", {}).get("portfolio_snapshot", {})
+    if not isinstance(portfolio, dict):
+        return None
+    value = portfolio.get("portfolio_id")
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _normalized_non_empty(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip().upper()
+    return normalized or None
 
 
 __all__ = ["PolicyEvaluationRecordStore"]

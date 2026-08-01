@@ -54,9 +54,16 @@ class _FakeClient:
     def __exit__(self, exc_type, exc, tb) -> bool:  # noqa: ANN001
         return False
 
-    def post(self, url: str, json: dict[str, object]) -> _FakeResponse:
+    def post(
+        self,
+        url: str,
+        json: dict[str, object],
+        headers: dict[str, str] | None = None,
+    ) -> _FakeResponse:
         if self._raised_error is not None:
             raise self._raised_error
+        if headers != {"X-Caller-App": "lotus-advise"}:
+            raise AssertionError(f"unexpected authenticated caller headers: {headers}")
         response = self._responses.get(url)
         if response is None:
             raise AssertionError(f"unexpected request url: {url}")
@@ -76,8 +83,15 @@ class _SequencedClient:
     def __exit__(self, exc_type, exc, tb) -> bool:  # noqa: ANN001
         return False
 
-    def post(self, url: str, json: dict[str, object]) -> _FakeResponse:
-        self.requests.append({"url": url, "json": json})
+    def post(
+        self,
+        url: str,
+        json: dict[str, object],
+        headers: dict[str, str] | None = None,
+    ) -> _FakeResponse:
+        self.requests.append({"url": url, "json": json, "headers": headers})
+        if headers != {"X-Caller-App": "lotus-advise"}:
+            raise AssertionError(f"unexpected authenticated caller headers: {headers}")
         if not self._outcomes:
             raise AssertionError("unexpected extra request")
         outcome = self._outcomes.pop(0)
@@ -383,6 +397,60 @@ def test_generate_advisory_copilot_returns_review_required_sections(
     assert response.lineage["model_risk_evaluation"]["metrics"]["grounded_claim_ratio_bps"] == (
         10000
     )
+
+
+def test_generate_advisory_copilot_accepts_lotus_ai_task_audit_model_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base_url = "http://lotus-ai.dev.lotus"
+    monkeypatch.setenv("LOTUS_AI_BASE_URL", base_url)
+    monkeypatch.setattr(
+        "src.integrations.lotus_ai.advisory_copilot.httpx.Client",
+        lambda *args, **kwargs: _FakeClient(
+            *args,
+            responses={
+                f"{base_url}/platform/workflow-packs/execute": _FakeResponse(
+                    200,
+                    {
+                        "execution": {
+                            "status": "COMPLETED",
+                            "result": {
+                                "structured_output": {
+                                    "state": "REVIEW_REQUIRED",
+                                    "sections": [
+                                        {
+                                            "section_key": "POLICY_POSTURE",
+                                            "title": "Policy posture",
+                                            "text": "Evidence remains under advisor review.",
+                                            "claims": [_grounded_claim()],
+                                        }
+                                    ],
+                                },
+                            },
+                            "audit": {
+                                "provider_id": "lotus-ai",
+                                "model_version": "lotus-ai-governed-model.v1",
+                            },
+                        },
+                        "workflow_pack_run": {"run_id": "packrun_copilot_audit_identity"},
+                    },
+                )
+            },
+            **kwargs,
+        ),
+    )
+
+    response = generate_advisory_copilot_draft_with_lotus_ai(
+        evidence_packet=_packet(),
+        audience="ADVISOR",
+        requested_outputs=["advisor_review_summary"],
+        requested_by="advisor_001",
+        reason={"purpose": "advisor review"},
+    )
+
+    assert response.status == "REVIEW_REQUIRED"
+    assert response.lineage["model_provider_id"] == "lotus-ai"
+    assert response.lineage["model_version"] == "lotus-ai-governed-model.v1"
 
 
 def test_generate_advisory_copilot_extracts_proposal_version_from_source_refs(
@@ -1095,6 +1163,34 @@ def test_generate_advisory_copilot_returns_unavailable_without_lotus_ai(
     assert response.lineage["fallback_reason"] == "LOTUS_AI_ADVISORY_COPILOT_UNAVAILABLE"
 
 
+def test_generate_advisory_copilot_preserves_missing_tenant_identity_reason(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    called = False
+
+    def _client(*args, **kwargs):  # noqa: ANN002, ANN003
+        nonlocal called
+        called = True
+        return _FakeClient(*args, **kwargs)
+
+    monkeypatch.setenv("LOTUS_AI_BASE_URL", "http://lotus-ai.dev.lotus")
+    monkeypatch.delenv("LOTUS_ADVISE_TENANT_ID", raising=False)
+    monkeypatch.setattr("src.integrations.lotus_ai.advisory_copilot.httpx.Client", _client)
+
+    response = generate_advisory_copilot_draft_with_lotus_ai(
+        evidence_packet=_packet(),
+        audience="ADVISOR",
+        requested_outputs=["advisor_review_summary"],
+        requested_by="advisor_001",
+        reason={"purpose": "advisor review"},
+    )
+
+    assert called is False
+    assert response.status == "UNAVAILABLE"
+    assert response.sections == ()
+    assert response.lineage["fallback_reason"] == "LOTUS_AI_TENANT_ID_UNAVAILABLE"
+
+
 def test_generate_advisory_copilot_fails_closed_for_non_completed_execution(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1423,6 +1519,68 @@ def test_generate_advisory_copilot_fails_closed_when_output_budget_exhausted(
     assert telemetry["attempt_count"] == 1
     assert telemetry["output_character_count"] > 1
     assert telemetry["fallback_reason"] == "COPILOT_AI_OUTPUT_BUDGET_EXHAUSTED"
+
+
+def test_generate_advisory_copilot_budgets_generated_result_not_workflow_envelope(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    base_url = "http://lotus-ai.dev.lotus"
+    client = _SequencedClient(
+        [
+            _FakeResponse(
+                200,
+                {
+                    "workflow_pack_run": {
+                        "run_id": "packrun_copilot_001",
+                        "operator_summary": "x" * 9000,
+                    },
+                    "execution": {
+                        "status": "COMPLETED",
+                        "audit": {
+                            "run_ledger_summary": "x" * 9000,
+                        },
+                        "result": {
+                            "provider_id": "lotus-ai",
+                            "model_version": "lotus-ai-governed-model.v1",
+                            "message": "Review-ready advisory copilot draft.",
+                            "structured_output": {
+                                "state": "REVIEW_REQUIRED",
+                                "sections": [
+                                    {
+                                        "section_key": "POLICY_POSTURE",
+                                        "title": "Policy posture",
+                                        "text": "Policy evaluation requires compliance review.",
+                                        "claims": [_grounded_claim()],
+                                    }
+                                ],
+                            },
+                        },
+                    },
+                },
+            )
+        ]
+    )
+
+    monkeypatch.setenv("LOTUS_AI_BASE_URL", base_url)
+    monkeypatch.setenv("LOTUS_AI_ADVISORY_COPILOT_MAX_OUTPUT_CHARACTERS", "2500")
+    monkeypatch.setattr(
+        "src.integrations.lotus_ai.advisory_copilot.httpx.Client",
+        lambda *args, **kwargs: client,
+    )
+
+    response = generate_advisory_copilot_draft_with_lotus_ai(
+        evidence_packet=_packet(),
+        audience="ADVISOR",
+        requested_outputs=["advisor_review_summary"],
+        requested_by="advisor_001",
+        reason={"purpose": "advisor review"},
+    )
+
+    assert response.status == "REVIEW_REQUIRED"
+    assert response.lineage["workflow_run_id"] == "packrun_copilot_001"
+    telemetry = response.lineage["runtime_budget_telemetry"]
+    assert telemetry["output_character_count"] < 2500
+    assert telemetry["fallback_reason"] is None
 
 
 def test_generate_advisory_copilot_masks_invalid_lotus_ai_json(

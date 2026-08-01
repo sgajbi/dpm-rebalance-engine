@@ -3,7 +3,10 @@ from __future__ import annotations
 import pytest
 
 from src.integrations.lotus_ai.runtime_config import LotusAITenantIdentityError
-from src.integrations.lotus_ai.workflow_request import build_workflow_pack_execute_request
+from src.integrations.lotus_ai.workflow_request import (
+    build_workflow_pack_execute_request,
+    workflow_pack_authenticated_headers,
+)
 
 
 def test_build_workflow_pack_execute_request_applies_governed_caller_envelope(
@@ -46,6 +49,10 @@ def test_build_workflow_pack_execute_request_applies_governed_caller_envelope(
         "payload": {"evidence_packet_id": "copilot_packet_pb_sg_001"},
         "source_refs": ["lotus-advise:proposal:proposal_001"],
     }
+
+
+def test_workflow_pack_authenticated_headers_bind_declared_lotus_advise_caller() -> None:
+    assert workflow_pack_authenticated_headers() == {"X-Caller-App": "lotus-advise"}
 
 
 def test_build_workflow_pack_execute_request_requires_trusted_tenant(

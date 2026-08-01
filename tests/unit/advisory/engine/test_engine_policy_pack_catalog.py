@@ -3,6 +3,7 @@ from typing import Any
 
 import pytest
 
+from src.core.common.canonical import hash_canonical_payload
 from src.core.policy_packs import (
     DurablePolicyPackCatalogRepository,
     InMemoryPolicyPackCatalogStateStore,
@@ -132,6 +133,100 @@ def test_policy_pack_validation_rejects_idempotency_key_reuse_with_different_pay
         )
 
 
+def test_policy_pack_validation_replays_when_only_trusted_principal_metadata_changes() -> None:
+    first = validate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        requested_by="policy_steward_1",
+        idempotency_key="validate-principal-replay",
+        reason={
+            "purpose": "pre-activation validation",
+            "trusted_principal": {
+                "subject": "policy_steward_1",
+                "role": "POLICY_STEWARD",
+                "correlation_id": "corr-first",
+                "trace_id": "trace-first",
+            },
+        },
+    )
+
+    replayed = validate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        requested_by="policy_steward_1",
+        idempotency_key="validate-principal-replay",
+        reason={
+            "purpose": "pre-activation validation",
+            "trusted_principal": {
+                "subject": "policy_steward_1",
+                "role": "POLICY_STEWARD",
+                "correlation_id": "corr-retry",
+                "trace_id": "trace-retry",
+            },
+        },
+    )
+
+    assert replayed.replayed is True
+    assert replayed.validation_event.event_id == first.validation_event.event_id
+    assert (
+        first.validation_event.reason["reason"]["trusted_principal"]["correlation_id"]
+        == "corr-first"
+    )
+
+
+def test_policy_pack_validation_replays_legacy_volatile_principal_hash() -> None:
+    store = PolicyPackCatalogStore(reference_policy_packs())
+    reason = {
+        "purpose": "pre-activation validation",
+        "trusted_principal": {
+            "subject": "policy_steward_1",
+            "role": "POLICY_STEWARD",
+            "correlation_id": "corr-first",
+            "trace_id": "trace-first",
+        },
+    }
+    validated = store.validate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        requested_by="policy_steward_1",
+        idempotency_key="validate-legacy-principal-replay",
+        reason=reason,
+    )
+    legacy_hash = hash_canonical_payload(
+        {
+            "operation": "POLICY_PACK_VALIDATED",
+            "policy_pack_id": "SG_PRIVATE_BANKING_REFERENCE",
+            "policy_version": "2026.05",
+            "requested_by": "policy_steward_1",
+            "content_hash": validated.validation_event.content_hash,
+            "reason": reason,
+        }
+    )
+    store._idempotency["validate-legacy-principal-replay"] = (  # noqa: SLF001
+        legacy_hash,
+        validated.validation_event,
+    )
+
+    replayed = store.validate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        requested_by="policy_steward_1",
+        idempotency_key="validate-legacy-principal-replay",
+        reason={
+            "purpose": "pre-activation validation",
+            "trusted_principal": {
+                "subject": "policy_steward_1",
+                "role": "POLICY_STEWARD",
+                "correlation_id": "corr-retry",
+                "trace_id": "trace-retry",
+            },
+        },
+    )
+
+    assert replayed.replayed is True
+    assert replayed.validation_event.event_id == validated.validation_event.event_id
+
+
 def test_policy_pack_activation_enforces_hash_maker_checker_and_immutability() -> None:
     detail = get_policy_pack_version(
         policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
@@ -199,6 +294,60 @@ def test_policy_pack_activation_enforces_hash_maker_checker_and_immutability() -
             idempotency_key="activate-again",
             reason={"purpose": "second activation should fail"},
         )
+
+
+def test_policy_pack_activation_replays_when_only_trusted_principal_metadata_changes() -> None:
+    detail = get_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+    )
+    validate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        requested_by="policy_steward_1",
+        idempotency_key="validate-before-principal-replay-activate",
+        reason={"purpose": "pre-activation validation"},
+    )
+    activated = activate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        activated_by="policy_checker_1",
+        source_content_hash=detail.policy_pack.content_hash,
+        idempotency_key="activate-principal-replay",
+        reason={
+            "purpose": "activate reference pack",
+            "trusted_principal": {
+                "subject": "policy_checker_1",
+                "role": "POLICY_CHECKER",
+                "correlation_id": "corr-first",
+                "trace_id": "trace-first",
+            },
+        },
+    )
+
+    replayed = activate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        activated_by="policy_checker_1",
+        source_content_hash=detail.policy_pack.content_hash,
+        idempotency_key="activate-principal-replay",
+        reason={
+            "purpose": "activate reference pack",
+            "trusted_principal": {
+                "subject": "policy_checker_1",
+                "role": "POLICY_CHECKER",
+                "correlation_id": "corr-retry",
+                "trace_id": "trace-retry",
+            },
+        },
+    )
+
+    assert replayed.replayed is True
+    assert replayed.activation_event.event_id == activated.activation_event.event_id
+    assert (
+        activated.activation_event.reason["reason"]["trusted_principal"]["correlation_id"]
+        == "corr-first"
+    )
 
 
 def test_policy_pack_activation_supersedes_prior_active_version() -> None:

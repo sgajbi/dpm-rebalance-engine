@@ -10,6 +10,20 @@ from src.core.proposals.context_resolution import (
 from src.core.proposals.models import ProposalCreateRequest, ProposalVersionRequest
 
 
+def canonicalize_create_command_payload(
+    *,
+    payload: ProposalCreateRequest,
+) -> dict[str, Any]:
+    return cast(dict[str, Any], payload.model_dump(mode="json"))
+
+
+def build_create_command_idempotency_hash(
+    *,
+    payload: ProposalCreateRequest,
+) -> str:
+    return cast(str, hash_canonical_payload(canonicalize_create_command_payload(payload=payload)))
+
+
 def canonicalize_create_request_payload(
     *,
     payload: ProposalCreateRequest,
@@ -92,7 +106,9 @@ def build_version_request_hash(
 
 
 __all__ = [
+    "build_create_command_idempotency_hash",
     "build_create_request_hash",
+    "canonicalize_create_command_payload",
     "build_simulation_request_hash",
     "build_version_request_hash",
     "canonicalize_create_request_payload",

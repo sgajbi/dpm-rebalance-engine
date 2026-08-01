@@ -26,7 +26,10 @@ from src.core.advisory_copilot.run_review_policy import (
     can_refresh_retryable_copilot_run,
     review_posture_from_draft_status,
 )
-from src.core.advisory_copilot.structured_payload import assert_safe_structured_payload
+from src.core.advisory_copilot.structured_payload import (
+    assert_safe_lineage_payload,
+    assert_safe_structured_payload,
+)
 from src.core.advisory_copilot.type_models import CopilotAudience, CopilotReviewPosture
 from src.core.advisory_copilot.workflow_pack import (
     workflow_pack_id_for_action,
@@ -120,7 +123,7 @@ def _assert_safe_run_payloads(
     output_sections: tuple[dict[str, Any], ...],
 ) -> None:
     assert_safe_structured_payload(reason)
-    assert_safe_structured_payload(lineage)
+    assert_safe_lineage_payload(lineage)
     for section in output_sections:
         assert_safe_structured_payload(section)
 
