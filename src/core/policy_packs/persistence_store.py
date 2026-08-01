@@ -403,48 +403,21 @@ class PolicyEvaluationRecordStore:
             return None
         stored_hash, evaluation_id, event_id = stored
         if stored_hash != request_hash:
-            record = self._load_record(evaluation_id)
-            event = next(
-                event for event in self._events[evaluation_id] if event.event_id == event_id
+            record, event = self._load_replayed_event(evaluation_id, event_id)
+            legacy_match = _matching_legacy_replay(
+                record=record,
+                event=event,
+                stored_hash=stored_hash,
+                event_type=event_type,
+                actor_id=actor_id,
+                evaluation_id=evaluation_id,
+                evaluation_hash=evaluation_hash,
+                source_evidence_hash=source_evidence_hash,
+                reason=reason,
             )
-            if (
-                source_evidence_hash is not None
-                and reason is not None
-                and _matches_legacy_correlation_sensitive_replay(
-                    record=record,
-                    event=event,
-                    stored_hash=stored_hash,
-                    source_evidence_hash=source_evidence_hash,
-                    reason=reason,
-                )
-            ):
-                return event, record
-            if (
-                event_type is not None
-                and actor_id is not None
-                and evaluation_id is not None
-                and evaluation_hash is not None
-                and reason is not None
-                and _matches_legacy_event_stable_replay(
-                    record=record,
-                    event=event,
-                    stored_hash=stored_hash,
-                    event_type=event_type,
-                    actor_id=actor_id,
-                    evaluation_id=evaluation_id,
-                    evaluation_hash=evaluation_hash,
-                    reason=reason,
-                )
-            ):
-                return event, record
-            if (
-                proposal_id is not None
-                and proposal_version_id is not None
-                and policy_pack_id is not None
-                and policy_version is not None
-                and evidence_bundle is not None
-                and reason is not None
-            ) and _can_repair_trusted_legal_entity_gap(
+            if legacy_match is not None:
+                return legacy_match
+            if _can_skip_conflict_for_legal_entity_repair(
                 record=record,
                 proposal_id=proposal_id,
                 proposal_version_id=proposal_version_id,
@@ -456,9 +429,17 @@ class PolicyEvaluationRecordStore:
             ):
                 return None
             raise ProposalIdempotencyConflictError("POLICY_EVALUATION_IDEMPOTENCY_KEY_CONFLICT")
+        record, event = self._load_replayed_event(evaluation_id, event_id)
+        return event, record
+
+    def _load_replayed_event(
+        self,
+        evaluation_id: str,
+        event_id: str,
+    ) -> tuple[PolicyEvaluationRecord, PolicyEvaluationAuditEvent]:
         record = self._load_record(evaluation_id)
         event = next(event for event in self._events[evaluation_id] if event.event_id == event_id)
-        return event, record
+        return record, event
 
 
 def _filtered_policy_evaluation_records(
@@ -554,6 +535,116 @@ def _can_repair_trusted_legal_entity_gap(
     ):
         return False
     return _evidence_legal_entity_matches_trusted_principal(
+        evidence_bundle=evidence_bundle,
+        reason=reason,
+    )
+
+
+def _matching_legacy_replay(
+    *,
+    record: PolicyEvaluationRecord,
+    event: PolicyEvaluationAuditEvent,
+    stored_hash: str,
+    event_type: PolicyEvaluationEventType | None,
+    actor_id: str | None,
+    evaluation_id: str | None,
+    evaluation_hash: str | None,
+    source_evidence_hash: str | None,
+    reason: dict[str, Any] | None,
+) -> tuple[PolicyEvaluationAuditEvent, PolicyEvaluationRecord] | None:
+    if reason is None:
+        return None
+    if _matches_correlation_sensitive_replay(
+        record=record,
+        event=event,
+        stored_hash=stored_hash,
+        source_evidence_hash=source_evidence_hash,
+        reason=reason,
+    ):
+        return event, record
+    if _matches_event_stable_replay(
+        record=record,
+        event=event,
+        stored_hash=stored_hash,
+        event_type=event_type,
+        actor_id=actor_id,
+        evaluation_id=evaluation_id,
+        evaluation_hash=evaluation_hash,
+        reason=reason,
+    ):
+        return event, record
+    return None
+
+
+def _matches_correlation_sensitive_replay(
+    *,
+    record: PolicyEvaluationRecord,
+    event: PolicyEvaluationAuditEvent,
+    stored_hash: str,
+    source_evidence_hash: str | None,
+    reason: dict[str, Any],
+) -> bool:
+    return source_evidence_hash is not None and _matches_legacy_correlation_sensitive_replay(
+        record=record,
+        event=event,
+        stored_hash=stored_hash,
+        source_evidence_hash=source_evidence_hash,
+        reason=reason,
+    )
+
+
+def _matches_event_stable_replay(
+    *,
+    record: PolicyEvaluationRecord,
+    event: PolicyEvaluationAuditEvent,
+    stored_hash: str,
+    event_type: PolicyEvaluationEventType | None,
+    actor_id: str | None,
+    evaluation_id: str | None,
+    evaluation_hash: str | None,
+    reason: dict[str, Any],
+) -> bool:
+    if event_type is None or actor_id is None or evaluation_id is None or evaluation_hash is None:
+        return False
+    return _matches_legacy_event_stable_replay(
+        record=record,
+        event=event,
+        stored_hash=stored_hash,
+        event_type=event_type,
+        actor_id=actor_id,
+        evaluation_id=evaluation_id,
+        evaluation_hash=evaluation_hash,
+        reason=reason,
+    )
+
+
+def _can_skip_conflict_for_legal_entity_repair(
+    *,
+    record: PolicyEvaluationRecord,
+    proposal_id: str | None,
+    proposal_version_id: str | None,
+    policy_pack_id: str | None,
+    policy_version: str | None,
+    portfolio_id: str | None,
+    evidence_bundle: dict[str, Any] | None,
+    reason: dict[str, Any] | None,
+) -> bool:
+    if (
+        proposal_id is None
+        or proposal_version_id is None
+        or policy_pack_id is None
+        or policy_version is None
+        or evidence_bundle is None
+        or reason is None
+    ):
+        return False
+    return _can_repair_trusted_legal_entity_gap(
+        record=record,
+        proposal_id=proposal_id,
+        proposal_version_id=proposal_version_id,
+        policy_pack_id=policy_pack_id,
+        policy_version=policy_version,
+        portfolio_id=portfolio_id,
         evidence_bundle=evidence_bundle,
         reason=reason,
     )
