@@ -299,7 +299,18 @@ def _freshness_status(
     payloads: tuple[dict[str, Any], ...],
     aggregate: bool = False,
 ) -> SourceFreshnessStatus:
-    raw_values = tuple(
+    raw_values = _freshness_raw_values(source_kind=source_kind, payloads=payloads)
+    if aggregate:
+        return _aggregate_freshness_status(raw_values)
+    return _single_freshness_status(source_kind=source_kind, payloads=payloads)
+
+
+def _freshness_raw_values(
+    *,
+    source_kind: Literal["PORTFOLIO", "MARKET_DATA"],
+    payloads: tuple[dict[str, Any], ...],
+) -> tuple[str, ...]:
+    return tuple(
         value.upper()
         for value in _payload_text_values(
             source_kind,
@@ -307,18 +318,23 @@ def _freshness_status(
             keys=("freshness_status", "valuation_freshness_status"),
         )
     )
-    values = tuple(
-        cast(SourceFreshnessStatus, value) for value in raw_values if value in _FRESHNESS_VALUES
-    )
-    if not values:
+
+
+def _aggregate_freshness_status(raw_values: tuple[str, ...]) -> SourceFreshnessStatus:
+    values = tuple(freshness for freshness in raw_values if freshness in _FRESHNESS_VALUES)
+    if not values or len(values) != len(raw_values):
         return "UNKNOWN"
-    if aggregate:
-        if len(values) != len(raw_values):
-            return "UNKNOWN"
-        for freshness in _FRESHNESS_PRECEDENCE:
-            if freshness in values:
-                return freshness
-        return "UNKNOWN"
+    for freshness in _FRESHNESS_PRECEDENCE:
+        if freshness in values:
+            return freshness
+    return "UNKNOWN"
+
+
+def _single_freshness_status(
+    *,
+    source_kind: Literal["PORTFOLIO", "MARKET_DATA"],
+    payloads: tuple[dict[str, Any], ...],
+) -> SourceFreshnessStatus:
     value = _consistent_payload_text(
         source_kind,
         payloads,
