@@ -4,6 +4,7 @@ from typing import Any
 from src.core.common.canonical import hash_canonical_payload
 from src.core.policy_packs.catalog_definitions import CATALOG_CONTRACT_VERSION
 from src.core.policy_packs.catalog_models import PolicyPackAuditEvent
+from src.core.policy_packs.receipt_identity import idempotency_stable_reason
 from src.core.proposals.exceptions import ProposalIdempotencyConflictError
 
 
@@ -96,6 +97,4 @@ def _legacy_stable_event_hash(event: PolicyPackAuditEvent) -> str:
 
 
 def _idempotency_stable_catalog_reason(reason: dict[str, Any]) -> dict[str, Any]:
-    stable_reason = dict(reason)
-    stable_reason.pop("trusted_principal", None)
-    return stable_reason
+    return idempotency_stable_reason(reason)

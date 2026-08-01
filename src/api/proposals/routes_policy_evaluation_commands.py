@@ -189,8 +189,10 @@ def _bind_policy_evaluation_proposal_evidence(
     )
     if version is None:
         return deepcopy(evidence_bundle)
-    if not isinstance(version.evidence_bundle_json, dict) or not version.evidence_bundle_json:
+    if not isinstance(version.evidence_bundle_json, dict):
         raise ProposalValidationError("PROPOSAL_VERSION_EVIDENCE_BUNDLE_REQUIRED")
+    if not version.evidence_bundle_json:
+        return deepcopy(evidence_bundle)
 
     bound = deepcopy(evidence_bundle)
     _bind_context_resolution(

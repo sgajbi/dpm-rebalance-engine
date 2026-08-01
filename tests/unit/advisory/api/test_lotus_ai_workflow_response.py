@@ -48,13 +48,30 @@ def test_extract_provider_and_model_identity_from_model_risk_output() -> None:
             }
         }
     }
-    audit = {
-        "provider_id": "text.stub",
-        "model_version": None,
-    }
+    assert extract_provider_id(result) == "lotus-ai"
+    assert extract_model_version(result) == "lotus-ai-governed-model.v1"
 
-    assert extract_provider_id(result, audit=audit) == "lotus-ai"
+
+def test_extract_provider_rejects_audit_and_model_risk_identity_disagreement() -> None:
+    result = {
+        "structured_output": {
+            "model_risk": {
+                "approved_provider_id": " lotus-ai ",
+                "approved_model_version": " lotus-ai-governed-model.v1 ",
+            }
+        }
+    }
+    audit = {"provider_id": "text.stub", "model_version": None}
+
+    assert extract_provider_id(result, audit=audit) == "MODEL_IDENTITY_SOURCE_DISAGREEMENT"
     assert extract_model_version(result, audit=audit) == "lotus-ai-governed-model.v1"
+
+
+def test_extract_model_version_rejects_audit_and_result_identity_disagreement() -> None:
+    result = {"model_version": "lotus-ai-experimental-model.v2"}
+    audit = {"model_version": "lotus-ai-governed-model.v1"}
+
+    assert extract_model_version(result, audit=audit) == "MODEL_IDENTITY_SOURCE_DISAGREEMENT"
 
 
 def test_extract_error_detail_uses_default_for_blank_or_structured_details() -> None:

@@ -638,6 +638,7 @@ def test_policy_evaluation_legal_entity_repair_guard_requires_complete_identity(
         policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
         policy_version="2026.05",
         portfolio_id="PB_SG_GLOBAL_BAL_001",
+        source_evidence_hash=hash_canonical_payload(evidence),
         evidence_bundle=evidence,
         reason=repair_reason,
     )
@@ -648,6 +649,7 @@ def test_policy_evaluation_legal_entity_repair_guard_requires_complete_identity(
         policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
         policy_version="2026.05",
         portfolio_id="PB_SG_GLOBAL_BAL_001",
+        source_evidence_hash=hash_canonical_payload(evidence),
         evidence_bundle=evidence,
         reason={"purpose": "missing trusted principal"},
     )
@@ -658,6 +660,7 @@ def test_policy_evaluation_legal_entity_repair_guard_requires_complete_identity(
         policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
         policy_version="2026.05",
         portfolio_id="PB_SG_GLOBAL_BAL_001",
+        source_evidence_hash=hash_canonical_payload(evidence),
         evidence_bundle=evidence,
         reason=repair_reason,
     )
@@ -725,6 +728,66 @@ def test_policy_evaluation_idempotency_repair_rejects_business_reason_drift() ->
             idempotency_key="policy-eval-legal-repair-reason-drift",
             reason=_trusted_legal_entity_repair_reason("changed repair proof"),
         )
+
+
+def test_policy_evaluation_idempotency_repair_rejects_non_legal_entity_evidence_drift() -> None:
+    _activate_sg_policy_pack()
+    repaired_evidence = _sg_structured_note_evidence()
+    pre_fix_evidence = _without_policy_legal_entity(repaired_evidence)
+
+    finalize_policy_evaluation_record(
+        evidence_bundle=pre_fix_evidence,
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legal_repair_evidence_drift",
+        proposal_version_id="ppv_policy_legal_repair_evidence_drift",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legal-repair-evidence-drift",
+        reason=_trusted_reason("trusted legal entity repair proof"),
+    )
+    repaired_evidence["inputs"]["portfolio_snapshot"]["positions"].append(
+        {"instrument_id": "DRIFTED_SOURCE", "quantity": "1"}
+    )
+
+    with pytest.raises(
+        ProposalIdempotencyConflictError,
+        match="POLICY_EVALUATION_IDEMPOTENCY_KEY_CONFLICT",
+    ):
+        finalize_policy_evaluation_record(
+            evidence_bundle=repaired_evidence,
+            policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+            policy_version="2026.05",
+            proposal_id="pp_policy_legal_repair_evidence_drift",
+            proposal_version_id="ppv_policy_legal_repair_evidence_drift",
+            created_by="advisor_1",
+            idempotency_key="policy-eval-legal-repair-evidence-drift",
+            reason=_trusted_legal_entity_repair_reason("trusted legal entity repair proof"),
+        )
+
+
+def test_policy_evaluation_event_stable_replay_rejects_requested_evaluation_id_drift() -> None:
+    created = finalize_policy_evaluation_record(
+        evidence_bundle=_base_evidence_bundle(),
+        policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legacy_eval_id",
+        proposal_version_id="ppv_policy_legacy_eval_id",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legacy-eval-id",
+        reason=_trusted_reason("legacy evaluation id proof"),
+    )
+    event = list_policy_evaluation_events(evaluation_id=created.record.evaluation_id)[0]
+
+    assert not _matches_event_stable_replay(
+        record=created.record,
+        event=event,
+        stored_hash=event.reason_json["idempotency_request_hash"],
+        event_type=event.event_type,
+        actor_id=event.actor_id,
+        evaluation_id="pev_different_requested",
+        evaluation_hash=created.record.evaluation_hash,
+        reason=_trusted_reason("legacy evaluation id proof"),
+    )
 
 
 def test_policy_evaluation_receipt_identity_fails_closed_without_trusted_principal() -> None:

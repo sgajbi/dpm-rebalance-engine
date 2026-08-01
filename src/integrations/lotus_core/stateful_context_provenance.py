@@ -58,6 +58,7 @@ def build_lotus_core_source_provenance(
         fallback_id=f"lotus-core:market-data:{portfolio_id}:{resolved_as_of}",
         identity_payloads=(positions_payload, cash_payload),
         metadata_payloads=(positions_payload, cash_payload),
+        metadata_component_names=("positions", "cash_balances"),
         id_keys=("market_data_snapshot_id", "valuation_snapshot_id"),
         fallback_payload=positions_payload,
         allow_component_hashes=True,
@@ -87,6 +88,7 @@ def _source_identity(
     metadata_payloads: tuple[dict[str, Any], ...],
     id_keys: tuple[str, ...],
     fallback_payload: dict[str, Any],
+    metadata_component_names: tuple[str, ...] | None = None,
     allow_component_hashes: bool = False,
     aggregate_freshness: bool = False,
     aggregate_latest_timestamp: bool = False,
@@ -110,6 +112,7 @@ def _source_identity(
         source_kind,
         metadata_payloads,
         allow_component_hashes=allow_component_hashes,
+        component_names=metadata_component_names,
     )
     valuation_timestamp = _valuation_timestamp(
         source_kind,
@@ -146,21 +149,30 @@ def _source_hash(
     payloads: tuple[dict[str, Any], ...],
     *,
     allow_component_hashes: bool,
+    component_names: tuple[str, ...] | None,
 ) -> str | None:
     values = _payload_text_values(
         source_kind,
         payloads,
         keys=("source_hash", "content_hash", "snapshot_hash"),
     )
+    component_values = _payload_component_text_values(
+        payloads,
+        component_names=component_names,
+        keys=("source_hash", "content_hash", "snapshot_hash"),
+    )
     if len(values) <= 1:
-        return next(iter(values), None)
+        if len(component_values) <= 1:
+            return next(iter(values), None)
+        if not allow_component_hashes:
+            raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
     if not allow_component_hashes:
         raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
     return hash_canonical_payload(
         {
             "source_system": _SOURCE_SYSTEM,
             "source_kind": source_kind,
-            "component_hashes": values,
+            "component_hashes": component_values,
         }
     )
 
@@ -235,6 +247,38 @@ def _payload_text_values(
     )
 
 
+def _payload_component_text_values(
+    payloads: tuple[dict[str, Any], ...],
+    *,
+    component_names: tuple[str, ...] | None,
+    keys: tuple[str, ...],
+) -> tuple[dict[str, str], ...]:
+    components: list[dict[str, str]] = []
+    for index, payload in enumerate(payloads):
+        value = next(
+            (
+                normalized
+                for key in keys
+                if (normalized := _normalized_text(payload.get(key))) is not None
+            ),
+            None,
+        )
+        if value is None:
+            continue
+        component = (
+            component_names[index]
+            if component_names is not None and index < len(component_names)
+            else f"component_{index + 1}"
+        )
+        components.append({"component": component, "source_hash": value})
+    return tuple(
+        sorted(
+            components,
+            key=lambda item: (item["component"], item["source_hash"]),
+        )
+    )
+
+
 def _fallback_source_id(
     *,
     fallback_id: str,
@@ -255,18 +299,22 @@ def _freshness_status(
     payloads: tuple[dict[str, Any], ...],
     aggregate: bool = False,
 ) -> SourceFreshnessStatus:
-    values = tuple(
-        cast(SourceFreshnessStatus, value.upper())
+    raw_values = tuple(
+        value.upper()
         for value in _payload_text_values(
             source_kind,
             payloads,
             keys=("freshness_status", "valuation_freshness_status"),
         )
-        if value.upper() in _FRESHNESS_VALUES
+    )
+    values = tuple(
+        cast(SourceFreshnessStatus, value) for value in raw_values if value in _FRESHNESS_VALUES
     )
     if not values:
         return "UNKNOWN"
     if aggregate:
+        if len(values) != len(raw_values):
+            return "UNKNOWN"
         for freshness in _FRESHNESS_PRECEDENCE:
             if freshness in values:
                 return freshness

@@ -939,7 +939,10 @@ def test_resolve_stateful_context_accepts_componentized_market_data_hashes(monke
         {
             "source_system": "LOTUS_CORE",
             "source_kind": "MARKET_DATA",
-            "component_hashes": sorted([positions_hash, cash_hash]),
+            "component_hashes": [
+                {"component": "cash_balances", "source_hash": cash_hash},
+                {"component": "positions", "source_hash": positions_hash},
+            ],
         }
     )
     assert provenance.market_data.source_hash == expected_market_hash
@@ -949,6 +952,54 @@ def test_resolve_stateful_context_accepts_componentized_market_data_hashes(monke
     assert provenance.market_data.valuation_timestamp == "2026-08-01T11:46:22.097731Z"
     assert provenance.market_data.freshness_status == "CURRENT"
     assert resolved.resolved_context.market_data_snapshot_id == provenance.market_data.source_id
+
+
+def test_resolve_stateful_context_degrades_invalid_component_freshness(monkeypatch) -> None:
+    from src.core.workspace.models import WorkspaceStatefulInput
+
+    base_url = "http://host.docker.internal:8201"
+    control_plane_base_url = "http://host.docker.internal:8202"
+    monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", control_plane_base_url)
+    responses = {
+        ("GET", f"{base_url}/portfolios/PB_SG_GLOBAL_BAL_001"): _FakeResponse(
+            {
+                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "base_currency": "USD",
+            }
+        ),
+        ("GET", f"{base_url}/portfolios/PB_SG_GLOBAL_BAL_001/positions"): _FakeResponse(
+            {
+                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "content_hash": "sha256:positions-source",
+                "generated_at": "2026-08-01T11:46:22.074848Z",
+                "freshness_status": "CURRENT",
+                "positions": [],
+            }
+        ),
+        ("GET", f"{base_url}/portfolios/PB_SG_GLOBAL_BAL_001/cash-balances"): _FakeResponse(
+            {
+                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "resolved_as_of_date": "2026-04-10",
+                "content_hash": "sha256:cash-source",
+                "generated_at": "2026-08-01T11:46:22.097731Z",
+                "freshness_status": "UNRECOGNIZED_COMPONENT_STATE",
+                "cash_accounts": [],
+            }
+        ),
+    }
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.stateful_context.httpx.Client",
+        lambda timeout: _FakeClient(responses),
+    )
+
+    resolved = resolve_stateful_context_with_lotus_core(
+        WorkspaceStatefulInput(portfolio_id="PB_SG_GLOBAL_BAL_001", as_of="2026-04-10")
+    )
+
+    provenance = resolved.resolved_context.source_provenance
+    assert provenance is not None
+    assert provenance.market_data.freshness_status == "UNKNOWN"
 
 
 def test_lotus_core_source_completeness_counts_rejections_without_raw_payloads() -> None:

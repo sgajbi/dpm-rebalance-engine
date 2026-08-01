@@ -174,6 +174,49 @@ def test_policy_pack_validation_replays_when_only_trusted_principal_metadata_cha
     )
 
 
+def test_policy_pack_validation_idempotency_preserves_trusted_scope_fields() -> None:
+    validate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        requested_by="policy_steward_1",
+        idempotency_key="validate-principal-scope",
+        reason={
+            "purpose": "pre-activation validation",
+            "trusted_principal": {
+                "subject": "policy_steward_1",
+                "role": "POLICY_STEWARD",
+                "tenant_id": "tenant_sg_001",
+                "legal_entity_code": "REFERENCE",
+                "service_identity": "lotus-gateway",
+                "capability": "advisory.policy_packs.validate",
+                "correlation_id": "corr-first",
+                "trace_id": "trace-first",
+            },
+        },
+    )
+
+    with pytest.raises(ProposalIdempotencyConflictError):
+        validate_policy_pack_version(
+            policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+            policy_version="2026.05",
+            requested_by="policy_steward_1",
+            idempotency_key="validate-principal-scope",
+            reason={
+                "purpose": "pre-activation validation",
+                "trusted_principal": {
+                    "subject": "policy_steward_1",
+                    "role": "POLICY_STEWARD",
+                    "tenant_id": "tenant_other",
+                    "legal_entity_code": "OTHER_ENTITY",
+                    "service_identity": "lotus-gateway",
+                    "capability": "advisory.policy_packs.validate",
+                    "correlation_id": "corr-retry",
+                    "trace_id": "trace-retry",
+                },
+            },
+        )
+
+
 def test_policy_pack_validation_replays_legacy_volatile_principal_hash() -> None:
     store = PolicyPackCatalogStore(reference_policy_packs())
     reason = {
@@ -348,6 +391,62 @@ def test_policy_pack_activation_replays_when_only_trusted_principal_metadata_cha
         activated.activation_event.reason["reason"]["trusted_principal"]["correlation_id"]
         == "corr-first"
     )
+
+
+def test_policy_pack_activation_idempotency_preserves_trusted_scope_fields() -> None:
+    detail = get_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+    )
+    validate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        requested_by="policy_steward_1",
+        idempotency_key="validate-before-principal-scope-activate",
+        reason={"purpose": "pre-activation validation"},
+    )
+    activate_policy_pack_version(
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        activated_by="policy_checker_1",
+        source_content_hash=detail.policy_pack.content_hash,
+        idempotency_key="activate-principal-scope",
+        reason={
+            "purpose": "activate reference pack",
+            "trusted_principal": {
+                "subject": "policy_checker_1",
+                "role": "POLICY_CHECKER",
+                "tenant_id": "tenant_sg_001",
+                "legal_entity_code": "REFERENCE",
+                "service_identity": "lotus-gateway",
+                "capability": "advisory.policy_packs.activate",
+                "correlation_id": "corr-first",
+                "trace_id": "trace-first",
+            },
+        },
+    )
+
+    with pytest.raises(ProposalIdempotencyConflictError):
+        activate_policy_pack_version(
+            policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+            policy_version="2026.05",
+            activated_by="policy_checker_1",
+            source_content_hash=detail.policy_pack.content_hash,
+            idempotency_key="activate-principal-scope",
+            reason={
+                "purpose": "activate reference pack",
+                "trusted_principal": {
+                    "subject": "policy_checker_1",
+                    "role": "POLICY_CHECKER",
+                    "tenant_id": "tenant_other",
+                    "legal_entity_code": "OTHER_ENTITY",
+                    "service_identity": "lotus-gateway",
+                    "capability": "advisory.policy_packs.activate",
+                    "correlation_id": "corr-retry",
+                    "trace_id": "trace-retry",
+                },
+            },
+        )
 
 
 def test_policy_pack_activation_supersedes_prior_active_version() -> None:
