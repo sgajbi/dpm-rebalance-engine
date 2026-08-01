@@ -227,9 +227,15 @@ def _legacy_context_matches(*, version: Any, stateful_input: Any) -> bool:
     resolved_context = context_resolution.get("resolved_context")
     if not isinstance(resolved_context, dict):
         return False
-    portfolio_matches = resolved_context.get("portfolio_id") == stateful_input.portfolio_id
-    as_of_matches = resolved_context.get("as_of") == stateful_input.as_of
-    return bool(portfolio_matches and as_of_matches)
+    return _legacy_optional_fields_match(
+        actual=resolved_context,
+        expected={
+            "portfolio_id": stateful_input.portfolio_id,
+            "as_of": stateful_input.as_of,
+            "household_id": getattr(stateful_input, "household_id", None),
+            "benchmark_id": getattr(stateful_input, "benchmark_id", None),
+        },
+    )
 
 
 def _legacy_narrative_request_matches(
@@ -248,11 +254,25 @@ def _legacy_narrative_request_matches(
     if expected_payload is None or narrative_context is None:
         return False
     return (
-        narrative.get("audience") == expected_payload.get("audience")
-        and narrative_context.get("jurisdiction") == expected_payload.get("jurisdiction")
-        and narrative_context.get("client_audience") == expected_payload.get("client_audience")
-        and list(_legacy_narrative_section_keys(narrative)) == expected_payload.get("sections")
-        and expected_payload.get("requested_by") == created_by
+        _legacy_optional_fields_match(
+            actual=narrative,
+            expected={
+                "audience": expected_payload.get("audience"),
+                "generation_mode": expected_payload.get("generation_mode"),
+            },
+        )
+        and _legacy_optional_fields_match(
+            actual=narrative_context,
+            expected={
+                "jurisdiction": expected_payload.get("jurisdiction"),
+                "client_audience": expected_payload.get("client_audience"),
+                "product_types": expected_payload.get("product_types"),
+            },
+        )
+        and (
+            list(_legacy_narrative_section_keys(narrative)) == expected_payload.get("sections")
+            and expected_payload.get("requested_by") == created_by
+        )
     )
 
 
@@ -272,6 +292,16 @@ def _legacy_narrative_context(narrative: dict[str, Any]) -> dict[str, Any] | Non
 def _legacy_narrative_section_keys(narrative: dict[str, Any]) -> tuple[object, ...]:
     sections = narrative.get("sections", [])
     return tuple(section.get("section_key") for section in sections if isinstance(section, dict))
+
+
+def _legacy_optional_fields_match(
+    *,
+    actual: dict[str, Any],
+    expected: dict[str, object | None],
+) -> bool:
+    return all(
+        value is None or actual.get(field_name) == value for field_name, value in expected.items()
+    )
 
 
 __all__ = ["create_proposal_command"]
