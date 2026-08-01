@@ -1,10 +1,17 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
 from src.core.common.idempotency import (
     normalize_optional_idempotency_key,
     normalize_required_idempotency_key,
+)
+from src.core.proposals.create_command import (
+    _is_matching_legacy_replay,
+    _legacy_context_matches,
+    _legacy_narrative_request_matches,
+    _legacy_proposal_fields_match,
 )
 from src.core.proposals.exceptions import ProposalValidationError
 from src.core.proposals.idempotency import (
@@ -17,6 +24,30 @@ from src.core.proposals.idempotency import (
 from src.core.proposals.idempotency_validation import require_proposal_idempotency_key
 from src.core.proposals.models import ProposalApprovalRecordData, ProposalWorkflowEventRecord
 from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
+
+
+class _NarrativeRequest:
+    def __init__(self, payload: dict[str, object]) -> None:
+        self._payload = payload
+
+    def model_dump(self, *, mode: str) -> dict[str, object]:
+        assert mode == "json"
+        return self._payload
+
+
+class _LegacyReplayRepository:
+    def __init__(self, proposal: object | None, version: object | None) -> None:
+        self._proposal = proposal
+        self._version = version
+
+    def get_proposal(self, *, proposal_id: str) -> object | None:
+        assert proposal_id == "pp_legacy_replay"
+        return self._proposal
+
+    def get_version(self, *, proposal_id: str, version_no: int) -> object | None:
+        assert proposal_id == "pp_legacy_replay"
+        assert version_no == 1
+        return self._version
 
 
 def _event(
@@ -209,3 +240,179 @@ def test_load_replayed_approval_reads_repository_approvals():
     )
 
     assert replayed == latest
+
+
+def test_legacy_stateful_create_replay_helpers_match_canonical_legacy_payload() -> None:
+    stateful_input = SimpleNamespace(
+        portfolio_id="pf_legacy_replay",
+        as_of="2026-05-20",
+        mandate_id="mandate_stateful",
+        narrative_request=_NarrativeRequest(
+            {
+                "audience": "ADVISOR_REVIEW",
+                "jurisdiction": "SG",
+                "client_audience": "RELATIONSHIP_MANAGER",
+                "sections": ["overview", "risk"],
+                "requested_by": "advisor_legacy",
+            }
+        ),
+    )
+    payload = SimpleNamespace(
+        input_mode="stateful",
+        stateful_input=stateful_input,
+        created_by="advisor_legacy",
+        metadata=SimpleNamespace(
+            title="Legacy stateful proposal",
+            advisor_notes="Replay compatibility proof",
+            jurisdiction="SG",
+            mandate_id=None,
+        ),
+    )
+    proposal = SimpleNamespace(
+        created_by="advisor_legacy",
+        portfolio_id="pf_legacy_replay",
+        title="Legacy stateful proposal",
+        advisor_notes="Replay compatibility proof",
+        jurisdiction="SG",
+        mandate_id="mandate_stateful",
+    )
+    version = SimpleNamespace(
+        request_hash="sha256:legacy",
+        evidence_bundle_json={
+            "context_resolution": {
+                "resolved_context": {
+                    "portfolio_id": "pf_legacy_replay",
+                    "as_of": "2026-05-20",
+                }
+            }
+        },
+        artifact_json={
+            "proposal_narrative": {
+                "audience": "ADVISOR_REVIEW",
+                "narrative_policy": {
+                    "context": {
+                        "jurisdiction": "SG",
+                        "client_audience": "RELATIONSHIP_MANAGER",
+                    }
+                },
+                "sections": [
+                    {"section_key": "overview"},
+                    {"section_key": "risk"},
+                    "not-a-section",
+                ],
+            }
+        },
+    )
+
+    assert _legacy_proposal_fields_match(
+        proposal=proposal,
+        payload=payload,
+        stateful_input=stateful_input,
+    )
+    assert _legacy_context_matches(version=version, stateful_input=stateful_input)
+    assert _legacy_narrative_request_matches(
+        artifact=version.artifact_json,
+        expected=stateful_input.narrative_request,
+        created_by="advisor_legacy",
+    )
+    assert _is_matching_legacy_replay(
+        repository=_LegacyReplayRepository(proposal=proposal, version=version),
+        payload=payload,
+        stored_request_hash="sha256:legacy",
+        proposal_id="pp_legacy_replay",
+        proposal_version_no=1,
+    )
+
+
+@pytest.mark.parametrize(
+    ("payload_override", "version_override"),
+    [
+        ({"input_mode": "snapshot"}, {}),
+        ({"stateful_input": None}, {}),
+        ({}, {"request_hash": "sha256:changed"}),
+        (
+            {
+                "metadata": SimpleNamespace(
+                    title="Changed", advisor_notes=None, jurisdiction=None, mandate_id=None
+                )
+            },
+            {},
+        ),
+        ({}, {"evidence_bundle_json": {"context_resolution": "malformed"}}),
+        ({}, {"evidence_bundle_json": {"context_resolution": {"resolved_context": "malformed"}}}),
+        ({}, {"artifact_json": {"proposal_narrative": "malformed"}}),
+        ({}, {"artifact_json": {"proposal_narrative": None}}),
+    ],
+)
+def test_legacy_stateful_create_replay_helpers_reject_drift(
+    payload_override: dict[str, object],
+    version_override: dict[str, object],
+) -> None:
+    stateful_input = SimpleNamespace(
+        portfolio_id="pf_legacy_replay",
+        as_of="2026-05-20",
+        mandate_id="mandate_stateful",
+        narrative_request=_NarrativeRequest(
+            {
+                "audience": "ADVISOR_REVIEW",
+                "jurisdiction": "SG",
+                "client_audience": "RELATIONSHIP_MANAGER",
+                "sections": ["overview"],
+                "requested_by": "advisor_legacy",
+            }
+        ),
+    )
+    payload = SimpleNamespace(
+        input_mode="stateful",
+        stateful_input=stateful_input,
+        created_by="advisor_legacy",
+        metadata=SimpleNamespace(
+            title="Legacy stateful proposal",
+            advisor_notes=None,
+            jurisdiction=None,
+            mandate_id=None,
+        ),
+    )
+    for key, value in payload_override.items():
+        setattr(payload, key, value)
+    proposal = SimpleNamespace(
+        created_by="advisor_legacy",
+        portfolio_id="pf_legacy_replay",
+        title="Legacy stateful proposal",
+        advisor_notes=None,
+        jurisdiction=None,
+        mandate_id="mandate_stateful",
+    )
+    version = SimpleNamespace(
+        request_hash="sha256:legacy",
+        evidence_bundle_json={
+            "context_resolution": {
+                "resolved_context": {
+                    "portfolio_id": "pf_legacy_replay",
+                    "as_of": "2026-05-20",
+                }
+            }
+        },
+        artifact_json={
+            "proposal_narrative": {
+                "audience": "ADVISOR_REVIEW",
+                "narrative_policy": {
+                    "context": {
+                        "jurisdiction": "SG",
+                        "client_audience": "RELATIONSHIP_MANAGER",
+                    }
+                },
+                "sections": [{"section_key": "overview"}],
+            }
+        },
+    )
+    for key, value in version_override.items():
+        setattr(version, key, value)
+
+    assert not _is_matching_legacy_replay(
+        repository=_LegacyReplayRepository(proposal=proposal, version=version),
+        payload=payload,
+        stored_request_hash="sha256:legacy",
+        proposal_id="pp_legacy_replay",
+        proposal_version_no=1,
+    )
