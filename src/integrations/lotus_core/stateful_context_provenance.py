@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Literal, cast
 
 from src.core.common.canonical import hash_canonical_payload
@@ -161,13 +162,20 @@ def _source_hash(
         component_names=component_names,
         keys=("source_hash", "content_hash", "snapshot_hash"),
     )
+    if allow_component_hashes and component_values:
+        return _component_source_hash(source_kind=source_kind, component_values=component_values)
     if len(values) <= 1:
-        if len(component_values) <= 1:
-            return next(iter(values), None)
-        if not allow_component_hashes:
-            raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
+        return next(iter(values), None)
     if not allow_component_hashes:
         raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
+    return _component_source_hash(source_kind=source_kind, component_values=component_values)
+
+
+def _component_source_hash(
+    *,
+    source_kind: Literal["PORTFOLIO", "MARKET_DATA"],
+    component_values: tuple[dict[str, str], ...],
+) -> str:
     return hash_canonical_payload(
         {
             "source_system": _SOURCE_SYSTEM,
@@ -191,8 +199,23 @@ def _valuation_timestamp(
     if len(values) <= 1:
         return next(iter(values), None)
     if aggregate_latest_timestamp:
-        return max(values)
+        return _latest_timestamp_value(values)
     raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
+
+
+def _latest_timestamp_value(values: tuple[str, ...]) -> str:
+    return max(values, key=_parsed_timestamp)
+
+
+def _parsed_timestamp(value: str) -> datetime:
+    normalized = value.removesuffix("Z") + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID") from exc
+    if parsed.tzinfo is None:
+        raise LotusCoreSourceProvenanceError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
+    return parsed
 
 
 def _record(

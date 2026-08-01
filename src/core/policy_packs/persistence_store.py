@@ -31,7 +31,12 @@ from src.core.policy_packs.projection_models import (
     PolicyEvaluationReviewQueueResponse,
     PolicyEvaluationSignOffPackageResponse,
 )
-from src.core.policy_packs.receipt_identity import idempotency_stable_reason, replay_safe_reason
+from src.core.policy_packs.receipt_identity import (
+    build_policy_evaluation_receipt_identity,
+    idempotency_stable_reason,
+    receipt_identity_from_record,
+    replay_safe_reason,
+)
 from src.core.policy_packs.supportability import (
     POLICY_EVALUATION_PERSISTENCE_CONTRACT_VERSION,
     policy_sign_off_package_posture,
@@ -412,6 +417,11 @@ class PolicyEvaluationRecordStore:
                 actor_id=actor_id,
                 evaluation_id=evaluation_id,
                 evaluation_hash=evaluation_hash,
+                proposal_id=proposal_id,
+                proposal_version_id=proposal_version_id,
+                policy_pack_id=policy_pack_id,
+                policy_version=policy_version,
+                portfolio_id=portfolio_id,
                 source_evidence_hash=source_evidence_hash,
                 reason=reason,
             )
@@ -524,16 +534,23 @@ def _can_repair_trusted_legal_entity_gap(
         return False
     if not _is_legal_entity_gap_blocked_record(record):
         return False
-    if (
-        record.proposal_id != proposal_id
-        or record.proposal_version_id != proposal_version_id
-        or record.policy_pack_id != policy_pack_id
-        or record.policy_version != policy_version
-        or record.portfolio_id != portfolio_id
+    if not _matches_record_scope(
+        record=record,
+        proposal_id=proposal_id,
+        proposal_version_id=proposal_version_id,
+        policy_pack_id=policy_pack_id,
+        policy_version=policy_version,
+        portfolio_id=portfolio_id,
     ):
         return False
     if record.replay_metadata_json.get("creation_reason") != _repair_base_replay_safe_reason(
         reason
+    ):
+        return False
+    if not _repair_trusted_principal_matches_record(
+        record=record,
+        evidence_bundle=evidence_bundle,
+        reason=reason,
     ):
         return False
     if not _repair_changes_only_missing_legal_entity(
@@ -557,6 +574,11 @@ def _matching_legacy_replay(
     actor_id: str | None,
     evaluation_id: str | None,
     evaluation_hash: str | None,
+    proposal_id: str | None,
+    proposal_version_id: str | None,
+    policy_pack_id: str | None,
+    policy_version: str | None,
+    portfolio_id: str | None,
     source_evidence_hash: str | None,
     reason: dict[str, Any] | None,
 ) -> tuple[PolicyEvaluationAuditEvent, PolicyEvaluationRecord] | None:
@@ -566,6 +588,11 @@ def _matching_legacy_replay(
         record=record,
         event=event,
         stored_hash=stored_hash,
+        proposal_id=proposal_id,
+        proposal_version_id=proposal_version_id,
+        policy_pack_id=policy_pack_id,
+        policy_version=policy_version,
+        portfolio_id=portfolio_id,
         source_evidence_hash=source_evidence_hash,
         reason=reason,
     ):
@@ -589,15 +616,31 @@ def _matches_correlation_sensitive_replay(
     record: PolicyEvaluationRecord,
     event: PolicyEvaluationAuditEvent,
     stored_hash: str,
+    proposal_id: str | None,
+    proposal_version_id: str | None,
+    policy_pack_id: str | None,
+    policy_version: str | None,
+    portfolio_id: str | None,
     source_evidence_hash: str | None,
     reason: dict[str, Any],
 ) -> bool:
-    return source_evidence_hash is not None and _matches_legacy_correlation_sensitive_replay(
-        record=record,
-        event=event,
-        stored_hash=stored_hash,
-        source_evidence_hash=source_evidence_hash,
-        reason=reason,
+    return (
+        source_evidence_hash is not None
+        and _matches_record_scope(
+            record=record,
+            proposal_id=proposal_id,
+            proposal_version_id=proposal_version_id,
+            policy_pack_id=policy_pack_id,
+            policy_version=policy_version,
+            portfolio_id=portfolio_id,
+        )
+        and _matches_legacy_correlation_sensitive_replay(
+            record=record,
+            event=event,
+            stored_hash=stored_hash,
+            source_evidence_hash=source_evidence_hash,
+            reason=reason,
+        )
     )
 
 
@@ -679,6 +722,31 @@ def _matches_legacy_correlation_sensitive_replay(
     return stored_hash == _legacy_correlation_sensitive_request_hash(
         record=record,
         reason=finalization_reason,
+    )
+
+
+def _matches_record_scope(
+    *,
+    record: PolicyEvaluationRecord,
+    proposal_id: str | None,
+    proposal_version_id: str | None,
+    policy_pack_id: str | None,
+    policy_version: str | None,
+    portfolio_id: str | None,
+) -> bool:
+    if (
+        proposal_id is None
+        or proposal_version_id is None
+        or policy_pack_id is None
+        or policy_version is None
+    ):
+        return False
+    return (
+        record.proposal_id == proposal_id
+        and record.proposal_version_id == proposal_version_id
+        and record.policy_pack_id == policy_pack_id
+        and record.policy_version == policy_version
+        and record.portfolio_id == portfolio_id
     )
 
 
@@ -764,6 +832,44 @@ def _repair_base_replay_safe_reason(reason: dict[str, Any]) -> dict[str, Any]:
     safe_reason = replay_safe_reason(reason)
     safe_reason.pop(_POLICY_EVALUATION_REPAIR_INTENT_KEY, None)
     return safe_reason
+
+
+def _repair_trusted_principal_matches_record(
+    *,
+    record: PolicyEvaluationRecord,
+    evidence_bundle: dict[str, Any],
+    reason: dict[str, Any],
+) -> bool:
+    trusted_principal = reason.get("trusted_principal")
+    if not isinstance(trusted_principal, dict):
+        return False
+    subject = _normalized_non_empty(trusted_principal.get("subject"))
+    if subject is None or subject != _normalized_non_empty(record.created_by):
+        return False
+    try:
+        incoming = build_policy_evaluation_receipt_identity(
+            evidence_bundle=evidence_bundle,
+            proposal_id=record.proposal_id,
+            proposal_version_id=record.proposal_version_id,
+            portfolio_id=record.portfolio_id,
+            reason=reason,
+            observed_trace_id=None,
+            observed_at=_generated_at(record),
+        )
+        existing = receipt_identity_from_record(record)
+    except Exception:
+        return False
+    return (
+        incoming.as_of_date == existing.as_of_date
+        and incoming.scope_identity == existing.scope_identity
+    )
+
+
+def _generated_at(record: PolicyEvaluationRecord) -> datetime:
+    value = record.generated_at.strip()
+    normalized = value.removesuffix("Z") + "+00:00" if value.endswith("Z") else value
+    parsed = datetime.fromisoformat(normalized)
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
 
 def _evidence_legal_entity_matches_trusted_principal(

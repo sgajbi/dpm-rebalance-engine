@@ -655,3 +655,78 @@ def test_legacy_stateful_create_replay_helpers_reject_stateful_scope_drift(
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
     )
+
+
+def test_legacy_stateful_create_replay_helpers_reject_omitted_optional_scope() -> None:
+    stateful_input = SimpleNamespace(
+        portfolio_id="pf_legacy_replay",
+        as_of="2026-05-20",
+        household_id=None,
+        mandate_id=None,
+        benchmark_id=None,
+        narrative_request=_NarrativeRequest(
+            {
+                "audience": "ADVISOR_REVIEW",
+                "jurisdiction": "SG",
+                "client_audience": "RELATIONSHIP_MANAGER",
+                "product_types": ["EQUITY"],
+                "generation_mode": "DETERMINISTIC_TEMPLATE",
+                "sections": ["overview"],
+                "requested_by": "advisor_legacy",
+            }
+        ),
+    )
+    payload = SimpleNamespace(
+        input_mode="stateful",
+        stateful_input=stateful_input,
+        created_by="advisor_legacy",
+        metadata=SimpleNamespace(
+            title="Legacy stateful proposal",
+            advisor_notes=None,
+            jurisdiction=None,
+            mandate_id=None,
+        ),
+    )
+    proposal = SimpleNamespace(
+        created_by="advisor_legacy",
+        portfolio_id="pf_legacy_replay",
+        title="Legacy stateful proposal",
+        advisor_notes=None,
+        jurisdiction=None,
+        mandate_id=None,
+    )
+    version = SimpleNamespace(
+        request_hash="sha256:legacy",
+        evidence_bundle_json={
+            "context_resolution": {
+                "resolved_context": {
+                    "portfolio_id": "pf_legacy_replay",
+                    "as_of": "2026-05-20",
+                    "household_id": "hh_legacy_replay",
+                    "benchmark_id": "bm_legacy_replay",
+                }
+            }
+        },
+        artifact_json={
+            "proposal_narrative": {
+                "audience": "ADVISOR_REVIEW",
+                "narrative_policy": {
+                    "context": {
+                        "jurisdiction": "SG",
+                        "client_audience": "RELATIONSHIP_MANAGER",
+                        "product_types": ["EQUITY"],
+                    }
+                },
+                "generation_mode": "DETERMINISTIC_TEMPLATE",
+                "sections": [{"section_key": "overview"}],
+            }
+        },
+    )
+
+    assert not _is_matching_legacy_replay(
+        repository=_LegacyReplayRepository(proposal=proposal, version=version),
+        payload=payload,
+        stored_request_hash="sha256:legacy",
+        proposal_id="pp_legacy_replay",
+        proposal_version_no=1,
+    )

@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-01T17:08:31.670109+00:00`
+- Generated At: `2026-08-01T17:23:41.755591+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `baseline/report-only`
@@ -10,7 +10,7 @@
 - Python files: `1053`
 - Packages: `41`
 - Modules: `1012`
-- Total Python lines: `187870`
+- Total Python lines: `188296`
 
 ## Largest Files
 
@@ -18,7 +18,7 @@
 | ---: | --- | ---: |
 | 1 | `tests/unit/advisory/api/test_api_advisory_proposal_lifecycle.py` | 4043 |
 | 2 | `scripts/validate_cross_service_parity_live.py` | 4010 |
-| 3 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2566 |
+| 3 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2675 |
 | 4 | `tests/unit/advisory/engine/test_engine_proposal_workflow_service.py` | 2560 |
 | 5 | `tests/unit/advisory/api/test_api_workspace.py` | 2555 |
 | 6 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 1978 |
@@ -47,8 +47,8 @@
 - Current baseline uses largest-function and router-hotspot evidence as deterministic
   complexity proxies.
 - Radon config executable: `True`
-- Radon analyzed block inventory: `4981`
-- Radon complexity rank inventory: `A=4850, B=131`
+- Radon analyzed block inventory: `4987`
+- Radon complexity rank inventory: `A=4854, B=133`
 - Radon worst complexity: `rank=B, complexity=10`
 - Radon C/D/E/F-ranked block enforcement is repo-native through
   `make complexity-regression-gate` and the `lint` lane.
@@ -121,7 +121,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5526, missing=5475, covered=51, coverage=0.9%`
+- Interrogate docstring inventory: `total=5532, missing=5481, covered=51, coverage=0.9%`
 - Interrogate remains report-only until public API and module ownership thresholds
   are classified.
 
