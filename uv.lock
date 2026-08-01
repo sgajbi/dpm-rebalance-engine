@@ -4,17 +4,17 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "fb0035d7d7d3a7bb8e40c6424a678999195c42291db20d737a4fff4d372a07a6"
+license-inventory-sha256 = "ad547e011f869516fb4ca48a16d73a7528fb244a480a4f57b3884b2f8ebea025"
 
 [[requirement-files]]
 group = "development"
 path = "requirements-dev.txt"
-sha256 = "31b0b9cf56427eee34165f2da89a09879890631864afb81e764da5b7bb0f81c5"
+sha256 = "2c3f80f51703c653ea15e4c110f31c0fcc376dda2645fd0a2d644c410ed64869"
 
 [[requirement-files]]
 group = "install"
 path = "requirements.txt"
-sha256 = "e627b3ae15599abcd49536a6c371e9a87d2dddfbf797c2f5a732534e4682bad2"
+sha256 = "e9e50ed9441e54f429003b9e11199e76a266db4efbebab8ae6cd03f39b975e68"
 
 [[requirement-files]]
 group = "runtime"
@@ -662,12 +662,12 @@ requirement-hashes = []
 
 [[package]]
 name = "ruff"
-version = "0.16.0"
+version = "0.16.1"
 direct = true
 groups = ["development", "install"]
 requirement-files = ["requirements-dev.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["a4799383481d36de015513fc016b781d83b9b1837110e6d96534a23059060cf6"]
+requirement-hashes = ["085e05932aea8979922cbca58218a7e221e07ddf3983f26cca9ea8c0dc1ba730"]
 
 [[package]]
 name = "scipy"

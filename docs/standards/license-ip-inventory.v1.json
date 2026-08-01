@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-07-30T11:28:35Z",
-  "git_commit_sha": "2fc51dcb8c6856456bd048990b540c2574756baa",
+  "generated_at_utc": "2026-08-01T16:02:56Z",
+  "git_commit_sha": "6b82f5f7e7d11f7e1459ed82184434df40871ea3",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -1377,7 +1377,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.16.0",
+      "installed_version": "0.16.1",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1387,7 +1387,7 @@
       "source_files": [
         "requirements-dev.txt"
       ],
-      "version": "0.16.0"
+      "version": "0.16.1"
     },
     {
       "declared_name": "scipy",

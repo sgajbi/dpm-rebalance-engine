@@ -27,6 +27,11 @@ from src.core.policy_packs import (
     validate_policy_pack_version,
 )
 from src.core.policy_packs.catalog_reference_packs import reference_policy_packs
+from src.core.policy_packs.persistence_store import (
+    _can_skip_conflict_for_legal_entity_repair,
+    _matches_event_stable_replay,
+    _matching_legacy_replay,
+)
 from src.core.policy_packs.receipt_identity import build_policy_evaluation_receipt_identity
 from src.core.proposals.exceptions import ProposalIdempotencyConflictError, ProposalValidationError
 
@@ -560,6 +565,102 @@ def test_policy_evaluation_idempotency_replays_legacy_correlation_sensitive_hash
 
     assert replayed.replayed is True
     assert replayed.record.evaluation_id == created.record.evaluation_id
+
+
+def test_policy_evaluation_legacy_replay_helpers_reject_incomplete_context() -> None:
+    created = finalize_policy_evaluation_record(
+        evidence_bundle=_base_evidence_bundle(),
+        policy_pack_id="GLOBAL_PRIVATE_BANKING_BASELINE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legacy_helper",
+        proposal_version_id="ppv_policy_legacy_helper",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legacy-helper",
+        reason=_trusted_reason("legacy helper proof"),
+    )
+    event = list_policy_evaluation_events(evaluation_id=created.record.evaluation_id)[0]
+
+    assert (
+        _matching_legacy_replay(
+            record=created.record,
+            event=event,
+            stored_hash="sha256:stored",
+            event_type=event.event_type,
+            actor_id=event.actor_id,
+            evaluation_id=created.record.evaluation_id,
+            evaluation_hash=created.record.evaluation_hash,
+            source_evidence_hash=created.record.source_evidence_hash,
+            reason=None,
+        )
+        is None
+    )
+    assert not _matches_event_stable_replay(
+        record=created.record,
+        event=event,
+        stored_hash="sha256:stored",
+        event_type=None,
+        actor_id=event.actor_id,
+        evaluation_id=created.record.evaluation_id,
+        evaluation_hash=created.record.evaluation_hash,
+        reason=_trusted_reason("legacy helper proof"),
+    )
+    assert not _matches_event_stable_replay(
+        record=created.record,
+        event=event,
+        stored_hash="sha256:stored",
+        event_type=event.event_type,
+        actor_id="different_actor",
+        evaluation_id=created.record.evaluation_id,
+        evaluation_hash=created.record.evaluation_hash,
+        reason=_trusted_reason("legacy helper proof"),
+    )
+
+
+def test_policy_evaluation_legal_entity_repair_guard_requires_complete_identity() -> None:
+    _activate_sg_policy_pack()
+    evidence = _sg_structured_note_evidence()
+    blocked = finalize_policy_evaluation_record(
+        evidence_bundle=_without_policy_legal_entity(evidence),
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        proposal_id="pp_policy_legal_helper",
+        proposal_version_id="ppv_policy_legal_helper",
+        created_by="advisor_1",
+        idempotency_key="policy-eval-legal-helper",
+        reason=_trusted_reason("legal helper proof"),
+    )
+    repair_reason = _trusted_legal_entity_repair_reason("legal helper proof")
+
+    assert not _can_skip_conflict_for_legal_entity_repair(
+        record=blocked.record,
+        proposal_id=None,
+        proposal_version_id="ppv_policy_legal_helper",
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        evidence_bundle=evidence,
+        reason=repair_reason,
+    )
+    assert not _can_skip_conflict_for_legal_entity_repair(
+        record=blocked.record,
+        proposal_id="pp_policy_legal_helper",
+        proposal_version_id="ppv_policy_legal_helper",
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        evidence_bundle=evidence,
+        reason={"purpose": "missing trusted principal"},
+    )
+    assert _can_skip_conflict_for_legal_entity_repair(
+        record=blocked.record,
+        proposal_id="pp_policy_legal_helper",
+        proposal_version_id="ppv_policy_legal_helper",
+        policy_pack_id="SG_PRIVATE_BANKING_REFERENCE",
+        policy_version="2026.05",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        evidence_bundle=evidence,
+        reason=repair_reason,
+    )
 
 
 def test_policy_evaluation_idempotency_repair_requires_server_repair_intent() -> None:
