@@ -183,41 +183,53 @@ def _is_matching_legacy_replay(
     version = repository.get_version(proposal_id=proposal_id, version_no=proposal_version_no)
     if proposal is None or version is None or stored_request_hash != version.request_hash:
         return False
-    if proposal.created_by != payload.created_by:
-        return False
     stateful_input = payload.stateful_input
-    if proposal.portfolio_id != stateful_input.portfolio_id:
-        return False
-    if payload.metadata.title is not None and proposal.title != payload.metadata.title:
-        return False
-    if (
-        payload.metadata.advisor_notes is not None
-        and proposal.advisor_notes != payload.metadata.advisor_notes
+    if not _legacy_proposal_fields_match(
+        proposal=proposal,
+        payload=payload,
+        stateful_input=stateful_input,
     ):
         return False
-    if (
-        payload.metadata.jurisdiction is not None
-        and proposal.jurisdiction != payload.metadata.jurisdiction
-    ):
-        return False
-    expected_mandate_id = payload.metadata.mandate_id or stateful_input.mandate_id
-    if expected_mandate_id is not None and proposal.mandate_id != expected_mandate_id:
-        return False
-    context_resolution = version.evidence_bundle_json.get("context_resolution")
-    if not isinstance(context_resolution, dict):
-        return False
-    resolved_context = context_resolution.get("resolved_context")
-    if not isinstance(resolved_context, dict):
-        return False
-    if resolved_context.get("portfolio_id") != stateful_input.portfolio_id:
-        return False
-    if resolved_context.get("as_of") != stateful_input.as_of:
+    if not _legacy_context_matches(version=version, stateful_input=stateful_input):
         return False
     return _legacy_narrative_request_matches(
         artifact=version.artifact_json,
         expected=stateful_input.narrative_request,
         created_by=payload.created_by,
     )
+
+
+def _legacy_proposal_fields_match(
+    *,
+    proposal: Any,
+    payload: ProposalCreateRequest,
+    stateful_input: Any,
+) -> bool:
+    expected_mandate_id = payload.metadata.mandate_id or stateful_input.mandate_id
+    expected_fields = {
+        "created_by": payload.created_by,
+        "portfolio_id": stateful_input.portfolio_id,
+        "title": payload.metadata.title,
+        "advisor_notes": payload.metadata.advisor_notes,
+        "jurisdiction": payload.metadata.jurisdiction,
+        "mandate_id": expected_mandate_id,
+    }
+    return all(
+        expected is None or getattr(proposal, field_name) == expected
+        for field_name, expected in expected_fields.items()
+    )
+
+
+def _legacy_context_matches(*, version: Any, stateful_input: Any) -> bool:
+    context_resolution = version.evidence_bundle_json.get("context_resolution")
+    if not isinstance(context_resolution, dict):
+        return False
+    resolved_context = context_resolution.get("resolved_context")
+    if not isinstance(resolved_context, dict):
+        return False
+    portfolio_matches = resolved_context.get("portfolio_id") == stateful_input.portfolio_id
+    as_of_matches = resolved_context.get("as_of") == stateful_input.as_of
+    return bool(portfolio_matches and as_of_matches)
 
 
 def _legacy_narrative_request_matches(
@@ -231,27 +243,35 @@ def _legacy_narrative_request_matches(
         return narrative is None
     if not isinstance(narrative, dict):
         return False
-    expected_payload = expected.model_dump(mode="json") if hasattr(expected, "model_dump") else {}
-    if not isinstance(expected_payload, dict):
+    expected_payload = _legacy_expected_narrative_payload(expected)
+    narrative_context = _legacy_narrative_context(narrative)
+    if expected_payload is None or narrative_context is None:
         return False
-    narrative_policy = narrative.get("narrative_policy")
-    if not isinstance(narrative_policy, dict):
-        return False
-    narrative_context = narrative_policy.get("context")
-    if not isinstance(narrative_context, dict):
-        return False
-    section_keys = tuple(
-        section.get("section_key")
-        for section in narrative.get("sections", [])
-        if isinstance(section, dict)
-    )
     return (
         narrative.get("audience") == expected_payload.get("audience")
         and narrative_context.get("jurisdiction") == expected_payload.get("jurisdiction")
         and narrative_context.get("client_audience") == expected_payload.get("client_audience")
-        and list(section_keys) == expected_payload.get("sections")
+        and list(_legacy_narrative_section_keys(narrative)) == expected_payload.get("sections")
         and expected_payload.get("requested_by") == created_by
     )
+
+
+def _legacy_expected_narrative_payload(expected: object) -> dict[str, Any] | None:
+    expected_payload = expected.model_dump(mode="json") if hasattr(expected, "model_dump") else {}
+    return expected_payload if isinstance(expected_payload, dict) else None
+
+
+def _legacy_narrative_context(narrative: dict[str, Any]) -> dict[str, Any] | None:
+    narrative_policy = narrative.get("narrative_policy")
+    if not isinstance(narrative_policy, dict):
+        return None
+    narrative_context = narrative_policy.get("context")
+    return narrative_context if isinstance(narrative_context, dict) else None
+
+
+def _legacy_narrative_section_keys(narrative: dict[str, Any]) -> tuple[object, ...]:
+    sections = narrative.get("sections", [])
+    return tuple(section.get("section_key") for section in sections if isinstance(section, dict))
 
 
 __all__ = ["create_proposal_command"]
