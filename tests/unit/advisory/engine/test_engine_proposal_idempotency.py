@@ -7,6 +7,8 @@ from src.core.common.idempotency import (
     normalize_optional_idempotency_key,
     normalize_required_idempotency_key,
 )
+from src.core.proposals.context_evidence import build_context_resolution_evidence
+from src.core.proposals.context_resolution import resolve_create_request
 from src.core.proposals.create_command import (
     _is_matching_legacy_replay,
     _legacy_context_matches,
@@ -22,6 +24,7 @@ from src.core.proposals.idempotency import (
     load_replayed_event,
 )
 from src.core.proposals.idempotency_validation import require_proposal_idempotency_key
+from src.core.proposals.input_request_models import ProposalCreateRequest
 from src.core.proposals.models import ProposalApprovalRecordData, ProposalWorkflowEventRecord
 from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
 
@@ -48,6 +51,52 @@ class _LegacyReplayRepository:
         assert proposal_id == "pp_legacy_replay"
         assert version_no == 1
         return self._version
+
+
+def _legacy_direct_simulate_request(*, portfolio_id: str = "pf_legacy_direct") -> dict[str, object]:
+    return {
+        "portfolio_snapshot": {
+            "portfolio_id": portfolio_id,
+            "base_currency": "USD",
+            "positions": [{"instrument_id": "EQ_OLD", "quantity": "10"}],
+            "cash_balances": [{"currency": "USD", "amount": "1000"}],
+        },
+        "market_data_snapshot": {
+            "prices": [{"instrument_id": "EQ_OLD", "price": "100", "currency": "USD"}],
+            "fx_rates": [],
+        },
+        "shelf_entries": [{"instrument_id": "EQ_OLD", "status": "APPROVED"}],
+        "options": {"enable_proposal_simulation": True},
+        "proposed_cash_flows": [{"currency": "USD", "amount": "100"}],
+        "proposed_trades": [{"side": "SELL", "instrument_id": "EQ_OLD", "quantity": "1"}],
+        "reference_model": {
+            "model_id": "bm_balanced",
+            "as_of": "2026-05-20",
+            "base_currency": "USD",
+        },
+    }
+
+
+def _legacy_direct_evidence_inputs(payload: ProposalCreateRequest) -> dict[str, object]:
+    resolved = resolve_create_request(payload)
+    simulate_request = resolved.simulate_request
+    return {
+        "portfolio_snapshot": simulate_request.portfolio_snapshot.model_dump(mode="json"),
+        "market_data_snapshot": simulate_request.market_data_snapshot.model_dump(mode="json"),
+        "shelf_entries": [row.model_dump(mode="json") for row in simulate_request.shelf_entries],
+        "options": simulate_request.options.model_dump(mode="json"),
+        "proposed_cash_flows": [
+            row.model_dump(mode="json") for row in simulate_request.proposed_cash_flows
+        ],
+        "proposed_trades": [
+            row.model_dump(mode="json") for row in simulate_request.proposed_trades
+        ],
+        "reference_model": (
+            simulate_request.reference_model.model_dump(mode="json")
+            if simulate_request.reference_model is not None
+            else None
+        ),
+    }
 
 
 def _event(
@@ -429,6 +478,95 @@ def test_legacy_stateful_create_replay_helpers_reject_drift(
         repository=_LegacyReplayRepository(proposal=proposal, version=version),
         payload=payload,
         stored_request_hash="sha256:legacy",
+        proposal_id="pp_legacy_replay",
+        proposal_version_no=1,
+    )
+
+
+@pytest.mark.parametrize("normalized", [False, True])
+def test_legacy_create_replay_helpers_match_non_stateful_direct_payloads(
+    normalized: bool,
+) -> None:
+    simulate_request = _legacy_direct_simulate_request()
+    payload = ProposalCreateRequest(
+        created_by="advisor_legacy",
+        input_mode="stateless" if normalized else None,
+        simulate_request=None if normalized else simulate_request,
+        stateless_input={"simulate_request": simulate_request} if normalized else None,
+        metadata={
+            "title": "Legacy direct proposal",
+            "advisor_notes": "Direct replay compatibility proof",
+            "jurisdiction": "SG",
+            "mandate_id": "mandate_direct",
+        },
+    )
+    resolved = resolve_create_request(payload)
+    proposal = SimpleNamespace(
+        created_by="advisor_legacy",
+        portfolio_id="pf_legacy_direct",
+        title="Legacy direct proposal",
+        advisor_notes="Direct replay compatibility proof",
+        jurisdiction="SG",
+        mandate_id="mandate_direct",
+    )
+    version = SimpleNamespace(
+        request_hash="sha256:legacy-direct-resolved",
+        evidence_bundle_json={
+            "inputs": _legacy_direct_evidence_inputs(payload),
+            "context_resolution": build_context_resolution_evidence(resolved),
+        },
+        artifact_json={"proposal_narrative": None},
+    )
+
+    assert _is_matching_legacy_replay(
+        repository=_LegacyReplayRepository(proposal=proposal, version=version),
+        payload=payload,
+        stored_request_hash="sha256:legacy-direct-resolved",
+        proposal_id="pp_legacy_replay",
+        proposal_version_no=1,
+    )
+
+
+def test_legacy_create_replay_helpers_reject_non_stateful_input_drift() -> None:
+    original_payload = ProposalCreateRequest(
+        created_by="advisor_legacy",
+        input_mode="stateless",
+        stateless_input={"simulate_request": _legacy_direct_simulate_request()},
+        metadata={"title": "Legacy direct proposal"},
+    )
+    changed_request = _legacy_direct_simulate_request()
+    changed_request["portfolio_snapshot"] = {
+        **changed_request["portfolio_snapshot"],
+        "portfolio_id": "pf_other",
+    }
+    changed_payload = ProposalCreateRequest(
+        created_by="advisor_legacy",
+        input_mode="stateless",
+        stateless_input={"simulate_request": changed_request},
+        metadata={"title": "Legacy direct proposal"},
+    )
+    resolved = resolve_create_request(original_payload)
+    proposal = SimpleNamespace(
+        created_by="advisor_legacy",
+        portfolio_id="pf_legacy_direct",
+        title="Legacy direct proposal",
+        advisor_notes=None,
+        jurisdiction=None,
+        mandate_id=None,
+    )
+    version = SimpleNamespace(
+        request_hash="sha256:legacy-direct-resolved",
+        evidence_bundle_json={
+            "inputs": _legacy_direct_evidence_inputs(original_payload),
+            "context_resolution": build_context_resolution_evidence(resolved),
+        },
+        artifact_json={"proposal_narrative": None},
+    )
+
+    assert not _is_matching_legacy_replay(
+        repository=_LegacyReplayRepository(proposal=proposal, version=version),
+        payload=changed_payload,
+        stored_request_hash="sha256:legacy-direct-resolved",
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
     )

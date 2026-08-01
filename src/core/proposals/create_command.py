@@ -12,6 +12,7 @@ from src.core.proposals.context_hashing import (
 )
 from src.core.proposals.context_resolution import (
     ProposalContextResolutionError,
+    ResolvedProposalContext,
     resolve_create_request,
 )
 from src.core.proposals.create_persistence import persist_created_proposal
@@ -177,11 +178,19 @@ def _is_matching_legacy_replay(
     proposal_id: str,
     proposal_version_no: int,
 ) -> bool:
-    if payload.input_mode != "stateful" or payload.stateful_input is None:
-        return False
     proposal = repository.get_proposal(proposal_id=proposal_id)
     version = repository.get_version(proposal_id=proposal_id, version_no=proposal_version_no)
     if proposal is None or version is None or stored_request_hash != version.request_hash:
+        return False
+    if payload.input_mode in (None, "stateless"):
+        return _is_matching_direct_legacy_replay(
+            proposal=proposal,
+            version=version,
+            payload=payload,
+        )
+    if payload.input_mode != "stateful":
+        return False
+    if payload.stateful_input is None:
         return False
     stateful_input = payload.stateful_input
     if not _legacy_proposal_fields_match(
@@ -195,6 +204,35 @@ def _is_matching_legacy_replay(
     return _legacy_narrative_request_matches(
         artifact=version.artifact_json,
         expected=stateful_input.narrative_request,
+        created_by=payload.created_by,
+    )
+
+
+def _is_matching_direct_legacy_replay(
+    *,
+    proposal: Any,
+    version: Any,
+    payload: ProposalCreateRequest,
+) -> bool:
+    try:
+        resolved = resolve_create_request(payload)
+    except ProposalContextResolutionError:
+        return False
+    if resolved.resolution_source != "DIRECT_REQUEST":
+        return False
+    if not _legacy_direct_proposal_fields_match(
+        proposal=proposal,
+        payload=payload,
+        resolved=resolved,
+    ):
+        return False
+    if not _legacy_direct_context_matches(version=version, resolved=resolved):
+        return False
+    if not _legacy_direct_inputs_match(version=version, resolved=resolved):
+        return False
+    return _legacy_narrative_request_matches(
+        artifact=version.artifact_json,
+        expected=resolved.simulate_request.narrative_request,
         created_by=payload.created_by,
     )
 
@@ -220,6 +258,26 @@ def _legacy_proposal_fields_match(
     )
 
 
+def _legacy_direct_proposal_fields_match(
+    *,
+    proposal: Any,
+    payload: ProposalCreateRequest,
+    resolved: ResolvedProposalContext,
+) -> bool:
+    expected_fields = {
+        "created_by": payload.created_by,
+        "portfolio_id": resolved.simulate_request.portfolio_snapshot.portfolio_id,
+        "title": resolved.metadata.title,
+        "advisor_notes": resolved.metadata.advisor_notes,
+        "jurisdiction": resolved.metadata.jurisdiction,
+        "mandate_id": resolved.metadata.mandate_id,
+    }
+    return all(
+        getattr(proposal, field_name) == expected
+        for field_name, expected in expected_fields.items()
+    )
+
+
 def _legacy_context_matches(*, version: Any, stateful_input: Any) -> bool:
     context_resolution = version.evidence_bundle_json.get("context_resolution")
     if not isinstance(context_resolution, dict):
@@ -236,6 +294,43 @@ def _legacy_context_matches(*, version: Any, stateful_input: Any) -> bool:
             "benchmark_id": getattr(stateful_input, "benchmark_id", None),
         },
     )
+
+
+def _legacy_direct_context_matches(*, version: Any, resolved: ResolvedProposalContext) -> bool:
+    context_resolution = version.evidence_bundle_json.get("context_resolution")
+    if not isinstance(context_resolution, dict):
+        return False
+    expected_context = resolved.resolved_context.model_dump(mode="json")
+    return (
+        context_resolution.get("input_mode") == "stateless"
+        and context_resolution.get("resolution_source") == "DIRECT_REQUEST"
+        and context_resolution.get("resolved_context") == expected_context
+    )
+
+
+def _legacy_direct_inputs_match(*, version: Any, resolved: ResolvedProposalContext) -> bool:
+    inputs = version.evidence_bundle_json.get("inputs")
+    if not isinstance(inputs, dict):
+        return False
+    simulate_request = resolved.simulate_request
+    expected_inputs = {
+        "portfolio_snapshot": simulate_request.portfolio_snapshot.model_dump(mode="json"),
+        "market_data_snapshot": simulate_request.market_data_snapshot.model_dump(mode="json"),
+        "shelf_entries": [row.model_dump(mode="json") for row in simulate_request.shelf_entries],
+        "options": simulate_request.options.model_dump(mode="json"),
+        "proposed_cash_flows": [
+            row.model_dump(mode="json") for row in simulate_request.proposed_cash_flows
+        ],
+        "proposed_trades": [
+            row.model_dump(mode="json") for row in simulate_request.proposed_trades
+        ],
+        "reference_model": (
+            simulate_request.reference_model.model_dump(mode="json")
+            if simulate_request.reference_model is not None
+            else None
+        ),
+    }
+    return inputs == expected_inputs
 
 
 def _legacy_narrative_request_matches(
