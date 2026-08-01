@@ -401,9 +401,9 @@ class PolicyEvaluationRecordStore:
         stored = self._idempotency.get(idempotency_key)
         if stored is None:
             return None
-        stored_hash, evaluation_id, event_id = stored
+        stored_hash, stored_evaluation_id, event_id = stored
         if stored_hash != request_hash:
-            record, event = self._load_replayed_event(evaluation_id, event_id)
+            record, event = self._load_replayed_event(stored_evaluation_id, event_id)
             legacy_match = _matching_legacy_replay(
                 record=record,
                 event=event,
@@ -424,12 +424,13 @@ class PolicyEvaluationRecordStore:
                 policy_pack_id=policy_pack_id,
                 policy_version=policy_version,
                 portfolio_id=portfolio_id,
+                source_evidence_hash=source_evidence_hash,
                 evidence_bundle=evidence_bundle,
                 reason=reason,
             ):
                 return None
             raise ProposalIdempotencyConflictError("POLICY_EVALUATION_IDEMPOTENCY_KEY_CONFLICT")
-        record, event = self._load_replayed_event(evaluation_id, event_id)
+        record, event = self._load_replayed_event(stored_evaluation_id, event_id)
         return event, record
 
     def _load_replayed_event(
@@ -515,6 +516,7 @@ def _can_repair_trusted_legal_entity_gap(
     policy_pack_id: str,
     policy_version: str,
     portfolio_id: str | None,
+    source_evidence_hash: str,
     evidence_bundle: dict[str, Any],
     reason: dict[str, Any],
 ) -> bool:
@@ -532,6 +534,12 @@ def _can_repair_trusted_legal_entity_gap(
         return False
     if record.replay_metadata_json.get("creation_reason") != _repair_base_replay_safe_reason(
         reason
+    ):
+        return False
+    if not _repair_changes_only_missing_legal_entity(
+        record=record,
+        evidence_bundle=evidence_bundle,
+        source_evidence_hash=source_evidence_hash,
     ):
         return False
     return _evidence_legal_entity_matches_trusted_principal(
@@ -626,6 +634,7 @@ def _can_skip_conflict_for_legal_entity_repair(
     policy_pack_id: str | None,
     policy_version: str | None,
     portfolio_id: str | None,
+    source_evidence_hash: str | None,
     evidence_bundle: dict[str, Any] | None,
     reason: dict[str, Any] | None,
 ) -> bool:
@@ -634,6 +643,7 @@ def _can_skip_conflict_for_legal_entity_repair(
         or proposal_version_id is None
         or policy_pack_id is None
         or policy_version is None
+        or source_evidence_hash is None
         or evidence_bundle is None
         or reason is None
     ):
@@ -645,6 +655,7 @@ def _can_skip_conflict_for_legal_entity_repair(
         policy_pack_id=policy_pack_id,
         policy_version=policy_version,
         portfolio_id=portfolio_id,
+        source_evidence_hash=source_evidence_hash,
         evidence_bundle=evidence_bundle,
         reason=reason,
     )
@@ -768,6 +779,26 @@ def _evidence_legal_entity_matches_trusted_principal(
         .get("legal_entity_code")
     )
     return expected is not None and actual == expected
+
+
+def _repair_changes_only_missing_legal_entity(
+    *,
+    record: PolicyEvaluationRecord,
+    evidence_bundle: dict[str, Any],
+    source_evidence_hash: str,
+) -> bool:
+    if source_evidence_hash == record.source_evidence_hash:
+        return False
+    comparable = deepcopy(evidence_bundle)
+    policy_context = (
+        comparable.get("context_resolution", {}).get("advisory_policy_context", {})
+        if isinstance(comparable.get("context_resolution"), dict)
+        else {}
+    )
+    if not isinstance(policy_context, dict):
+        return False
+    policy_context.pop("legal_entity_code", None)
+    return hash_canonical_payload(comparable) == record.source_evidence_hash
 
 
 def _portfolio_id_from_evidence(evidence_bundle: dict[str, Any]) -> str | None:

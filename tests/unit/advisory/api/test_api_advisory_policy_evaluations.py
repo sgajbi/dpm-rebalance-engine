@@ -556,6 +556,34 @@ def test_policy_evaluation_rejects_request_source_date_drift_from_proposal_versi
     assert response.json()["detail"] == "POLICY_EVALUATION_SOURCE_AS_OF_DATE_MISMATCH"
 
 
+def test_policy_evaluation_uses_caller_evidence_when_version_evidence_storage_is_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    proposal_id = "pp_policy_version_evidence_disabled"
+    proposal_version_id = "ppv_policy_version_evidence_disabled"
+    repository = _proposal_repository_with_version(
+        proposal_id=proposal_id,
+        proposal_version_id=proposal_version_id,
+        evidence_bundle={},
+    )
+    monkeypatch.setattr(proposals_router, "get_proposal_repository", lambda: repository)
+
+    with TestClient(app) as client:
+        response = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/{proposal_version_id}/policy-evaluations",
+            json=_create_payload(),
+            headers=_policy_evaluation_create_headers(
+                proposal_id=proposal_id,
+                idempotency_key="api-policy-eval-version-evidence-disabled",
+            ),
+        )
+
+    assert response.status_code == 200
+    record = response.json()["record"]
+    assert record["evaluation_status"] == "PENDING_REVIEW"
+    assert record["replay_metadata_json"]["as_of_date"] == "2026-05-26"
+
+
 def test_policy_evaluation_binds_missing_legal_entity_from_trusted_principal() -> None:
     payload = _sg_pending_payload()
     payload["evidence_bundle"]["context_resolution"]["advisory_policy_context"].pop(

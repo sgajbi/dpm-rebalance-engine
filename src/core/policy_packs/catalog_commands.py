@@ -17,6 +17,7 @@ from src.core.policy_packs.catalog_models import (
     PolicyPackAuditEvent,
     PolicyPackValidationResponse,
 )
+from src.core.policy_packs.receipt_identity import idempotency_stable_reason
 from src.core.proposals.exceptions import ProposalValidationError
 
 
@@ -238,6 +239,4 @@ def _activation_event_reason(
 
 
 def _idempotency_stable_catalog_reason(reason: dict[str, Any]) -> dict[str, Any]:
-    stable_reason = deepcopy(reason)
-    stable_reason.pop("trusted_principal", None)
-    return stable_reason
+    return idempotency_stable_reason(reason)
