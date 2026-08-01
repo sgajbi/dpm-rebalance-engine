@@ -394,9 +394,7 @@ def _legacy_optional_fields_match(
     actual: dict[str, Any],
     expected: dict[str, object | None],
 ) -> bool:
-    return all(
-        value is None or actual.get(field_name) == value for field_name, value in expected.items()
-    )
+    return all(actual.get(field_name) == value for field_name, value in expected.items())
 
 
 __all__ = ["create_proposal_command"]
