@@ -8,6 +8,7 @@ from src.core.proposals.correlation import MAX_CORRELATION_ID_LENGTH
 _SNAPSHOT_DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
 _REPORT_DATE_KEYS = {"as_of_date", "report_end_date", "valuation_date"}
 _SUPPORTED_OUTPUT_FORMATS = {"pdf", "json"}
+_ADVISORY_POLICY_SIGN_OFF_PACKAGE = "ADVISORY_POLICY_SIGN_OFF_PACKAGE"
 
 
 class LotusReportRequestMappingError(ValueError):
@@ -39,22 +40,13 @@ def build_report_headers(
 def build_portfolio_review_job_request(request: dict[str, Any]) -> dict[str, Any]:
     proposal = cast(dict[str, Any], request.get("proposal") or {})
     portfolio_id = required_string(proposal, "portfolio_id")
-    related_version_no = request.get("related_version_no")
     proposal_narrative_package = request.get("proposal_narrative_package")
     payload: dict[str, Any] = {
         "portfolio_scope": {"portfolio_ids": [portfolio_id]},
         "as_of_date": extract_report_as_of_date(request),
         "requested_output_formats": ["json"],
         "reporting_currency": extract_reporting_currency(request),
-        "options": {
-            "source_system": "lotus-advise",
-            "source_proposal_id": proposal.get("proposal_id"),
-            "source_report_type": request.get("report_type"),
-            "requested_by": report_actor_id(request),
-            "related_version_no": related_version_no,
-            "include_execution_summary": request.get("include_execution_summary"),
-            "include_reviewed_narrative": request.get("include_reviewed_narrative"),
-        },
+        "options": {},
     }
     if isinstance(proposal_narrative_package, dict):
         payload["proposal_narrative_package"] = proposal_narrative_package
@@ -71,14 +63,7 @@ def build_memo_report_package_job_request(request: dict[str, Any]) -> dict[str, 
             request.get("requested_output_formats")
         ),
         "reporting_currency": extract_reporting_currency(request),
-        "options": {
-            "source_system": "lotus-advise",
-            "source_proposal_id": proposal.get("proposal_id"),
-            "source_report_type": "ADVISORY_PROPOSAL_MEMO",
-            "requested_by": report_actor_id(request),
-            "related_version_no": request.get("related_version_no"),
-            "retention_policy_id": as_mapping(request.get("reason")).get("retention_policy_id"),
-        },
+        "options": _report_operational_options(request),
         "proposal_memo_package": request.get("proposal_memo_package"),
     }
     return payload
@@ -87,6 +72,7 @@ def build_memo_report_package_job_request(request: dict[str, Any]) -> dict[str, 
 def build_policy_sign_off_package_job_request(request: dict[str, Any]) -> dict[str, Any]:
     proposal = cast(dict[str, Any], request.get("proposal") or {})
     portfolio_id = required_string(proposal, "portfolio_id")
+    policy_sign_off_package = _policy_sign_off_package(request)
     payload = {
         "portfolio_scope": {"portfolio_ids": [portfolio_id]},
         "as_of_date": extract_report_as_of_date(request),
@@ -94,17 +80,25 @@ def build_policy_sign_off_package_job_request(request: dict[str, Any]) -> dict[s
             request.get("requested_output_formats")
         ),
         "reporting_currency": extract_reporting_currency(request),
-        "options": {
-            "source_system": "lotus-advise",
-            "source_proposal_id": proposal.get("proposal_id"),
-            "source_report_type": "ADVISORY_POLICY_SIGN_OFF_PACKAGE",
-            "requested_by": report_actor_id(request),
-            "related_policy_evaluation_id": request.get("related_policy_evaluation_id"),
-            "retention_policy_id": as_mapping(request.get("reason")).get("retention_policy_id"),
-        },
-        "policy_sign_off_package": request.get("policy_sign_off_package"),
+        "options": _report_operational_options(request),
+        "policy_sign_off_package": policy_sign_off_package,
     }
     return payload
+
+
+def _report_operational_options(request: dict[str, Any]) -> dict[str, Any]:
+    reason = as_mapping(request.get("reason"))
+    retention_policy_id = optional_string(reason.get("retention_policy_id"))
+    if retention_policy_id is None:
+        return {}
+    return {"retention_policy_id": retention_policy_id}
+
+
+def _policy_sign_off_package(request: dict[str, Any]) -> dict[str, Any]:
+    package = as_mapping(request.get("policy_sign_off_package"))
+    if optional_string(package.get("package_type")) != _ADVISORY_POLICY_SIGN_OFF_PACKAGE:
+        raise LotusReportRequestMappingError("LOTUS_REPORT_REQUEST_UNAVAILABLE")
+    return package
 
 
 def normalized_output_formats(value: Any) -> list[str]:

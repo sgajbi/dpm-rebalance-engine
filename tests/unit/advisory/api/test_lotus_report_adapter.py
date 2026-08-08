@@ -280,7 +280,7 @@ def test_lotus_report_adapter_bounds_identity_headers_and_payload_actor(monkeypa
     [post] = fake_client.posts
     assert post["headers"]["X-Actor-Id"] == "advisor_sg_002"
     assert post["headers"]["X-Tenant-Id"] == "tenant-private-bank-001"
-    assert post["json"]["options"]["requested_by"] == "advisor_sg_002"
+    assert post["json"]["options"] == {}
 
 
 def test_lotus_report_adapter_rejects_invalid_tenant_identity_before_http_client(
@@ -766,8 +766,7 @@ def test_lotus_report_adapter_submits_policy_sign_off_package_for_render_archive
     assert response.explanation["render"]["render_job_id"] == "rdr_policy_001"
     assert response.explanation["archive"]["document_id"] == "doc_policy_001"
     [post] = fake_client.posts
-    assert post["json"]["options"]["source_report_type"] == "ADVISORY_POLICY_SIGN_OFF_PACKAGE"
-    assert post["json"]["options"]["related_policy_evaluation_id"] == "pev_policy_001"
+    assert post["json"]["options"] == {}
     assert post["json"]["policy_sign_off_package"]["workflow"]["sign_off_status"] == "SIGNED_OFF"
 
 
