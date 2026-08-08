@@ -325,6 +325,73 @@ def _create_payload_with_narrative(portfolio_id: str) -> ProposalCreateRequest:
     )
 
 
+def _stateful_narrative_payload_without_product_constraints() -> ProposalCreateRequest:
+    return ProposalCreateRequest(
+        created_by="advisor_service",
+        input_mode="stateful",
+        stateful_input={
+            "portfolio_id": "pf_service_stateful_replay",
+            "as_of": "2026-04-10",
+            "narrative_request": {
+                "audience": "ADVISOR_REVIEW",
+                "generation_mode": "DETERMINISTIC_TEMPLATE",
+                "jurisdiction": "SG",
+                "client_audience": "ADVISOR_REVIEW",
+                "sections": ["EXECUTIVE_SUMMARY", "RISK_AND_CONCENTRATION"],
+                "requested_by": "advisor_service",
+            },
+        },
+        metadata={"title": "Stateful narrative replay", "jurisdiction": "SG"},
+    )
+
+
+def _resolved_stateful_context_for_replay(stateful_input):
+    return build_resolved_stateful_context(
+        stateful_input.portfolio_id,
+        stateful_input.as_of,
+        positions=[{"instrument_id": "EQ_OLD", "quantity": "10"}],
+        prices=[
+            {"instrument_id": "EQ_OLD", "price": "100", "currency": "USD"},
+            {"instrument_id": "EQ_NEW", "price": "50", "currency": "USD"},
+        ],
+        shelf_entries=[
+            {"instrument_id": "EQ_OLD", "status": "APPROVED"},
+            {"instrument_id": "EQ_NEW", "status": "APPROVED"},
+        ],
+        proposed_trades=[{"side": "BUY", "instrument_id": "EQ_NEW", "quantity": "2"}],
+        include_context_ids=False,
+    )
+
+
+def _replace_create_idempotency_hash_with_legacy_value(
+    *,
+    repository: InMemoryProposalRepository,
+    idempotency_key: str,
+    proposal_id: str,
+    source_resolved_product_types: list[str],
+) -> None:
+    legacy_request_hash = "sha256:legacy-narrative-product-type-replay"
+    version = repository.get_version(proposal_id=proposal_id, version_no=1)
+    idempotency = repository.get_idempotency(idempotency_key=idempotency_key)
+    assert version is not None
+    assert idempotency is not None
+
+    artifact = deepcopy(version.artifact_json)
+    narrative_context = artifact["proposal_narrative"]["narrative_policy"]["context"]
+    narrative_context["product_types"] = source_resolved_product_types
+    repository.create_version(
+        version.model_copy(
+            update={
+                "request_hash": legacy_request_hash,
+                "artifact_json": artifact,
+            }
+        )
+    )
+    repository.save_idempotency(
+        idempotency.model_copy(update={"request_hash": legacy_request_hash})
+    )
+
+
 @pytest.fixture(autouse=True)
 def reset_upstream_authority_overrides(monkeypatch):
     monkeypatch.delenv("LOTUS_CORE_BASE_URL", raising=False)
@@ -609,6 +676,70 @@ def test_service_create_proposal_persists_policy_context_for_stateful_requests()
         created.version.proposal_result.proposal_decision_summary.client_and_mandate_posture.status
         == "AVAILABLE"
     )
+
+
+def test_stateful_proposal_replay_allows_source_resolved_narrative_product_types() -> None:
+    repository = InMemoryProposalRepository()
+    service = ProposalWorkflowService(repository=repository)
+    idempotency_key = "service-idem-stateful-narrative-legacy-products"
+    payload = _stateful_narrative_payload_without_product_constraints()
+
+    configure_proposal_stateful_context_resolver(_resolved_stateful_context_for_replay)
+    try:
+        created = service.create_proposal(
+            payload=payload,
+            idempotency_key=idempotency_key,
+            correlation_id="corr-service-stateful-narrative-legacy-products",
+        )
+        _replace_create_idempotency_hash_with_legacy_value(
+            repository=repository,
+            idempotency_key=idempotency_key,
+            proposal_id=created.proposal.proposal_id,
+            source_resolved_product_types=["BOND", "CASH", "EQUITY", "ETF"],
+        )
+
+        replayed = service.create_proposal(
+            payload=payload,
+            idempotency_key=idempotency_key,
+            correlation_id="corr-service-stateful-narrative-legacy-products-replay",
+        )
+    finally:
+        configure_proposal_stateful_context_resolver(None)
+
+    assert replayed.proposal.proposal_id == created.proposal.proposal_id
+    assert replayed.version.proposal_version_id == created.version.proposal_version_id
+
+
+def test_stateful_proposal_replay_rejects_changed_product_type_constraint() -> None:
+    repository = InMemoryProposalRepository()
+    service = ProposalWorkflowService(repository=repository)
+    idempotency_key = "service-idem-stateful-narrative-product-conflict"
+    original_payload = _stateful_narrative_payload_without_product_constraints()
+    changed_payload = _stateful_narrative_payload_without_product_constraints()
+    changed_payload.stateful_input.narrative_request.product_types = ["EQUITY"]
+
+    configure_proposal_stateful_context_resolver(_resolved_stateful_context_for_replay)
+    try:
+        created = service.create_proposal(
+            payload=original_payload,
+            idempotency_key=idempotency_key,
+            correlation_id="corr-service-stateful-narrative-product-conflict",
+        )
+        _replace_create_idempotency_hash_with_legacy_value(
+            repository=repository,
+            idempotency_key=idempotency_key,
+            proposal_id=created.proposal.proposal_id,
+            source_resolved_product_types=["BOND", "CASH"],
+        )
+
+        with pytest.raises(ProposalIdempotencyConflictError):
+            service.create_proposal(
+                payload=changed_payload,
+                idempotency_key=idempotency_key,
+                correlation_id="corr-service-stateful-narrative-product-conflict-replay",
+            )
+    finally:
+        configure_proposal_stateful_context_resolver(None)
 
 
 def test_service_new_version_recomputes_decision_summary_without_bleeding_forward() -> None:

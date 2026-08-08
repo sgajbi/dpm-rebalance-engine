@@ -356,19 +356,40 @@ def _legacy_narrative_request_matches(
                 "generation_mode": expected_payload.get("generation_mode"),
             },
         )
-        and _legacy_optional_fields_match(
+        and _legacy_narrative_context_matches(
             actual=narrative_context,
-            expected={
-                "jurisdiction": expected_payload.get("jurisdiction"),
-                "client_audience": expected_payload.get("client_audience"),
-                "product_types": expected_payload.get("product_types"),
-            },
+            expected=expected_payload,
         )
         and (
             list(_legacy_narrative_section_keys(narrative)) == expected_payload.get("sections")
             and expected_payload.get("requested_by") == created_by
         )
     )
+
+
+def _legacy_narrative_context_matches(
+    *,
+    actual: dict[str, Any],
+    expected: dict[str, Any],
+) -> bool:
+    return _legacy_optional_fields_match(
+        actual=actual,
+        expected={
+            "jurisdiction": expected.get("jurisdiction"),
+            "client_audience": expected.get("client_audience"),
+        },
+    ) and _legacy_product_types_match(
+        actual=actual.get("product_types"),
+        expected=expected.get("product_types"),
+    )
+
+
+def _legacy_product_types_match(*, actual: object, expected: object) -> bool:
+    if expected is None:
+        return True
+    if isinstance(expected, list) and not expected:
+        return True
+    return actual == expected
 
 
 def _legacy_expected_narrative_payload(expected: object) -> dict[str, Any] | None:
