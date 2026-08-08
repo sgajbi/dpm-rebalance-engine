@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-01T16:02:56Z",
-  "git_commit_sha": "6b82f5f7e7d11f7e1459ed82184434df40871ea3",
+  "generated_at_utc": "2026-08-08T18:32:41Z",
+  "git_commit_sha": "86bb1db4c3bdebc03e3cd2d375c295771ab300dc",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -73,7 +73,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.6.0",
+      "installed_version": "0.8.0",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -81,7 +81,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "0.6.0"
+      "version": "0.8.0"
     },
     {
       "declared_name": "attrs",
@@ -187,7 +187,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "2.1.0",
+      "installed_version": "2.1.1",
       "license_term": "MIT-0",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -195,7 +195,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "2.1.0"
+      "version": "2.1.1"
     },
     {
       "declared_name": "charset-normalizer",
@@ -639,7 +639,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.13.0",
+      "installed_version": "0.15.0",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -647,7 +647,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "0.13.0"
+      "version": "0.15.0"
     },
     {
       "declared_name": "license-expression",
@@ -975,7 +975,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "4.11.0",
+      "installed_version": "4.11.1",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -983,7 +983,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "4.11.0"
+      "version": "4.11.1"
     },
     {
       "declared_name": "pluggy",
@@ -1531,15 +1531,17 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "1.3.1",
+      "installed_version": "1.6.0",
       "license_term": "BSD-3-Clause",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
       "name": "starlette",
       "policy_classification": "ALLOWED",
-      "relationship": "transitive",
-      "source_files": [],
-      "version": "1.3.1"
+      "relationship": "direct",
+      "source_files": [
+        "requirements-prod.txt"
+      ],
+      "version": "1.6.0"
     },
     {
       "declared_name": "stevedore",
@@ -1768,8 +1770,8 @@
       "ALLOWED": 89,
       "APPROVED_EXCEPTION": 2
     },
-    "direct_package_count": 35,
+    "direct_package_count": 36,
     "package_count": 91,
-    "transitive_package_count": 56
+    "transitive_package_count": 55
   }
 }

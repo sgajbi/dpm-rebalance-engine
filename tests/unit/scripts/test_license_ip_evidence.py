@@ -52,6 +52,10 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
         calls.append((command, kwargs))
         return subprocess.CompletedProcess(command, 0)
 
+    monkeypatch.setattr(
+        "scripts.license_ip_evidence.sys.version_info",
+        (3, 11, 9, "final", 0),
+    )
     monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
 
     result = _run_in_isolated_environment(
@@ -171,6 +175,10 @@ def test_isolated_license_inventory_stops_on_install_failure(
         calls.append(command)
         return subprocess.CompletedProcess(command, 17 if "pip" in command else 0)
 
+    monkeypatch.setattr(
+        "scripts.license_ip_evidence.sys.version_info",
+        (3, 11, 9, "final", 0),
+    )
     monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
 
     result = _run_in_isolated_environment(
