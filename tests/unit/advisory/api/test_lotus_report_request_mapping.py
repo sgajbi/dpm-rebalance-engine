@@ -49,16 +49,38 @@ def test_portfolio_review_mapping_preserves_advisory_report_context() -> None:
     assert payload["as_of_date"] == "2026-04-10"
     assert payload["requested_output_formats"] == ["json"]
     assert payload["reporting_currency"] == "USD"
-    assert payload["options"] == {
-        "source_system": "lotus-advise",
-        "source_proposal_id": "pp_live_001",
-        "source_report_type": "PORTFOLIO_REVIEW",
-        "requested_by": "advisor_1",
-        "related_version_no": 1,
-        "include_execution_summary": True,
-        "include_reviewed_narrative": True,
-    }
+    assert payload["options"] == {}
     assert payload["proposal_narrative_package"]["narrative_id"] == "pnar_live_001"
+
+
+def test_portfolio_review_mapping_keeps_source_provenance_out_of_report_options() -> None:
+    request = _proposal_request()
+    request["proposal_narrative_package"] = {
+        "package_status": "INCLUDED_REVIEWED_NARRATIVE",
+        "proposal_id": "pp_live_001",
+        "proposal_version_no": 1,
+        "narrative_id": "pnar_live_001",
+        "review": {
+            "review_state": "APPROVED_FOR_ADVISOR_USE",
+            "source_narrative_hash": "sha256:narrative",
+        },
+        "source_lineage": {"source_narrative_hash": "sha256:narrative"},
+        "sections": [
+            {
+                "section_id": "EXECUTIVE_SUMMARY",
+                "title": "Executive Summary",
+                "body": "Advisor-reviewed proposal context.",
+            }
+        ],
+    }
+
+    payload = build_portfolio_review_job_request(request)
+
+    assert payload["options"] == {}
+    assert payload["proposal_narrative_package"]["proposal_id"] == "pp_live_001"
+    assert payload["proposal_narrative_package"]["source_lineage"] == {
+        "source_narrative_hash": "sha256:narrative"
+    }
 
 
 def test_memo_and_policy_mappings_keep_report_package_boundaries() -> None:
@@ -79,6 +101,7 @@ def test_memo_and_policy_mappings_keep_report_package_boundaries() -> None:
             "requested_output_formats": ["docx"],
             "related_policy_evaluation_id": "pev_policy_001",
             "policy_sign_off_package": {
+                "package_type": "ADVISORY_POLICY_SIGN_OFF_PACKAGE",
                 "evaluation": {"evaluation_id": "pev_policy_001"},
                 "client_ready_publication": "BLOCKED",
             },
@@ -89,13 +112,31 @@ def test_memo_and_policy_mappings_keep_report_package_boundaries() -> None:
     policy_payload = build_policy_sign_off_package_job_request(policy_request)
 
     assert memo_payload["requested_output_formats"] == ["pdf", "json"]
-    assert memo_payload["options"]["source_report_type"] == "ADVISORY_PROPOSAL_MEMO"
-    assert memo_payload["options"]["retention_policy_id"] == "advisor-use-retention"
+    assert memo_payload["options"] == {"retention_policy_id": "advisor-use-retention"}
     assert memo_payload["proposal_memo_package"]["client_ready_publication"] == "BLOCKED"
     assert policy_payload["requested_output_formats"] == ["pdf"]
-    assert policy_payload["options"]["source_report_type"] == ("ADVISORY_POLICY_SIGN_OFF_PACKAGE")
-    assert policy_payload["options"]["related_policy_evaluation_id"] == "pev_policy_001"
+    assert policy_payload["options"] == {}
     assert policy_payload["policy_sign_off_package"]["client_ready_publication"] == "BLOCKED"
+
+
+def test_policy_sign_off_mapping_requires_advisory_package_identity() -> None:
+    request = _proposal_request()
+    request.update(
+        {
+            "requested_output_formats": ["pdf"],
+            "related_policy_evaluation_id": "pev_policy_001",
+            "policy_sign_off_package": {
+                "package_type": "PORTFOLIO_REVIEW",
+                "evaluation": {"evaluation_id": "pev_policy_001"},
+            },
+        }
+    )
+
+    with pytest.raises(
+        LotusReportRequestMappingError,
+        match="LOTUS_REPORT_REQUEST_UNAVAILABLE",
+    ):
+        build_policy_sign_off_package_job_request(request)
 
 
 def test_mapping_preserves_trusted_headers_output_formats_and_status_paths() -> None:

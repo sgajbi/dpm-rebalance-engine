@@ -280,9 +280,11 @@
       "cases": [
         {
           "case_id": "valid_provider_response",
-          "expected_behavior": "submits report package and projects terminal archive evidence only",
+          "expected_behavior": "submits report package with only lotus-report supported output-affecting options, keeps Advise provenance in trusted headers and typed packages, and projects terminal archive evidence only",
           "test_references": [
-            "tests/unit/advisory/api/test_lotus_report_adapter.py::test_lotus_report_adapter_submits_memo_package_for_pdf_render_archive"
+            "tests/unit/advisory/api/test_lotus_report_request_mapping.py::test_portfolio_review_mapping_keeps_source_provenance_out_of_report_options",
+            "tests/unit/advisory/api/test_lotus_report_adapter.py::test_lotus_report_adapter_submits_memo_package_for_pdf_render_archive",
+            "tests/unit/advisory/api/test_lotus_report_adapter.py::test_lotus_report_adapter_bounds_identity_headers_and_payload_actor"
           ]
         },
         {
