@@ -18,8 +18,13 @@
 - `LOTUS_RISK_TIMEOUT_SECONDS`
 - `LOTUS_RISK_RETRY_ATTEMPTS`
 - `LOTUS_RISK_RETRY_BACKOFF_SECONDS`
+- `LOTUS_ADVISE_TENANT_ID`
 
 These bindings keep proposal simulation and advisory risk-lens behavior aligned to the actual upstream authorities instead of local stand-ins.
+The app-local Compose manifest supplies `LOTUS_ADVISE_TENANT_ID=tenant-sg-001` as the canonical
+developer fixture so standalone Advise and Workbench-orchestrated local startup do not require an
+external identity provider. Production Compose still requires deployment-owned tenant configuration
+and must not use the local fixture as tenant-isolation or entitlement proof.
 Lotus Risk enrichment retries transient `5xx`, `429`, and network failures with bounded operator
 configuration: retry attempts default to `2` and cap at `5`, while retry backoff defaults to `0.1`
 seconds and caps at `2.0` seconds.

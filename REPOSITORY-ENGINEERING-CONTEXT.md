@@ -303,24 +303,28 @@ Boundary rules:
    advisory simulation contract version, portfolio, as-of, mandate, benchmark, reporting currency,
    look-through/allocation/risk dimensions, and lookup-specific identifiers; current unsupported
    dimensions remain explicit default dimensions rather than omitted key parts,
-6. Lotus Core source provenance is part of advisory result lineage. Stateful context must preserve
+6. The app-local Compose manifest supplies `LOTUS_ADVISE_TENANT_ID=tenant-sg-001` only as the
+   canonical developer fixture for standalone and Workbench-orchestrated local startup. Production
+   Compose must continue to require deployment-owned tenant configuration and must not inherit this
+   local fixture,
+7. Lotus Core source provenance is part of advisory result lineage. Stateful context must preserve
    upstream portfolio and market-data snapshot identity, source version, event or batch refs, source
    hash, valuation timestamp, freshness posture, and contract version as typed provenance on the
    resolved context, advisory snapshots, and proposal lineage without storing raw source payloads.
    Conflicting source snapshot or provenance values must fail closed before advisory snapshot
    construction, caching, persistence, or replay,
-7. Lotus Core source-derived FX rates must be finite, strictly positive, and as-of eligible before
+8. Lotus Core source-derived FX rates must be finite, strictly positive, and as-of eligible before
    advisory valuation. Invalid explicit rates or source ratios fail closed with
    `LOTUS_CORE_STATEFUL_FX_INVALID`; missing eligible rates remain data-quality evidence rather
    than fabricated conversion inputs. Inverse-pair valuation is supported only from a valid positive
    inverse rate,
-8. Lotus Core stateful context must account for source-row completeness before advisory snapshot
+9. Lotus Core stateful context must account for source-row completeness before advisory snapshot
    construction. Required positions, cash, price, and FX source rows cannot silently disappear:
    malformed or incomplete required rows fail closed with
    `LOTUS_CORE_STATEFUL_SOURCE_INCOMPLETE`. Optional enrichment and classification taxonomy gaps
    remain explicit degraded source-completeness evidence on resolved context, advisory snapshots,
    and proposal lineage without storing raw source payloads,
-9. External advisory providers are runtime-composed through Advise-owned ports. Core application
+10. External advisory providers are runtime-composed through Advise-owned ports. Core application
    modules must not import concrete `src.integrations` modules or provider-specific exception
    classes. API/runtime startup registers production Lotus Core simulation/context, Lotus Risk
    enrichment/dependency-state, Lotus AI narrative/memo, and Lotus Report memo package adapters
@@ -329,71 +333,71 @@ Boundary rules:
    `configure_advisory_stateful_context_provider_port()` so engine-level resolver overrides cannot
    leak into API files. Integration modules must not import `src.api.main`, read `sys.modules`, or
    depend on FastAPI import order to select resolver or requester behavior,
-10. decision-summary, proposal-alternatives generation, ranking, selection, approval-requirement, and material-change semantics are backend-owned contracts and must not be generated, reranked, or re-inferred in UI or support layers,
-11. proposal alternatives must remain anchored to canonical `lotus-core` simulation and `lotus-risk` enrichment rather than local duplicated calculations,
-12. tactical house-view affected cohorts must remain bounded to supplied source-backed candidates,
+11. decision-summary, proposal-alternatives generation, ranking, selection, approval-requirement, and material-change semantics are backend-owned contracts and must not be generated, reranked, or re-inferred in UI or support layers,
+12. proposal alternatives must remain anchored to canonical `lotus-core` simulation and `lotus-risk` enrichment rather than local duplicated calculations,
+13. tactical house-view affected cohorts must remain bounded to supplied source-backed candidates,
    preserve source refs, and must not discover the global portfolio universe or open DPM campaigns,
-13. execution handoff, status, and delivery surfaces must preserve the boundary that `lotus-advise`
+14. execution handoff, status, and delivery surfaces must preserve the boundary that `lotus-advise`
    records advisory posture while downstream providers remain execution systems of record,
-14. proposal-create persistence must use the repository port's atomic unit-of-work boundary for
+15. proposal-create persistence must use the repository port's atomic unit-of-work boundary for
    initial proposal aggregate, immutable version 1, `CREATED` workflow event, and proposal-create
    idempotency record writes; callers must not recreate the multi-write sequence in services,
    routers, async glue, or scripts,
-15. memo-create persistence must use the repository port's atomic unit-of-work boundary for memo
+16. memo-create persistence must use the repository port's atomic unit-of-work boundary for memo
    record, optional memo-create idempotency record, and initial memo lifecycle event writes; review,
    report-package, archive, and AI lineage event commands remain separate append-only workflow
    commands,
-16. REST/OpenAPI remains the canonical integration contract; gRPC is not justified for current advisory upstream calls,
-17. runtime smoke should honor injected CI DSNs and canonical service identities rather than stale local assumptions,
-18. `lotus-idea` proposal-intake receipt must remain source-safe: Advise acknowledges only the
+17. REST/OpenAPI remains the canonical integration contract; gRPC is not justified for current advisory upstream calls,
+18. runtime smoke should honor injected CI DSNs and canonical service identities rather than stale local assumptions,
+19. `lotus-idea` proposal-intake receipt must remain source-safe: Advise acknowledges only the
    handoff envelope through trusted local/dev caller headers and retains proposal, suitability,
    approval, publication, and execution authority until a later certified realization slice
    implements production IdP binding, persistence, and those controls,
-19. outbound `lotus-report` and `lotus-ai` calls must fail closed when tenant or actor identity is
+20. outbound `lotus-report` and `lotus-ai` calls must fail closed when tenant or actor identity is
    missing, malformed, over-length, or control-character-bearing; do not reintroduce synthetic
    production defaults such as a hardcoded tenant or service actor,
-20. policy-control write routes must resolve `PolicyControlPrincipal` at the API boundary before
+21. policy-control write routes must resolve `PolicyControlPrincipal` at the API boundary before
     application commands run; do not pass caller-supplied actor strings into policy-pack or
     evaluation state transitions unless they have been bound to the trusted principal and
     authorized proposal, portfolio, tenant, and legal-entity scope,
-21. finalized policy-evaluation workflow receipts must derive `as_of_date` from explicit
+22. finalized policy-evaluation workflow receipts must derive `as_of_date` from explicit
     source-owned context, portfolio, or market-data evidence; current clock time, generated-at
     timestamps, request-body dates, and consumer-supplied dates cannot certify producer as-of
     identity. Receipt metadata may expose raw business scope codes such as legal entity,
     booking center, proposal, version, and portfolio ids, but tenant, service, correlation, and
     trace identity must be source-safe hashes,
-22. outbound `lotus-report` calls must require source-derived as-of date, reporting currency, and
+23. outbound `lotus-report` calls must require source-derived as-of date, reporting currency, and
    jurisdiction/booking-center metadata; current-date, USD, and SG fallbacks are not production
    source truth,
-23. unavailable `lotus-risk` authority must always carry degraded evidence with a stable reason
+24. unavailable `lotus-risk` authority must always carry degraded evidence with a stable reason
    code; do not allow `risk_authority="unavailable"` with `degraded=false`.
-23. advisor memo and policy sign-off report packages must not project archive-ready status from
+25. advisor memo and policy sign-off report packages must not project archive-ready status from
     accepted, running, missing-status, malformed-status, or failed status lookups; terminal
     readiness requires `lotus-report` archive evidence and all non-terminal status must preserve
     the report job id for operator recovery.
-24. external service adapters for `lotus-core`, `lotus-risk`, `lotus-report`, and `lotus-ai`
+26. external service adapters for `lotus-core`, `lotus-risk`, `lotus-report`, and `lotus-ai`
     must keep versioned consumer-contract fixtures under
     `tests/fixtures/external-adapter-contracts/` and pass `make external-adapter-contracts`.
     The lane must cover valid responses, malformed JSON, missing fields, portfolio/as-of identity
     mismatch, partial data, auth failures, timeouts, retry or bounded non-retry posture, duplicate
     or idempotency behavior, provider error mapping, and raw-payload/secret non-leakage.
-22. Lotus Core advisory simulation responses must enter Advise through
+27. Lotus Core advisory simulation responses must enter Advise through
     `CoreProjectedTransactionEffects`. Core-owned before/after transaction effects, rule results,
     allocation lens, and source lineage are accepted after contract validation; Core-returned
     suitability, workflow gate, decision-summary, alternatives, consent, or next-step fields are
     compatibility evidence only and must not drive Advise advisory decisions.
-23. advisory copilot review routes must resolve `CopilotReviewPrincipal` at the API boundary before
+28. advisory copilot review routes must resolve `CopilotReviewPrincipal` at the API boundary before
     application commands run; do not pass caller-supplied actor strings into review persistence
     unless they have been checked as compatibility echoes against the trusted principal and
     authorized proposal, portfolio, and tenant scope.
-24. HTTP boundary controls are centralized in `src/api/http_boundary.py`: trusted host validation,
+29. HTTP boundary controls are centralized in `src/api/http_boundary.py`: trusted host validation,
     deny-by-default CORS, approved security headers, write-payload caps, and enterprise
     audit/authorization denial responses must remain API-layer behavior. Production-like profiles
     must configure `HTTP_BOUNDARY_TRUSTED_HOSTS`; wildcard trusted hosts or wildcard allowed origins
     are not acceptable production posture. TLS termination, WAF/rate limiting, and external identity
     provider integration remain ingress/gateway responsibilities unless a later Advise issue
     deliberately moves a specific control into the service.
-25. advisory workspace routes compose through `WorkspaceApplicationService` and explicit workspace
+30. advisory workspace routes compose through `WorkspaceApplicationService` and explicit workspace
     ports for session persistence, Lotus Core source-context resolution, proposal evaluation, and
     proposal lifecycle handoff. Concrete Lotus Core resolution and the current in-memory workspace
     session store are infrastructure/runtime adapters, not route or use-case implementation

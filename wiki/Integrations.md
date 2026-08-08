@@ -206,6 +206,9 @@ Boundary rule:
 - AI must not become the authority for suitability, approvals, trade generation, or proposal alternatives
 - AI workflow-pack calls require `LOTUS_ADVISE_TENANT_ID`; unsafe or absent tenant identity fails
   closed before HTTP submission
+- app-local Compose supplies the canonical developer tenant fixture `tenant-sg-001` only for
+  standalone and Workbench-orchestrated local startup; production Compose requires deployment-owned
+  tenant configuration
 - proposal narrative and memo AI calls are selected through Advise-owned ports. Lotus AI adapter
   errors are translated into core unavailable outcomes before proposal narrative or memo
   orchestration handles fallback posture.
