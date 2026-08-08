@@ -59,6 +59,10 @@ immutable image digest reference, upstream service URLs, Postgres DSNs from secr
 tenant id. The production manifest must not contain `.dev.lotus`, `host-gateway`, plaintext DSNs,
 database passwords, local image builds, or mutable image tags.
 
+The app-local Compose manifest is different by design: it supplies
+`LOTUS_ADVISE_TENANT_ID=tenant-sg-001` as a developer fixture for standalone and canonical
+Workbench startup. That fixture is not production tenant-isolation or entitlement evidence.
+
 Production container healthchecks use `/health/ready`. `/version` is release metadata for
 comparing runtime build identity with release evidence; it is not a readiness endpoint.
 

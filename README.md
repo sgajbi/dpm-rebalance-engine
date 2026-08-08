@@ -300,6 +300,12 @@ Canonical local Docker upstream defaults:
 - `LOTUS_CORE_BASE_URL=http://core-control.dev.lotus`
 - `LOTUS_CORE_QUERY_BASE_URL=http://core-query.dev.lotus`
 - `LOTUS_RISK_BASE_URL=http://risk.dev.lotus`
+- `LOTUS_ADVISE_TENANT_ID=tenant-sg-001` for app-local and canonical Workbench developer startup
+
+The local Compose manifest supplies the canonical developer tenant fixture so cross-app Workbench
+bring-up can start without an external identity provider. Production Compose remains fail-closed and
+requires deployment-owned `LOTUS_ADVISE_TENANT_ID`; do not treat the local fixture as production
+tenant or entitlement proof.
 
 Lotus Risk enrichment uses bounded retries for transient `5xx`, `429`, and network failures.
 `LOTUS_RISK_RETRY_ATTEMPTS` defaults to `2` and must be between `1` and `5`;

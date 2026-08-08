@@ -12,7 +12,7 @@ def test_local_docker_compose_uses_canonical_upstream_urls() -> None:
         in compose_text
     )
     assert "LOTUS_RISK_BASE_URL=${LOTUS_RISK_BASE_URL:-http://risk.dev.lotus}" in compose_text
-    assert "LOTUS_ADVISE_TENANT_ID=${LOTUS_ADVISE_TENANT_ID:?" in compose_text
+    assert "LOTUS_ADVISE_TENANT_ID=${LOTUS_ADVISE_TENANT_ID:-tenant-sg-001}" in compose_text
     assert '"core-control.dev.lotus:host-gateway"' in compose_text
     assert '"core-query.dev.lotus:host-gateway"' in compose_text
     assert '"risk.dev.lotus:host-gateway"' in compose_text
@@ -143,3 +143,12 @@ def test_production_compose_is_environment_neutral_and_secret_safe() -> None:
     )
     for fragment in required_fragments:
         assert fragment in compose_text
+
+
+def test_only_local_compose_supplies_canonical_dev_tenant_fixture() -> None:
+    local_compose = Path("docker-compose.yml").read_text(encoding="utf-8")
+    production_compose = Path("docker-compose.production.yml").read_text(encoding="utf-8")
+
+    assert "LOTUS_ADVISE_TENANT_ID=${LOTUS_ADVISE_TENANT_ID:-tenant-sg-001}" in local_compose
+    assert "LOTUS_ADVISE_TENANT_ID=${LOTUS_ADVISE_TENANT_ID:-" not in production_compose
+    assert "LOTUS_ADVISE_TENANT_ID=${LOTUS_ADVISE_TENANT_ID:?" in production_compose
