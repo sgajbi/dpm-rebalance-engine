@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-08T18:32:41Z",
-  "git_commit_sha": "86bb1db4c3bdebc03e3cd2d375c295771ab300dc",
+  "generated_at_utc": "2026-08-08T18:53:27Z",
+  "git_commit_sha": "9fb6a7c4fcb1b69ca274a4d7661aae09def046ab",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -284,7 +284,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "7.15.2",
+      "installed_version": "7.15.4",
       "license_term": "Apache-2.0",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -294,7 +294,7 @@
       "source_files": [
         "requirements-dev.txt"
       ],
-      "version": "7.15.2"
+      "version": "7.15.4"
     },
     {
       "declared_name": "cvxpy",
@@ -863,7 +863,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "26.2",
+      "installed_version": "26.3",
       "license_term": "Apache-2.0 OR BSD-2-Clause",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -873,7 +873,7 @@
       "source_files": [
         "requirements-prod.txt"
       ],
-      "version": "26.2"
+      "version": "26.3"
     },
     {
       "declared_name": "pathspec",
@@ -1377,7 +1377,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.16.1",
+      "installed_version": "0.16.2",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1387,7 +1387,7 @@
       "source_files": [
         "requirements-dev.txt"
       ],
-      "version": "0.16.1"
+      "version": "0.16.2"
     },
     {
       "declared_name": "scipy",
@@ -1701,7 +1701,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.52.0",
+      "installed_version": "0.52.1",
       "license_term": "BSD-3-Clause",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1711,7 +1711,7 @@
       "source_files": [
         "requirements-prod.txt"
       ],
-      "version": "0.52.0"
+      "version": "0.52.1"
     },
     {
       "declared_name": "vulture",

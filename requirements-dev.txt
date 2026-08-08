@@ -1,14 +1,14 @@
 -r requirements-prod.txt
 
 bandit==1.9.4
-coverage==7.15.2
+coverage==7.15.4
 iniconfig==2.3.0
 pip-audit==2.10.1
 pluggy==1.6.0
 pytest==9.1.1
 pytest-cov==7.1.0
 radon==6.0.1
-ruff==0.16.1
+ruff==0.16.2
 mypy==2.1.0
 import-linter==2.12
 xenon==0.9.3
