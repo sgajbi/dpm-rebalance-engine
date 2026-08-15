@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "bf5ca46a331eda293b0ab2b4d7b2e0315dfff517bcd8fa41f6ba11d509705289"
+license-inventory-sha256 = "a43357bef3e4072f8ff4c2a22cb0ac48a07030fec12b61b37f6c138b0a4b8b34"
 
 [[requirement-files]]
 group = "development"
@@ -113,7 +113,7 @@ requirement-hashes = []
 
 [[package]]
 name = "charset-normalizer"
-version = "3.4.9"
+version = "3.5.0"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -167,7 +167,7 @@ requirement-hashes = ["df8dd023ac0faaae841405b1c5db3c13cf5a589182bae110224faab68
 
 [[package]]
 name = "cyclonedx-python-lib"
-version = "11.11.0"
+version = "11.12.0"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -203,7 +203,7 @@ requirement-hashes = ["0f940ebfb8bf2679f96c96fe73fc7937362c493ff2666e33833d6975a
 
 [[package]]
 name = "filelock"
-version = "3.32.2"
+version = "3.32.3"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -473,7 +473,7 @@ requirement-hashes = []
 
 [[package]]
 name = "platformdirs"
-version = "4.11.1"
+version = "4.11.3"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -788,7 +788,7 @@ requirement-hashes = ["d487e7a6974fe327808381ef70dd633442f377482fdebefdcd0feea71
 
 [[package]]
 name = "typing-inspection"
-version = "0.4.2"
+version = "0.4.4"
 direct = false
 groups = ["development", "runtime"]
 requirement-files = []

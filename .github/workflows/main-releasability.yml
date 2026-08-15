@@ -1,8 +1,6 @@
 name: Main Releasability Gate
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
 
 concurrency:

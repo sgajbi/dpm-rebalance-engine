@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-08T19:02:07Z",
-  "git_commit_sha": "65978b88a19846ce341c497a3515f2e7425ae00c",
+  "generated_at_utc": "2026-08-15T01:24:07Z",
+  "git_commit_sha": "79229e667f50bead55d198a94fe0e1268105071d",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -205,7 +205,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "3.4.9",
+      "installed_version": "3.5.0",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -213,7 +213,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "3.4.9"
+      "version": "3.5.0"
     },
     {
       "declared_name": "clarabel",
@@ -325,7 +325,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "11.11.0",
+      "installed_version": "11.12.0",
       "license_term": "Apache-2.0",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -333,7 +333,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "11.11.0"
+      "version": "11.12.0"
     },
     {
       "declared_name": "defusedxml",
@@ -402,7 +402,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "3.32.2",
+      "installed_version": "3.32.3",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -410,7 +410,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "3.32.2"
+      "version": "3.32.3"
     },
     {
       "declared_name": "grimp",
@@ -975,7 +975,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "4.11.1",
+      "installed_version": "4.11.3",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -983,7 +983,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "4.11.1"
+      "version": "4.11.3"
     },
     {
       "declared_name": "pluggy",
@@ -1645,7 +1645,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.4.2",
+      "installed_version": "0.4.4",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1653,7 +1653,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "0.4.2"
+      "version": "0.4.4"
     },
     {
       "declared_name": "tzdata",
