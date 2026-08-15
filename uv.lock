@@ -4,22 +4,22 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "a43357bef3e4072f8ff4c2a22cb0ac48a07030fec12b61b37f6c138b0a4b8b34"
+license-inventory-sha256 = "897aad5610636d185386e96e7bb06444d8b7b48c0ef2dc7528ec1ed86ec09f85"
 
 [[requirement-files]]
 group = "development"
 path = "requirements-dev.txt"
-sha256 = "1e0a24f7302ef981b906cfc2f33caf819a0e4d6896f3a3cfe122be4b601bed4b"
+sha256 = "374c574e56f6f0cabb0ca7c69fed5e5747be8c877ae949ff420940ecf18e23e7"
 
 [[requirement-files]]
 group = "install"
 path = "requirements.txt"
-sha256 = "4ded10cce3145ca83d4e789bac3615f6b07dec85dbc994224b2efa2099c3760b"
+sha256 = "8f4de02f9c7da62f5c9d4cd10117e466372d5ca632b2bbf7ee3585dbf14f2c93"
 
 [[requirement-files]]
 group = "runtime"
 path = "requirements-prod.txt"
-sha256 = "3d07e0f7c7f957d9cb961e1077dbb90702ad2b7bd7eaf2be3096ba028a44ba08"
+sha256 = "ca8a6f31c059c0cb0c52a05e32f8bb50a6f4e57bd795f299eca0c34bf69998c2"
 
 [[package]]
 name = "annotated-doc"
@@ -662,12 +662,12 @@ requirement-hashes = []
 
 [[package]]
 name = "ruff"
-version = "0.16.2"
+version = "0.16.3"
 direct = true
 groups = ["development", "install"]
 requirement-files = ["requirements-dev.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["eb6349b44f3108ccbe98d77ff5711fcb8d9e213353dd4d9908c0242c0bd654e6"]
+requirement-hashes = ["c003f5b436bc09d7b6d2243971b7606c28dc06537434adc7d3db89cb684176ed"]
 
 [[package]]
 name = "scipy"
@@ -815,12 +815,12 @@ requirement-hashes = []
 
 [[package]]
 name = "uvicorn"
-version = "0.52.1"
+version = "0.52.3"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["65ab748b9684893a739aba8793711da6a83d4a82fe60cec22f1827a471a96c7e"]
+requirement-hashes = ["d352ad59f17b1b814dcd7be6cc33ae0dc8a031314f14654237fb22fdc8373d07"]
 
 [[package]]
 name = "vulture"
