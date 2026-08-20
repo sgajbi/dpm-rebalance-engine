@@ -2,6 +2,15 @@ name: Main Releasability Gate
 
 on:
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: "Optional merged pull-request SHA that this run must validate."
+        required: false
+        type: string
+      triggering_pr:
+        description: "Optional pull request number that dispatched this mainline validation."
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,8 +25,32 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
+  exact-revision-assertion:
+    name: Main Releasability / Exact Revision Assertion
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Assert expected merged PR SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          TRIGGERING_PR: ${{ inputs.triggering_pr }}
+        run: |
+          actual_sha="$(git rev-parse HEAD)"
+          if [ -z "$EXPECTED_SHA" ]; then
+            echo "No expected_sha input supplied; treating this as an operator-dispatched main releasability run."
+            exit 0
+          fi
+          if [ "$actual_sha" != "$EXPECTED_SHA" ]; then
+            echo "::error::Main releasability checkout SHA $actual_sha does not match expected merged PR SHA $EXPECTED_SHA for PR ${TRIGGERING_PR:-unknown}."
+            exit 1
+          fi
+          echo "Validated exact merged PR SHA $EXPECTED_SHA for PR ${TRIGGERING_PR:-unknown}."
+
   workflow-lint:
     name: Main Releasability / Workflow Lint
+    needs: [exact-revision-assertion]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,6 +59,7 @@ jobs:
 
   lint-typecheck-governance:
     name: Main Releasability / Lint Typecheck Governance
+    needs: [exact-revision-assertion]
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
