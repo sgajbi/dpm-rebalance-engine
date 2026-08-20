@@ -23,6 +23,7 @@ env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PYTHONUNBUFFERED: "1"
   PYTHON_VERSION: "3.11"
+  LOTUS_RELEASE_GIT_REF: ${{ inputs.expected_sha && 'main' || github.ref_name }}
 
 jobs:
   exact-revision-assertion:
@@ -268,7 +269,7 @@ jobs:
       - name: Build Docker image
         env:
           CI_PIPELINE_ID: ${{ github.run_id }}
-          GIT_BRANCH: ${{ github.ref_name }}
+          GIT_BRANCH: ${{ env.LOTUS_RELEASE_GIT_REF }}
           GIT_SHA: ${{ github.sha }}
           IMAGE_DIGEST: resolved-after-push
         run: make docker-build
@@ -310,7 +311,7 @@ jobs:
           tags: ${{ env.IMAGE_REF }}
           build-args: |
             LOTUS_BUILD_COMMIT_SHA=${{ github.sha }}
-            LOTUS_BUILD_GIT_BRANCH=${{ github.ref_name }}
+            LOTUS_BUILD_GIT_BRANCH=${{ env.LOTUS_RELEASE_GIT_REF }}
             LOTUS_BUILD_REPO_URL=${{ github.server_url }}/${{ github.repository }}
             LOTUS_BUILD_VERSION=${{ env.SERVICE_VERSION }}
             LOTUS_BUILD_TIMESTAMP=${{ env.BUILD_TIMESTAMP }}
@@ -322,7 +323,7 @@ jobs:
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.ref.name=${{ github.ref_name }}
+            org.opencontainers.image.ref.name=${{ env.LOTUS_RELEASE_GIT_REF }}
             org.opencontainers.image.version=${{ env.SERVICE_VERSION }}
             org.opencontainers.image.created=${{ env.BUILD_TIMESTAMP }}
             org.opencontainers.image.vendor=Lotus
@@ -389,7 +390,7 @@ jobs:
           --image-ref "$IMAGE_REF"
           --image-digest "${{ steps.build.outputs.digest }}"
           --commit-sha "${{ github.sha }}"
-          --git-ref "${{ github.ref_name }}"
+          --git-ref "${{ env.LOTUS_RELEASE_GIT_REF }}"
           --repository-url "${{ github.server_url }}/${{ github.repository }}"
           --service-version "$SERVICE_VERSION"
           --build-timestamp-utc "$BUILD_TIMESTAMP"
