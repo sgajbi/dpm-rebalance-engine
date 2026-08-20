@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-15T01:37:22Z",
-  "git_commit_sha": "f872942cf0e96510d814852216463298a320c0fe",
+  "generated_at_utc": "2026-08-20T10:22:27Z",
+  "git_commit_sha": "99a01a211c13b5ce642f66bc18f8ec6c989b8e93",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -205,7 +205,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "3.5.0",
+      "installed_version": "3.5.1",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -213,7 +213,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "3.5.0"
+      "version": "3.5.1"
     },
     {
       "declared_name": "clarabel",
@@ -521,7 +521,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "3.18",
+      "installed_version": "3.19",
       "license_term": "BSD-3-Clause",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -531,7 +531,7 @@
       "source_files": [
         "requirements-prod.txt"
       ],
-      "version": "3.18"
+      "version": "3.19"
     },
     {
       "declared_name": "import-linter",
@@ -1190,7 +1190,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "2.20.0",
+      "installed_version": "2.21.0",
       "license_term": "BSD-2-Clause",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1198,7 +1198,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "2.20.0"
+      "version": "2.21.0"
     },
     {
       "declared_name": "pyparsing",
@@ -1701,7 +1701,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.52.3",
+      "installed_version": "0.52.4",
       "license_term": "BSD-3-Clause",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1711,7 +1711,7 @@
       "source_files": [
         "requirements-prod.txt"
       ],
-      "version": "0.52.3"
+      "version": "0.52.4"
     },
     {
       "declared_name": "vulture",

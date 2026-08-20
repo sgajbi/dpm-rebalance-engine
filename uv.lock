@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "897aad5610636d185386e96e7bb06444d8b7b48c0ef2dc7528ec1ed86ec09f85"
+license-inventory-sha256 = "e11eed3ae9c718c9abcfad65ff4ebfa9e0d0de8a819e29704803b4d85e527f74"
 
 [[requirement-files]]
 group = "development"
@@ -14,12 +14,12 @@ sha256 = "374c574e56f6f0cabb0ca7c69fed5e5747be8c877ae949ff420940ecf18e23e7"
 [[requirement-files]]
 group = "install"
 path = "requirements.txt"
-sha256 = "8f4de02f9c7da62f5c9d4cd10117e466372d5ca632b2bbf7ee3585dbf14f2c93"
+sha256 = "9e575f0909ee25e47f060a363172a2528d84bd22078a53fd5a2a2b33ffb3815d"
 
 [[requirement-files]]
 group = "runtime"
 path = "requirements-prod.txt"
-sha256 = "ca8a6f31c059c0cb0c52a05e32f8bb50a6f4e57bd795f299eca0c34bf69998c2"
+sha256 = "f19d975ee4b90549748bd478c37c5500e56179400581ae98a7de9d714ca526c5"
 
 [[package]]
 name = "annotated-doc"
@@ -113,7 +113,7 @@ requirement-hashes = []
 
 [[package]]
 name = "charset-normalizer"
-version = "3.5.0"
+version = "3.5.1"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -257,12 +257,12 @@ requirement-hashes = ["5fadf5f6ea5bd1b141ea05745cb52449bdccde939c22e76231e7993c2
 
 [[package]]
 name = "idna"
-version = "3.18"
+version = "3.19"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["1d7c42f54f85a9c2af00d8a5147e3625bf14d357ffba6d30ab863ddcd476a54a"]
+requirement-hashes = ["d5b04f199bad1a5062e1181bd693d196f1e6cf7a15d26edf9506d813e1e090d6"]
 
 [[package]]
 name = "import-linter"
@@ -572,7 +572,7 @@ requirement-hashes = []
 
 [[package]]
 name = "pygments"
-version = "2.20.0"
+version = "2.21.0"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -815,12 +815,12 @@ requirement-hashes = []
 
 [[package]]
 name = "uvicorn"
-version = "0.52.3"
+version = "0.52.4"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["d352ad59f17b1b814dcd7be6cc33ae0dc8a031314f14654237fb22fdc8373d07"]
+requirement-hashes = ["97bd61da6c77403be00424746bf95dd891d90db6879b221e4b1ed43a7074abda"]
 
 [[package]]
 name = "vulture"
