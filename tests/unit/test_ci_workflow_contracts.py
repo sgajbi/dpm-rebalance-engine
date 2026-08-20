@@ -554,5 +554,8 @@ def test_main_releasability_uses_dispatcher_without_duplicate_push_trigger() -> 
     assert "git rev-parse HEAD" in workflow
     assert 'if [ "$actual_sha" != "$EXPECTED_SHA" ]; then' in workflow
     assert "does not match expected merged PR SHA" in workflow
+    assert "git fetch --no-tags origin main:refs/remotes/origin/main" in workflow
+    assert 'git merge-base --is-ancestor "$EXPECTED_SHA" origin/main' in workflow
+    assert "refusing to label this run as mainline release evidence" in workflow
     assert "push:" not in trigger_section
     assert 'branches: ["main"]' not in trigger_section

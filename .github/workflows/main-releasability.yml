@@ -47,6 +47,11 @@ jobs:
             echo "::error::Main releasability checkout SHA $actual_sha does not match expected merged PR SHA $EXPECTED_SHA for PR ${TRIGGERING_PR:-unknown}."
             exit 1
           fi
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$EXPECTED_SHA" origin/main; then
+            echo "::error::Expected SHA $EXPECTED_SHA for PR ${TRIGGERING_PR:-unknown} is not reachable from origin/main; refusing to label this run as mainline release evidence."
+            exit 1
+          fi
           echo "Validated exact merged PR SHA $EXPECTED_SHA for PR ${TRIGGERING_PR:-unknown}."
 
   workflow-lint:
