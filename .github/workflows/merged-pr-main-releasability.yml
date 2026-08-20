@@ -30,12 +30,14 @@ jobs:
           fi
 
           dispatch_ref="main-releasability-${MERGE_COMMIT_SHA}"
-          existing_ref_sha="$(
-            gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$dispatch_ref" --jq .object.sha 2>/dev/null || true
-          )"
-          if [ -n "$existing_ref_sha" ] && [ "$existing_ref_sha" != "$MERGE_COMMIT_SHA" ]; then
-            echo "::error::Dispatch ref $dispatch_ref points to $existing_ref_sha, expected $MERGE_COMMIT_SHA"
-            exit 1
+          existing_ref_sha=""
+          if existing_ref_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$dispatch_ref" --jq .object.sha 2>/dev/null)"; then
+            if [ "$existing_ref_sha" != "$MERGE_COMMIT_SHA" ]; then
+              echo "::error::Dispatch ref $dispatch_ref points to $existing_ref_sha, expected $MERGE_COMMIT_SHA"
+              exit 1
+            fi
+          else
+            existing_ref_sha=""
           fi
           if [ -z "$existing_ref_sha" ]; then
             gh api "repos/$GITHUB_REPOSITORY/git/refs" \
