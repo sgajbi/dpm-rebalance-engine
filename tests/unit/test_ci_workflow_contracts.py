@@ -512,6 +512,9 @@ def test_merged_pr_dispatches_main_releasability_on_main() -> None:
     assert "github.event.pull_request.base.ref == 'main'" in dispatch_section
     assert "gh workflow run main-releasability.yml" in dispatch_section
     assert "--ref main" in dispatch_section
+    assert "github.event.pull_request.merge_commit_sha" in dispatch_section
+    assert '-f expected_sha="$MERGE_COMMIT_SHA"' in dispatch_section
+    assert '-f triggering_pr="$PR_NUMBER"' in dispatch_section
 
 
 def test_main_releasability_uses_dispatcher_without_duplicate_push_trigger() -> None:
@@ -519,5 +522,8 @@ def test_main_releasability_uses_dispatcher_without_duplicate_push_trigger() -> 
     trigger_section = workflow.split("concurrency:", maxsplit=1)[0]
 
     assert "workflow_dispatch:" in trigger_section
+    assert "expected_sha:" in trigger_section
+    assert "triggering_pr:" in trigger_section
+    assert "git rev-parse HEAD" in workflow
     assert "push:" not in trigger_section
     assert 'branches: ["main"]' not in trigger_section

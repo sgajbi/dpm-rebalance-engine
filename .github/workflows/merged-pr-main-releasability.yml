@@ -20,4 +20,15 @@ jobs:
       - name: Dispatch main releasability gate
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run main-releasability.yml --repo "$GITHUB_REPOSITORY" --ref main
+          MERGE_COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$MERGE_COMMIT_SHA" ]; then
+            echo "::error::pull_request.merge_commit_sha is required for exact-main releasability dispatch"
+            exit 1
+          fi
+          gh workflow run main-releasability.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f expected_sha="$MERGE_COMMIT_SHA" \
+            -f triggering_pr="$PR_NUMBER"
