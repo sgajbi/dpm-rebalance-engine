@@ -524,6 +524,11 @@ def test_merged_pr_dispatches_main_releasability_on_main() -> None:
     assert "github.event.pull_request.base.ref == 'main'" in dispatch_section
     assert "gh workflow run main-releasability.yml" in dispatch_section
     assert 'dispatch_ref="main-releasability-${MERGE_COMMIT_SHA}"' in dispatch_section
+    assert (
+        'existing_ref_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$dispatch_ref"'
+        in dispatch_section
+    )
+    assert "Dispatch ref $dispatch_ref points to $existing_ref_sha" in dispatch_section
     assert 'gh api "repos/$GITHUB_REPOSITORY/git/refs"' in dispatch_section
     assert '--ref "$dispatch_ref"' in dispatch_section
     assert "github.event.pull_request.merge_commit_sha" in dispatch_section
