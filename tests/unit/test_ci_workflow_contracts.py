@@ -539,6 +539,13 @@ def test_main_releasability_uses_dispatcher_without_duplicate_push_trigger() -> 
     assert "expected_sha:" in trigger_section
     assert "triggering_pr:" in trigger_section
     assert "${{ inputs.expected_sha || github.sha }}" in workflow
+    assert "LOTUS_RELEASE_GIT_REF: ${{ inputs.expected_sha && 'main' || github.ref_name }}" in (
+        workflow
+    )
+    assert "GIT_BRANCH: ${{ env.LOTUS_RELEASE_GIT_REF }}" in workflow
+    assert "LOTUS_BUILD_GIT_BRANCH=${{ env.LOTUS_RELEASE_GIT_REF }}" in workflow
+    assert "org.opencontainers.image.ref.name=${{ env.LOTUS_RELEASE_GIT_REF }}" in workflow
+    assert '--git-ref "${{ env.LOTUS_RELEASE_GIT_REF }}"' in workflow
     assert "git rev-parse HEAD" in workflow
     assert 'if [ "$actual_sha" != "$EXPECTED_SHA" ]; then' in workflow
     assert "does not match expected merged PR SHA" in workflow
