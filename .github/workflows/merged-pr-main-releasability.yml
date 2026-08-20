@@ -23,9 +23,15 @@ jobs:
           MERGE_COMMIT_SHA: ${{ github.event.pull_request.merge_commit_sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          set -euo pipefail
           if [ -z "$MERGE_COMMIT_SHA" ]; then
             echo "::error::pull_request.merge_commit_sha is required for exact-main releasability dispatch"
             exit 1
+          fi
+          current_main_sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          if [ "$current_main_sha" != "$MERGE_COMMIT_SHA" ]; then
+            echo "::notice::Skipping stale main releasability dispatch for PR $PR_NUMBER. main is $current_main_sha, merged PR SHA is $MERGE_COMMIT_SHA."
+            exit 0
           fi
           gh workflow run main-releasability.yml \
             --repo "$GITHUB_REPOSITORY" \
