@@ -13,7 +13,7 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ inputs.expected_sha || github.sha }}
   cancel-in-progress: true
 
 permissions:
@@ -118,6 +118,7 @@ jobs:
 
   test-suites:
     name: Main Releasability / Tests (${{ matrix.suite }})
+    needs: [exact-revision-assertion]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -176,6 +177,7 @@ jobs:
 
   postgres-migration-smoke:
     name: Main Releasability / Postgres Migration Smoke
+    needs: [exact-revision-assertion]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -208,6 +210,7 @@ jobs:
 
   production-profile-smoke:
     name: Main Releasability / Production Profile Startup Smoke
+    needs: [exact-revision-assertion]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -241,6 +244,7 @@ jobs:
 
   production-profile-guardrail-negatives:
     name: Main Releasability / Production Profile Guardrail Negatives
+    needs: [exact-revision-assertion]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

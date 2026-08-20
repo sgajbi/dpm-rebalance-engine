@@ -17,9 +17,13 @@ def _workflow_job_section(workflow: str, job_id: str) -> str:
     return workflow[start:next_job]
 
 
-def _assert_default_ci_guardrails(workflow: str) -> None:
+def _assert_default_ci_guardrails(
+    workflow: str,
+    *,
+    concurrency_group: str = "group: ${{ github.workflow }}-${{ github.ref }}",
+) -> None:
     assert "concurrency:" in workflow
-    assert "group: ${{ github.workflow }}-${{ github.ref }}" in workflow
+    assert concurrency_group in workflow
     assert "cancel-in-progress: true" in workflow
     assert "permissions:\n  contents: read" in workflow
 
@@ -334,7 +338,12 @@ def test_pr_and_main_runtime_jobs_are_parallelized_without_renaming_required_che
     ):
         workflow = _workflow_text(workflow_name)
 
-        _assert_default_ci_guardrails(workflow)
+        concurrency_group = (
+            "group: ${{ github.workflow }}-${{ inputs.expected_sha || github.sha }}"
+            if workflow_name == "main-releasability.yml"
+            else "group: ${{ github.workflow }}-${{ github.ref }}"
+        )
+        _assert_default_ci_guardrails(workflow, concurrency_group=concurrency_group)
         _assert_governance_job_runs_baseline_freshness(workflow, "lint-typecheck-governance")
         _assert_governance_job_runs_trust_telemetry_freshness(workflow, "lint-typecheck-governance")
         _assert_governance_job_runs_demo_assurance_checks(workflow, "lint-typecheck-governance")
@@ -350,7 +359,10 @@ def test_pr_and_main_runtime_jobs_are_parallelized_without_renaming_required_che
             "production-profile-guardrail-negatives",
         ):
             job_section = _workflow_job_section(workflow, job_id)
-            assert "needs: [lint-typecheck-governance]" not in job_section
+            if workflow_name == "main-releasability.yml":
+                assert "needs: [exact-revision-assertion]" in job_section
+            else:
+                assert "needs: [lint-typecheck-governance]" not in job_section
 
         docker_section = _workflow_job_section(workflow, "docker-build")
         assert (
@@ -513,6 +525,9 @@ def test_merged_pr_dispatches_main_releasability_on_main() -> None:
     assert "gh workflow run main-releasability.yml" in dispatch_section
     assert "--ref main" in dispatch_section
     assert "github.event.pull_request.merge_commit_sha" in dispatch_section
+    assert 'gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha' in dispatch_section
+    assert 'if [ "$current_main_sha" != "$MERGE_COMMIT_SHA" ]; then' in dispatch_section
+    assert "Skipping stale main releasability dispatch" in dispatch_section
     assert '-f expected_sha="$MERGE_COMMIT_SHA"' in dispatch_section
     assert '-f triggering_pr="$PR_NUMBER"' in dispatch_section
 
@@ -524,6 +539,9 @@ def test_main_releasability_uses_dispatcher_without_duplicate_push_trigger() -> 
     assert "workflow_dispatch:" in trigger_section
     assert "expected_sha:" in trigger_section
     assert "triggering_pr:" in trigger_section
+    assert "${{ inputs.expected_sha || github.sha }}" in workflow
     assert "git rev-parse HEAD" in workflow
+    assert 'if [ "$actual_sha" != "$EXPECTED_SHA" ]; then' in workflow
+    assert "does not match expected merged PR SHA" in workflow
     assert "push:" not in trigger_section
     assert 'branches: ["main"]' not in trigger_section
