@@ -6,8 +6,8 @@
   `scripts`
 - Pattern: quality reports measured large modules and functions but allowed new growth because
   aggregate coverage and complexity rank gates do not express maintainability size limits.
-- Status: Implementation in progress on feature branch; exact-mainline closure pending review and
-  merge
+- Status: Implemented and merged to `main`; bounded slice closure complete. Issue #495 remains
+  open for trend comparison, threshold ratcheting, and hotspot decomposition.
 - Finding Class: CI quality gate, maintainability regression prevention, baseline governance
 - Summary: The bounded #495 slice adds a fail-closed gate at 1,000 physical lines per module and
   200 physical lines per function. Existing ten production-tooling findings remain explicitly
@@ -23,6 +23,24 @@
   - Focused gate and workflow contract tests cover baseline pass, new finding, growth, stale
     baseline, nested identity, syntax failure, policy drift, expiry, and all three governance
     lanes.
+- PR #520 was kept draft until the latest exact-head review-lead verdict was
+  `VERDICT: mergeable`; no `BLOCKING`, `MUST-FIX`, or `hold` finding remained. It merged by the
+  repository-approved rebase/non-squash method as mainline commits `376abd5d`, `8a48b979`,
+  `8446e5ce`, and `8ec771ee`.
+- Exact-mainline local `make check` at `8ec771ee` passed `2,692` unit tests in `76.47s`; the
+  oversized gate reported `10 findings, 0 new, 0 resolved`, and all configured formatting,
+  typing, architecture, API, migration, security, licensing, dead-code, duplicate-code, and
+  dependency-hygiene checks passed.
+- Main Releasability run `32673312798` passed with the exact-revision assertion for `8ec771ee`,
+  including governance/evidence upload, coverage, migration/runtime, Docker, and image
+  security/provenance lanes.
+- Repo-authored wiki source was published at wiki commit `59b5f03`; strict parity verification
+  returned `DiffCount 0`. The previously recorded Docker runtime was absent before post-merge
+  verification, so the documented Advise Compose project was restored explicitly rather than
+  claiming container preservation. The restored product container
+  `9627ef4676d1c82f5347b97b7934fce50bca3995ea523a979adad3d88eb05371` and Postgres container are
+  running healthy on network `5762d8347ecbb0e3ca9fb4ae820ed5cf1f36c131195f47ee8e0d17360b3cf3d8`,
+  with `/health` and `/health/ready` returning `200`.
 - Compatibility: CI/developer/evidence behavior only. No runtime, API/OpenAPI, persistence,
   migration, data-model, or dependency-version contract change is intended.
 - Documentation decision: repository context, generated quality reports, operations guidance,
