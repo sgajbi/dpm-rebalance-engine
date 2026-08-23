@@ -554,6 +554,12 @@ Important validation expectations:
     `output/changed-coverage-gate.json`; it has no exceptions in this initial slice. Diff parsing is
     fail-closed: supported hunk shapes are validated for new-line counts, and malformed Python
     hunks produce failed machine-readable evidence rather than an empty 100% measurement.
+21. CI-local Docker execution is isolated from the product runtime: `make ci-local-docker`,
+    `make ci-local-docker-down`, and `scripts/run_runtime_smoke_checks.py` use the same
+    checkout-specific `CI_LOCAL_COMPOSE_PROJECT` identity, derived from the absolute checkout path
+    unless an orchestrator supplies an explicit, unique CI-owned override. Cleanup must remain
+    scoped to that project and callers must verify the health of any shared product runtime
+    afterward; arbitrary overrides are not collision-safe.
 
 ## Standards And RFCs That Govern This Repository
 

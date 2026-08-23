@@ -1,5 +1,36 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-500-CI-COMPOSE-ISOLATION
+
+- Scope: CI-local Docker Compose lifecycle isolation
+- Pattern: CI-local Compose startup and `down --remove-orphans` cleanup used the repository's
+  default Compose project, allowing cleanup to collide with an active product runtime from the
+  same checkout.
+- Status: Implemented on the PR branch; exact-mainline closure pending
+- Finding Class: CI safety, runtime isolation, regression prevention
+- Summary: GitHub issue #500 identified that local CI orchestration needed an explicit, stable
+  project boundary. The bounded fix applies one checkout-specific project identity to Makefile and
+  runtime-smoke startup/cleanup paths, with an orchestrator override for parallel execution.
+- Evidence:
+  - `scripts/ci_local_compose_project.py` derives a deterministic project name from the resolved
+    checkout path and keeps same-checkout runs stable while separating different checkouts.
+  - `Makefile` and `scripts/run_runtime_smoke_checks.py` use the same project identity for startup
+    and cleanup; no unscoped `docker-compose.ci-local.yml` lifecycle command remains.
+  - Focused regression tests prove symmetric Makefile scoping, deterministic derivation, default
+    runtime-smoke wiring, and explicit override propagation.
+  - The operations runbook, repository engineering context, and wiki source document the runtime
+    boundary and the required shared-runtime health verification.
+- Consequence: With the default derived identity, CI-local cleanup is limited to CI-owned
+  containers, networks, and volumes, reducing the risk that local validation removes the canonical
+  product Compose runtime. Explicit overrides are safe only when they remain unique and CI-owned.
+  Product Compose, API contracts, persistence schema, and service behavior are unchanged.
+- Documentation decision: Wiki source updated because the local validation/runtime boundary changed;
+  no central platform context or skill change is required because the existing governed pattern is
+  already established by Lotus CI guidance.
+- Follow-Up: #502 tracks the separate Docker-local Node/Spectral environment defect found during
+  validation. After merge, validate the exact mainline revision, publish and strictly verify the
+  wiki, record the merge SHA and runtime evidence, then close #500.
+
 ## LA-REV-495-CI-QUALITY
 
 - Scope: PR coverage quality beyond the aggregate coverage floor
