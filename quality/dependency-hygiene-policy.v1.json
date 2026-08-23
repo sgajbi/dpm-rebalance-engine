@@ -1,0 +1,21 @@
+{
+  "schema_version": "lotus.advise.dependency-hygiene-policy.v1",
+  "policy_version": "lotus-advise-dependency-hygiene.v1+fb921ed832b5",
+  "tool": "deptry",
+  "tool_version": "0.25.1",
+  "report_format": "json",
+  "config_path": "pyproject.toml",
+  "max_new_findings": 0,
+  "max_resolved_findings": 0,
+  "baseline": {
+    "path": "quality/dependency-hygiene-baseline.v1.json",
+    "sha256": "efcd8ab34005ad2dc98e55f050af04ee05ed30eb1e667308391efbaa11872ae7",
+    "owner": "lotus-advise-dependency-governance",
+    "reason": "Reviewed deptry findings are explicitly classified; new or resolved fingerprints must not pass without a deliberate dependency or baseline decision.",
+    "expires_on": "2027-08-24"
+  },
+  "exceptions": {
+    "allowed": false,
+    "entries": []
+  }
+}
