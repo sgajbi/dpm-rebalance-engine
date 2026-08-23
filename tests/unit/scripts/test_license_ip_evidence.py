@@ -130,6 +130,38 @@ def test_lock_constraints_project_exact_versions(tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("lock_contents", "expected_error"),
+    [
+        ("not valid TOML", "Cannot read authoritative dependency lock"),
+        (
+            '[[package]]\nname = "missing-version"\n',
+            "packages must include name and version",
+        ),
+        (
+            '[[package]]\nname = "conflicting"\nversion = "1.0.0"\n\n'
+            '[[package]]\nname = "conflicting"\nversion = "2.0.0"\n',
+            "contains conflicting versions for conflicting",
+        ),
+        ("", "contains no package constraints"),
+    ],
+)
+def test_lock_constraints_fail_closed_for_invalid_authoritative_shapes(
+    tmp_path: Path,
+    lock_contents: str,
+    expected_error: str,
+) -> None:
+    lock = tmp_path / "uv.lock"
+    constraints = tmp_path / "constraints.txt"
+    lock.write_text(lock_contents, encoding="utf-8")
+
+    with pytest.raises(RuntimeError) as error:
+        _write_lock_constraints(lock, constraints)
+
+    assert expected_error in str(error.value)
+    assert not constraints.exists()
+
+
 def test_governed_python_command_uses_current_supported_python(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -210,6 +242,36 @@ def test_isolated_license_inventory_stops_on_install_failure(
 
     assert result == 17
     assert len(calls) == 2
+
+
+def test_isolated_license_inventory_returns_two_before_any_install_when_lock_projection_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setattr("scripts.license_ip_evidence.REPO_ROOT", tmp_path)
+    monkeypatch.setattr(
+        "scripts.license_ip_evidence.sys.version_info",
+        (3, 11, 9, "final", 0),
+    )
+    (tmp_path / "uv.lock").write_text("not valid TOML", encoding="utf-8")
+
+    def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        del kwargs
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
+
+    result = _run_in_isolated_environment(
+        _isolated_args("write-inventory"),
+        venv_root=tmp_path / "venv",
+    )
+
+    assert result == 2
+    assert len(calls) == 1
+    assert "pip" not in calls[0]
+    assert not (tmp_path / "license-ip-constraints.txt").exists()
 
 
 def test_isolated_license_inventory_rejects_nested_isolation(
