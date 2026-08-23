@@ -603,6 +603,41 @@
   - No cross-app issue was raised. Other Lotus apps should add app-local license/IP gates rather
     than copy this inventory because each app owns its dependency graph and exceptions.
 
+## LA-REV-513-LICENSE-IP-DETERMINISM
+
+- Scope: deterministic license/IP release-evidence installation and governance-event comparison
+- Pattern: the isolated license/IP gate installed floor-ranged development requirements without
+  consuming the authoritative `uv.lock` transitive versions. An upstream `filelock` release could
+  therefore make an unchanged main commit red even though its reviewed license posture was stable.
+- Status: Implemented on the feature branch; exact-mainline closure pending
+- Finding Class: CI determinism, dependency governance, release evidence
+- Summary: The bounded #513 slice projects exact package constraints from the repository's
+  authoritative `uv.lock` into the temporary license/IP environment. Transitive version-only drift
+  is no longer treated as a governance change, while new packages, license terms, policy
+  classifications, dependency groups, and exception evidence remain blocking with actionable
+  current/expected evidence.
+- Evidence:
+  - `scripts/license_ip_evidence.py` parses `uv.lock` fail-closed, writes a temporary exact
+    `name==version` constraint projection, and applies it to both runtime and development installs.
+    Missing, malformed, or conflicting lock package records stop evidence generation.
+  - Transitive comparison ignores only `version` and `installed_version`; it still compares package
+    membership, license term, classification, dependency groups, and exception evidence. New
+    package failures include expected version and license; governance drift includes current and
+    expected version/license-related evidence and the refresh command.
+  - Focused tests cover lock projection ordering, constrained isolated installation, accepted
+    version-only drift, new-package blocking, license drift, group drift, and exception drift.
+  - Repository-native `make license-ip-gate` passes with `filelock==3.32.3` projected from `uv.lock`;
+    the prior unconstrained `filelock==3.32.4` failure is no longer reproducible on the unchanged
+    lock state.
+- Consequence: unchanged commits no longer become unreleasable solely because an upstream
+  transitive version moves; dependency or license governance changes remain visible and blocking.
+- Documentation decision: dependency hygiene, operations runbook, repository context, wiki CI
+  guidance, and this ledger update because the release-evidence control changed. No OpenAPI,
+  migration, runtime, data-model, or platform-wide context change is needed.
+- Follow-Up: Exact-mainline commit, two-run determinism evidence, Docker-lane isolation,
+  canonical-runtime preservation, wiki publication/parity, and issue-closure evidence must be
+  added after merge.
+
 ## LA-REV-927
 
 - Scope: Advisory copilot claim-level source grounding

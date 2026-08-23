@@ -498,8 +498,11 @@ Important validation expectations:
    `docs/standards/license-ip-policy.v1.json`; review-required terms need owner-approved expiring
    exceptions before release evidence is green. License/IP inventory generation and validation run
    in a temporary virtual environment installed from the governed runtime/development requirements
-   files, with pinned pip/setuptools bootstrap tooling and pip isolated from caller configuration,
-   so ambient developer or runner packages cannot define release evidence,
+   files, constrained to the exact package versions projected from `uv.lock`, with pinned
+   pip/setuptools bootstrap tooling and pip isolated from caller configuration, so ambient developer
+   or runner packages and upstream transitive releases cannot define release evidence. Transitive
+   version-only drift is not a governance event; new packages, license terms, classifications,
+   dependency groups, and exception evidence remain blocking,
 7. Dependency-lock posture is enforced through `make dependency-lock-gate`: `uv.lock` is the
    generated lock mirror for the current requirements install strategy and must match
    requirement-file hashes plus the license/IP dependency inventory hash,

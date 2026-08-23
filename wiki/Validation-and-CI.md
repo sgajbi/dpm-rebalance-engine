@@ -176,8 +176,11 @@ The current blocking posture is intentionally high-signal:
 17. `make license-ip-gate`
      validates the committed runtime/development dependency license inventory and owner-approved
      expiring exceptions in a temporary virtual environment installed from governed
-     runtime/development requirements files with pinned pip/setuptools bootstrap tooling and pip
-     isolated from caller configuration.
+     runtime/development requirements files constrained to exact package versions projected from
+     `uv.lock`, with pinned pip/setuptools bootstrap tooling and pip isolated from caller
+     configuration. Transitive version-only drift is not a governance event; new packages, license
+     terms, classifications, dependency groups, and exception evidence remain blocking with
+     actionable package/version/license output.
 18. `make coverage-combined`
      enforces the combined coverage floor across unit, integration, and e2e suites.
 19. `make postgres-runtime-contracts-local` and `make production-profile-guardrail-negatives-local`

@@ -9,6 +9,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import tomllib
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from importlib import metadata
@@ -23,6 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 SERVICE_NAME = "lotus-advise"
 POLICY_PATH = Path("docs/standards/license-ip-policy.v1.json")
 INVENTORY_PATH = Path("docs/standards/license-ip-inventory.v1.json")
+DEPENDENCY_LOCK_PATH = Path("uv.lock")
 NOTICE_PATH = Path("NOTICE.md")
 LICENSE_OPERATOR_RE = re.compile(r"\s+(?:AND|OR|WITH)\s+|[()]")
 ISOLATED_ENV_FLAG = "LOTUS_ADVISE_LICENSE_IP_ISOLATED"
@@ -189,19 +191,22 @@ def validate_license_inventory_against_expected(
         expected_inventory,
     )
     if missing_transitive_packages:
-        failures.append(
-            "License/IP inventory is stale. Missing transitive package evidence: "
-            + ", ".join(missing_transitive_packages)
+        expected_transitive_packages = _transitive_package_freshness_map(expected_inventory)
+        package_details = ", ".join(
+            f"{name} (version {expected_transitive_packages[name]['version']!r}, "
+            f"license {expected_transitive_packages[name]['license_term']!r})"
+            for name in missing_transitive_packages
         )
-    stale_transitive_packages = _stale_expected_transitive_package_names(
+        failures.append(
+            "License/IP inventory is missing new transitive package evidence: "
+            + package_details
+            + ". Regenerate with `make license-ip-inventory`."
+        )
+    governance_drift = _transitive_governance_drift(
         inventory,
         expected_inventory,
     )
-    if stale_transitive_packages:
-        failures.append(
-            "License/IP inventory is stale. Stale transitive package evidence: "
-            + ", ".join(stale_transitive_packages)
-        )
+    failures.extend(governance_drift)
     return failures
 
 
@@ -584,17 +589,35 @@ def _missing_expected_transitive_package_names(
     return sorted(name for name in expected_names - current_names if name)
 
 
-def _stale_expected_transitive_package_names(
+def _transitive_governance_drift(
     inventory: dict[str, Any],
     expected_inventory: dict[str, Any],
 ) -> list[str]:
     current_packages = _transitive_package_freshness_map(inventory)
     expected_packages = _transitive_package_freshness_map(expected_inventory)
-    return sorted(
-        name
-        for name, expected_package in expected_packages.items()
-        if name in current_packages and current_packages[name] != expected_package
-    )
+    failures: list[str] = []
+    for name in sorted(set(current_packages) & set(expected_packages)):
+        current_package = current_packages[name]
+        expected_package = expected_packages[name]
+        changed_fields = [
+            field
+            for field in current_package
+            if field not in {"version", "installed_version"}
+            if current_package[field] != expected_package[field]
+        ]
+        if not changed_fields:
+            continue
+        details = "; ".join(
+            f"{field} {current_package[field]!r} -> {expected_package[field]!r}"
+            for field in changed_fields
+        )
+        failures.append(
+            "License/IP governance evidence changed for transitive package "
+            f"{name}: version {current_package['version']!r} -> "
+            f"{expected_package['version']!r}; {details}. "
+            "Regenerate with `make license-ip-inventory`."
+        )
+    return failures
 
 
 def _transitive_package_freshness_map(
@@ -646,6 +669,38 @@ def _build_inventory_from_args(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
+def _write_lock_constraints(lock_path: Path, output_path: Path) -> None:
+    try:
+        lock_payload = tomllib.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        raise RuntimeError(f"Cannot read authoritative dependency lock {lock_path}: {exc}") from exc
+
+    package_constraints: dict[str, str] = {}
+    for package in lock_payload.get("package", []):
+        if not isinstance(package, dict):
+            raise RuntimeError("Authoritative dependency lock contains a malformed package")
+        name = canonicalize_name(str(package.get("name") or ""))
+        version = str(package.get("version") or "")
+        if not name or not version:
+            raise RuntimeError(
+                "Authoritative dependency lock packages must include name and version"
+            )
+        previous_version = package_constraints.setdefault(name, version)
+        if previous_version != version:
+            raise RuntimeError(
+                f"Authoritative dependency lock contains conflicting versions for {name}"
+            )
+    if not package_constraints:
+        raise RuntimeError("Authoritative dependency lock contains no package constraints")
+
+    output_path.write_text(
+        "# Generated at runtime from uv.lock; do not edit.\n"
+        + "\n".join(f"{name}=={package_constraints[name]}" for name in sorted(package_constraints))
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def _run_in_isolated_environment(
     args: argparse.Namespace,
     *,
@@ -679,6 +734,12 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
         return create_result.returncode
 
     venv_python = _venv_python(venv_root)
+    constraints_path = venv_root.parent / "license-ip-constraints.txt"
+    try:
+        _write_lock_constraints(REPO_ROOT / DEPENDENCY_LOCK_PATH, constraints_path)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     install_env = _python_isolated_subprocess_env(PIP_ENVIRONMENT)
     bootstrap_result = subprocess.run(
         [
@@ -712,6 +773,8 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
                 "--isolated",
                 "--disable-pip-version-check",
                 "install",
+                "--constraint",
+                str(constraints_path),
                 "-r",
                 str(REPO_ROOT / requirement_file),
             ],

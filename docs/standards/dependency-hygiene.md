@@ -40,10 +40,17 @@ expiry dates; prohibited or unclassified terms fail the gate.
 
 `make license-ip-inventory` and `make license-ip-gate` run the evidence generator inside a
 temporary virtual environment installed from the governed runtime and development requirements
-files. The temporary environment first pins pip/setuptools bootstrap tooling to governed versions and
-runs pip in isolated mode so caller environment variables, pip user configuration, and bundled
-`ensurepip` versions cannot determine license/IP release evidence. The inventory reflects the same
+files. The temporary environment first pins pip/setuptools bootstrap tooling to governed versions,
+projects exact package constraints from `uv.lock`, and runs pip in isolated mode so caller
+environment variables, pip user configuration, bundled `ensurepip` versions, or an upstream
+transitive release cannot determine license/IP release evidence. The inventory reflects the same
 requirements graph that CI installs and the dependency-lock mirror validates.
+
+The blocking comparison treats a transitive version-only change as non-governance drift, because the
+lock projection controls the installed version. New transitive packages, license-term changes,
+policy-classification changes, dependency-group changes, and exception changes remain blocking and
+print the affected package plus current/expected evidence. Direct requirement and policy changes
+still require the committed inventory and lock evidence to be regenerated deliberately.
 
 `make dependency-lock-gate` is blocking. `uv.lock` is the generated dependency-lock mirror for the
 requirements install strategy. It records requirement-file hashes, the license/IP inventory hash, and
