@@ -226,7 +226,8 @@
 - Finding Class: CI quality gate, maintainability regression prevention, baseline governance
 - Summary: The bounded #495 slice adds a pinned strict jscpd gate with stable normalized clone
   fingerprints. Existing findings are retained only in a reviewed, content-hashed baseline;
-  new fingerprints and scanner, parser, policy, or baseline-integrity failures fail closed.
+  new or resolved fingerprints and scanner, parser, policy, or baseline-integrity failures fail
+  closed.
 - Evidence:
   - `quality/duplicate-code-policy.v1.json` pins jscpd `5.0.16`, strict mode, Python/SQL scans,
     100-token and 10-line minimums, zero permitted new findings, and baseline owner/reason/expiry
@@ -236,14 +237,15 @@
     movement does not become a false regression.
   - `scripts/duplicate_code_gate.py` scopes jscpd paths to repository-relative `src`/`scripts`
     ownership, normalizes findings, emits actionable JSON evidence, and fails closed for missing
-    tools, malformed output, unsupported formats, duplicate fingerprints, expired baselines, and
-    policy/baseline hash drift.
+    tools, malformed output, unsupported formats, duplicate fingerprints, expired baselines,
+    resolved baseline entries, and policy/baseline hash drift.
   - `make duplicate-code-gate` is wired into `make check`, `make check-all`, `make ci`, and
     `make ci-local`; Feature Lane, PR Merge Gate, and Main Releasability run it as a named
     governance step. Docker-local CI installs the locked Node dependency before the isolated lane.
   - Focused regression tests cover scoped path normalization, repeated clone occurrence identity,
-    unsupported output, new-finding failure, scanner failure, policy-version drift, and baseline
-    hash drift; workflow contract tests protect all required lanes.
+    unsupported output, new-finding failure, resolved-baseline failure, scanner failure,
+    policy-version drift, and baseline hash drift; workflow contract tests protect all required
+    lanes.
   - Current feature-branch gate evidence: `43 findings`, `0 new`, policy
     `lotus-advise-duplicate-code.v1+6936e1cf71d2`.
 - Consequence: new duplicate-code findings cannot hide behind aggregate coverage or the reviewed

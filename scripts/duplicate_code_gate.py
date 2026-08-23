@@ -375,6 +375,12 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
                 "reviewed baseline with owner/reason/expiry evidence."
                 for finding in new_findings
             ]
+        if resolved:
+            failures.extend(
+                "Resolved duplicate-code baseline must be removed from the baseline; "
+                f"bump baseline/policy versions: {fingerprint}"
+                for fingerprint in resolved
+            )
         report.update(
             {
                 "policy_version": policy["policy_version"],

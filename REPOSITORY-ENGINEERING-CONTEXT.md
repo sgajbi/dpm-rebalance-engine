@@ -578,9 +578,9 @@ Important validation expectations:
 22. duplicate-code quality is enforced by `make duplicate-code-gate` using the pinned jscpd
     `5.0.16` scanner in strict mode across `src` and `scripts`, with 100-token/10-line minimums.
     The committed baseline contains stable clone fingerprints and explicit owner, reason, expiry,
-    and content-hash provenance; new fingerprints, scanner/parser failures, and baseline/policy
-    integrity drift fail closed. This is CI/developer evidence only and does not change runtime,
-    API, persistence, migration, or data-model contracts.
+    and content-hash provenance; new or resolved fingerprints, scanner/parser failures, and
+    baseline/policy integrity drift fail closed. This is CI/developer evidence only and does not
+    change runtime, API, persistence, migration, or data-model contracts.
 
 ## Standards And RFCs That Govern This Repository
 

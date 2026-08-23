@@ -123,6 +123,29 @@ def test_gate_fails_when_a_new_fingerprint_is_observed(tmp_path: Path) -> None:
     assert report["new_findings"][0]["fingerprint"] == new_finding.fingerprint
 
 
+def test_gate_fails_when_a_baseline_fingerprint_is_resolved(tmp_path: Path) -> None:
+    resolved_fingerprint = "jscpd.v1|python|src/first.py|src/second.py|resolved|occurrence=1"
+    policy_path, _ = _write_policy(tmp_path, fingerprints=[resolved_fingerprint])
+    output_path = tmp_path / "duplicate-code.json"
+
+    with patch.object(
+        duplicate_code_gate,
+        "_run_jscpd",
+        return_value=([], "jscpd test command"),
+    ):
+        result = duplicate_code_gate.run_gate(
+            repo_root=tmp_path,
+            policy_path=policy_path,
+            output_path=output_path,
+        )
+
+    report = json.loads(output_path.read_text(encoding="utf-8"))
+    assert result == 1
+    assert report["counts"]["resolved"] == 1
+    assert "Resolved duplicate-code baseline must be removed" in report["failures"][0]
+    assert resolved_fingerprint in report["resolved_baseline_fingerprints"]
+
+
 def test_gate_fails_closed_when_scanner_errors(tmp_path: Path) -> None:
     baseline_fingerprint = "jscpd.v1|python|src/first.py|src/second.py|baseline|occurrence=1"
     policy_path, _ = _write_policy(tmp_path, fingerprints=[baseline_fingerprint])
