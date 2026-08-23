@@ -41,7 +41,8 @@
   - A deliberately uncovered changed source line fails the required PR coverage context even when
     aggregate coverage remains above 97%; docs-only and test-only changes produce explicit no-op
     evidence, and manual non-PR runs record a skip reason. Small files use the same threshold with
-    no grace. Duplicate/dead-code, size, and trend gates remain follow-up slices under #495.
+    no grace. The remaining #495 follow-up slices are duplicate/dead-code/unused-dependency scans,
+    size thresholds, and trend policy; they are not implied by this coverage slice.
 - Documentation decision: No wiki change; this is developer CI policy and local evidence wiring,
   not an operator workflow or supported product behavior.
 
