@@ -16,6 +16,7 @@ from scripts.license_ip_evidence import (
     LicensePolicy,
     _governed_python_command,
     _run_in_isolated_environment,
+    _write_lock_constraints,
     build_license_inventory,
     validate_license_inventory,
     validate_license_inventory_against_expected,
@@ -85,6 +86,10 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     ]
     assert calls[2][0][-2] == "-r"
     assert Path(calls[2][0][-1]).name == "requirements-prod.txt"
+    assert "--constraint" in calls[2][0]
+    assert Path(calls[2][0][calls[2][0].index("--constraint") + 1]).name == (
+        "license-ip-constraints.txt"
+    )
     assert calls[3][0][1:7] == [
         "-I",
         "-m",
@@ -95,6 +100,7 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     ]
     assert calls[3][0][-2] == "-r"
     assert Path(calls[3][0][-1]).name == "requirements-dev.txt"
+    assert "--constraint" in calls[3][0]
     assert calls[4][0][1] == "-I"
     assert calls[4][0][2].endswith("scripts/license_ip_evidence.py") or calls[4][0][2].endswith(
         "scripts\\license_ip_evidence.py"
@@ -106,6 +112,22 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     for _, kwargs in calls:
         assert "PYTHONHOME" not in kwargs["env"]
         assert "PYTHONPATH" not in kwargs["env"]
+
+
+def test_lock_constraints_project_exact_versions(tmp_path: Path) -> None:
+    lock = tmp_path / "uv.lock"
+    constraints = tmp_path / "constraints.txt"
+    lock.write_text(
+        '[[package]]\nname = "zeta-pkg"\nversion = "2.0.0"\n\n'
+        '[[package]]\nname = "alpha_pkg"\nversion = "1.0.0"\n',
+        encoding="utf-8",
+    )
+
+    _write_lock_constraints(lock, constraints)
+
+    assert constraints.read_text(encoding="utf-8") == (
+        "# Generated at runtime from uv.lock; do not edit.\nalpha-pkg==1.0.0\nzeta-pkg==2.0.0\n"
+    )
 
 
 def test_governed_python_command_uses_current_supported_python(
@@ -342,7 +364,7 @@ def test_license_inventory_fails_stale_package_version(tmp_path: Path) -> None:
     assert "License/IP inventory is stale. Regenerate with `make license-ip-inventory`." in failures
 
 
-def test_license_inventory_staleness_detects_transitive_version_drift(
+def test_license_inventory_staleness_ignores_transitive_version_only_drift(
     tmp_path: Path,
 ) -> None:
     runtime = tmp_path / "requirements-prod.txt"
@@ -383,7 +405,7 @@ def test_license_inventory_staleness_detects_transitive_version_drift(
         _policy(),
     )
 
-    assert "License/IP inventory is stale. Stale transitive package evidence: childpkg" in failures
+    assert failures == []
 
 
 def test_license_inventory_staleness_detects_transitive_license_drift(
@@ -427,7 +449,12 @@ def test_license_inventory_staleness_detects_transitive_license_drift(
         _policy(),
     )
 
-    assert "License/IP inventory is stale. Stale transitive package evidence: childpkg" in failures
+    assert any(
+        "License/IP governance evidence changed for transitive package childpkg" in failure
+        and "version '1.0.0' -> '1.0.0'" in failure
+        and "license_term 'Apache-2.0' -> 'MIT'" in failure
+        for failure in failures
+    )
 
 
 def test_license_inventory_staleness_detects_transitive_membership_drift(
@@ -472,8 +499,10 @@ def test_license_inventory_staleness_detects_transitive_membership_drift(
         _policy(),
     )
 
-    assert (
-        "License/IP inventory is stale. Missing transitive package evidence: newchild" in failures
+    assert any(
+        "License/IP inventory is missing new transitive package evidence: "
+        "newchild (version '1.0.0', license 'MIT')" in failure
+        for failure in failures
     )
 
 
@@ -563,7 +592,11 @@ def test_license_inventory_staleness_detects_transitive_dependency_group_drift(
         _policy(),
     )
 
-    assert "License/IP inventory is stale. Stale transitive package evidence: childpkg" in failures
+    assert any(
+        "License/IP governance evidence changed for transitive package childpkg" in failure
+        and "dependency_groups ['development'] -> ['development', 'runtime']" in failure
+        for failure in failures
+    )
 
 
 def test_license_inventory_staleness_detects_transitive_exception_drift(
@@ -608,7 +641,11 @@ def test_license_inventory_staleness_detects_transitive_exception_drift(
     )
 
     assert "reviewpkg license exception evidence is stale" in failures
-    assert "License/IP inventory is stale. Stale transitive package evidence: reviewpkg" in failures
+    assert any(
+        "License/IP governance evidence changed for transitive package reviewpkg" in failure
+        and "exception_expires_on '2099-01-01' -> '2100-01-01'" in failure
+        for failure in failures
+    )
 
 
 def test_license_inventory_policy_validation_detects_stale_classification(
