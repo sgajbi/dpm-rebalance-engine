@@ -18,11 +18,13 @@ def test_coverage_percent_reports_uncovered_executable_lines(tmp_path: Path) -> 
     measured.stop()
     measured.save()
 
-    result = _coverage_percent(measured, source)
+    result = _coverage_percent(measured, source, changed_lines={4})
 
     assert result["file"] == source.as_posix()
-    assert result["statement_count"] > result["covered_statements"]
-    assert result["percent"] < 100.0
+    assert result["changed_executable_lines"] == [4]
+    assert result["statement_count"] == 1
+    assert result["covered_statements"] == 0
+    assert result["percent"] == 0.0
     assert result["missing_lines"]
 
 
