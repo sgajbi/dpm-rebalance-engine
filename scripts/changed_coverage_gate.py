@@ -21,22 +21,6 @@ _HUNK_HEADER = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
 
 def _changed_source_lines(*, base_ref: str, head_ref: str, source_root: str) -> dict[str, set[int]]:
-    result = subprocess.run(
-        [
-            "git",
-            "diff",
-            "--unified=0",
-            "--name-only",
-            "--diff-filter=ACMR",
-            f"{base_ref}...{head_ref}",
-            "--",
-            source_root,
-        ],
-        cwd=REPO_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
     diff_result = subprocess.run(
         [
             "git",
@@ -52,33 +36,52 @@ def _changed_source_lines(*, base_ref: str, head_ref: str, source_root: str) -> 
         capture_output=True,
         text=True,
     )
-    changed_files = {
-        path.replace("\\", "/")
-        for path in result.stdout.splitlines()
-        if path.replace("\\", "/").endswith(".py")
-    }
-    changed_lines = {path: set() for path in sorted(changed_files)}
+
+    changed_lines: dict[str, set[int]] = {}
     current_file: str | None = None
     new_line: int | None = None
+    expected_new_lines = 0
+    parsed_new_lines = 0
+
+    def finish_hunk() -> None:
+        if current_file is not None and expected_new_lines != parsed_new_lines:
+            raise ValueError(
+                f"Unable to parse changed Python diff for {current_file}: expected "
+                f"{expected_new_lines} new line(s), parsed {parsed_new_lines}."
+            )
+
     for line in diff_result.stdout.splitlines():
         if line.startswith("+++ b/"):
+            finish_hunk()
             candidate = line.removeprefix("+++ b/").replace("\\", "/")
-            current_file = candidate if candidate in changed_lines else None
+            current_file = candidate if candidate.endswith(".py") else None
+            if current_file is not None:
+                changed_lines.setdefault(current_file, set())
             new_line = None
+            expected_new_lines = 0
+            parsed_new_lines = 0
             continue
         hunk = _HUNK_HEADER.match(line)
         if hunk:
+            finish_hunk()
             new_line = int(hunk.group(1))
+            expected_new_lines = int(hunk.group(2) or "1")
+            parsed_new_lines = 0
             continue
+        if line.startswith("@@") and current_file is not None:
+            raise ValueError(f"Unable to parse changed Python diff hunk: {line}")
         if current_file is None or new_line is None or line.startswith("\\"):
             continue
         if line.startswith("+"):
             changed_lines[current_file].add(new_line)
             new_line += 1
+            parsed_new_lines += 1
         elif line.startswith("-"):
             continue
         elif line.startswith(" "):
             new_line += 1
+            parsed_new_lines += 1
+    finish_hunk()
     return changed_lines
 
 
@@ -200,16 +203,23 @@ def run_gate(
     output_path: Path,
 ) -> int:
     policy_version, minimum_percent = _load_policy(policy_path)
-    changed_files = _changed_source_lines(
-        base_ref=base_ref,
-        head_ref=head_ref,
-        source_root="src",
-    )
+    parse_failure: str | None = None
+    try:
+        changed_files = _changed_source_lines(
+            base_ref=base_ref,
+            head_ref=head_ref,
+            source_root="src",
+        )
+    except ValueError as exc:
+        changed_files = {}
+        parse_failure = f"Changed-source diff parsing failed: {exc}"
     measurements, failures = evaluate_changed_files(
         changed_files=changed_files,
         coverage_data=coverage_data,
         minimum_percent=minimum_percent,
     )
+    if parse_failure:
+        failures.insert(0, parse_failure)
     report = {
         "schema_version": "lotus.advise.changed-coverage-gate.v1",
         "policy_version": policy_version,
@@ -224,12 +234,6 @@ def run_gate(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
-    if not changed_files:
-        print(
-            f"Changed source coverage gate passed: no changed Python source files "
-            f"(policy={policy_version}, threshold={minimum_percent:.2f}%)."
-        )
-        return 0
     if failures:
         print(
             f"Changed source coverage gate FAILED (policy={policy_version}, "
@@ -239,6 +243,12 @@ def run_gate(
             print(f"- {failure}")
         print(f"Machine-readable evidence: {output_path}")
         return 1
+    if not changed_files:
+        print(
+            f"Changed source coverage gate passed: no changed Python source files "
+            f"(policy={policy_version}, threshold={minimum_percent:.2f}%)."
+        )
+        return 0
     print(
         f"Changed source coverage gate passed for {len(changed_files)} file(s) "
         f"(policy={policy_version}, threshold={minimum_percent:.2f}%)."
