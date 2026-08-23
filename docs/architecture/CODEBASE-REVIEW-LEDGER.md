@@ -1,5 +1,40 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-CI-OVERSIZED-CODE
+
+- Scope: deterministic oversized Python module/function regression enforcement for `src` and
+  `scripts`
+- Pattern: quality reports measured large modules and functions but allowed new growth because
+  aggregate coverage and complexity rank gates do not express maintainability size limits.
+- Status: Implementation in progress on feature branch; exact-mainline closure pending review and
+  merge
+- Finding Class: CI quality gate, maintainability regression prevention, baseline governance
+- Summary: The bounded #495 slice adds a fail-closed gate at 1,000 physical lines per module and
+  200 physical lines per function. Existing ten production-tooling findings remain explicitly
+  inventoried while refactoring proceeds; new findings and growth are rejected.
+- Evidence:
+  - `quality/oversized-code-policy.v1.json` defines the scan roots, thresholds, content-fingerprinted
+    policy, baseline provenance, and disabled unreviewed exceptions.
+  - `quality/oversized-code-baseline.v1.json` records two modules and eight functions with stable
+    fingerprints, owner/reason/expiry metadata, and SHA-256 provenance.
+  - `scripts/oversized_code_gate.py` parses Python ASTs, records qualified function identities,
+    fails on new/grown/resolved/expired findings and policy/baseline/scanner errors, and emits
+    `output/oversized-code-gate.json`.
+  - Focused gate and workflow contract tests cover baseline pass, new finding, growth, stale
+    baseline, nested identity, syntax failure, policy drift, expiry, and all three governance
+    lanes.
+- Compatibility: CI/developer/evidence behavior only. No runtime, API/OpenAPI, persistence,
+  migration, data-model, or dependency-version contract change is intended.
+- Documentation decision: repository context, generated quality reports, operations guidance,
+  supported-feature wording, wiki validation guidance, and this ledger change because the
+  blocking developer/operator validation surface changed; no OpenAPI, migration, or platform-wide
+  context change is needed.
+- Follow-Up: The separate machine-readable trend/regression policy remains in #495. Existing
+  oversized tooling hotspots remain tracked for decomposition and are not treated as cleared by
+  this enforcement slice.
+- Issue evidence: GitHub issue #495 records the bounded objective, thresholds, compatibility
+  boundary, and later merge/validation evidence.
+
 ## LA-REV-495-CI-UNUSED-DEPENDENCY
 
 - Scope: deterministic unused-dependency regression enforcement for the pinned Python install

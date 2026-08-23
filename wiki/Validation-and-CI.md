@@ -38,8 +38,15 @@ The same fast static lanes also run `make unused-dependency-gate`. It runs the p
 new or resolved fingerprints, duplicate identities, expired provenance, or policy/baseline hash
 drift. The gate emits `output/dependency-hygiene-gate.json` and uploads it from each governance
 lane. It is CI/developer evidence only and does not change runtime, API, persistence, migration,
-or data-model behavior. Oversized module/function and trend-comparison gates remain separately
-bounded quality work.
+or data-model behavior.
+
+The same fast static lanes also run `make oversized-code-gate`. It scans Python modules and
+functions under `src/` and `scripts/` against the explicit `1,000`-module-line and `200`-function-
+line thresholds. The reviewed ten-finding baseline is content-hashed and each entry carries an
+owner, reason, and expiry; new findings, growth, stale entries, expiry, scanner/parser failures,
+or policy/baseline hash drift fail closed. Evidence is emitted at
+`output/oversized-code-gate.json` and uploaded from each governance lane. This is CI/developer
+evidence only and does not change runtime, API, persistence, migration, or data-model behavior.
 
 ## Reader Map
 
@@ -53,11 +60,11 @@ bounded quality work.
 
 | Lane | Primary proof | What it protects |
 | --- | --- | --- |
-| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, dead-code/duplicate-code/unused-dependency regression gates, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
-| Local PR-grade gate | `make ci` | Dependency health, static governance including dead-code/duplicate-code/unused-dependency regression gates, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
-| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, dependency governance including dead-code/duplicate-code/unused-dependency regression gates, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
-| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck/dead-code/duplicate-code/unused-dependency governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
-| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same static dead-code/duplicate-code/unused-dependency, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
+| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, dead-code/duplicate-code/unused-dependency/oversized-code regression gates, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
+| Local PR-grade gate | `make ci` | Dependency health, static governance including dead-code/duplicate-code/unused-dependency/oversized-code regression gates, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
+| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, dependency governance including dead-code/duplicate-code/unused-dependency/oversized-code regression gates, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
+| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck/dead-code/duplicate-code/unused-dependency/oversized-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
+| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same static dead-code/duplicate-code/unused-dependency/oversized-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
 | Report-only quality evidence | `Quality Baseline / Report Only` and `make quality-baseline` | Trend evidence for code health and refactoring scorecards. Report-only signals should not be promoted until deterministic, low-noise, locally runnable, and policy-backed. |
 
 ```mermaid
@@ -85,6 +92,7 @@ make quality-baseline-check
 make dead-code-gate
 make duplicate-code-gate
 make unused-dependency-gate
+make oversized-code-gate
 make demo-assurance-gate
 make demo-certification-live
 make security-audit
@@ -172,23 +180,29 @@ The current blocking posture is intentionally high-signal:
    classifications, tool-version drift, malformed reports, duplicate identities, or policy/baseline
    integrity failures. Baseline changes require explicit owner/reason/expiry evidence plus a
    policy/baseline hash update.
-13. `make migration-rollout-contract-gate`
+13. `make oversized-code-gate`
+    scans `src/` and `scripts/` for modules over 1,000 physical lines and functions over 200
+    physical lines, compares stable fingerprints against the reviewed
+    `quality/oversized-code-baseline.v1.json`, and fails on new, grown, resolved, expired, or
+    malformed findings. Baseline changes require explicit owner/reason/expiry evidence plus a
+    policy/baseline hash update.
+14. `make migration-rollout-contract-gate`
    validates every checked-in Postgres migration has explicit namespace coverage, rollout phase,
    old/new application compatibility, lock and online behavior, backfill checkpoint/resume/quarantine
    posture, rollback limits, and non-production rehearsal evidence.
-14. `make bandit-severity-regression-gate`
+15. `make bandit-severity-regression-gate`
    blocks high-severity Bandit findings and fails on any new, stale, expired, or worsened
    medium/low finding relative to `quality/bandit_security_baseline.v1.json`.
-15. `make security-audit`
+16. `make security-audit`
    runs dependency health with audit posture and the Bandit severity-regression gate in PR-grade
    paths.
-16. `make release-image-provenance-gate`
+17. `make release-image-provenance-gate`
      blocks drift in Dockerfile build metadata args, OCI labels, Docker build arguments, and
      support-safe metadata naming before the image is built or pushed.
-17. `make dependency-lock-gate`
+18. `make dependency-lock-gate`
      validates `uv.lock` as the generated mirror of the requirements install strategy and
      dependency inventory.
-18. `make license-ip-gate`
+19. `make license-ip-gate`
      validates the committed runtime/development dependency license inventory and owner-approved
      expiring exceptions in a temporary virtual environment installed from governed
      runtime/development requirements files constrained to exact package versions projected from
@@ -196,9 +210,9 @@ The current blocking posture is intentionally high-signal:
      configuration. Transitive version-only drift is not a governance event; new packages, license
      terms, classifications, dependency groups, and exception evidence remain blocking with
      actionable package/version/license output.
-19. `make coverage-combined`
+20. `make coverage-combined`
      enforces the combined coverage floor across unit, integration, and e2e suites.
-20. `make postgres-runtime-contracts-local` and `make production-profile-guardrail-negatives-local`
+21. `make postgres-runtime-contracts-local` and `make production-profile-guardrail-negatives-local`
      protect supported runtime startup and production-profile guardrail behavior.
 
 These gates are blocking because they are measured, deterministic, repo-native, and low-noise for

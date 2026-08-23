@@ -358,7 +358,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate" in (
         refactor_health
     )
-    assert "oversized-module/function" in refactor_health
+    assert "machine-readable trend/regression slices" in refactor_health
     assert "Interrogate docstring inventory" in refactor_health
     assert "Reduce the governed Bandit medium/low baseline before expiry" in refactor_health
     assert "Spectral OpenAPI enforcement" in refactor_health
@@ -391,9 +391,10 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Proposal idempotency replay delegates event and approval replay matching" in (
         refactor_health
     )
-    assert "Quality evidence freshness plus dead-code, duplicate-code, and unused-dependency" in (
+    assert "Quality evidence freshness plus dead-code, duplicate-code, unused-dependency, and" in (
         scorecard
     )
+    assert "oversized-code regression prevention" in scorecard
     assert "wiki validation guidance now maps local, Feature Lane, PR Merge Gate" in scorecard
     assert "agent-facing CI guidance is pinned by a deterministic wiki contract test" in scorecard
     assert "Review ledger includes `LA-REV-611` through `LA-REV-896`" in scorecard
