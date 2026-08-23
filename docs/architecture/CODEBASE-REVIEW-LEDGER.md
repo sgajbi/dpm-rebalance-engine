@@ -31,10 +31,12 @@
     gates, mypy across 653 source files, documentation-source validation, and quality-baseline
     freshness.
   - Wiki publication completed at `89c604a` with strict source/published parity (`DiffCount 0`).
-  - Scoped CI-local cleanup was exercised against the checkout-specific project only. At the
-    post-merge review, no canonical `lotus-advise` container was running, so this ledger does not
-    claim shared-runtime health; #500 remains QA-pending until the owner restores Advise and
-    exercises its product-container preservation acceptance check.
+  - Post-merge acceptance was exercised with the standalone Advise container running: the
+    checkout-specific CI project created and removed only its own resources, while the Advise
+    container ID, product network ID, Postgres volume, and `/health/ready=200` were unchanged.
+    Shared Gateway/Core/Manage/Risk/AI/Report/Render/Archive/Idea containers remained healthy and
+    Gateway `/health` returned 200. The CI lane stopped at the separately tracked #502
+    Spectral/Node defect; matching scoped cleanup still returned 0.
 - Consequence: With the default derived identity, CI-local cleanup is limited to CI-owned
   containers, networks, and volumes, reducing the risk that local validation removes the canonical
   product Compose runtime. Explicit overrides are safe only when they remain unique and CI-owned.
@@ -43,8 +45,8 @@
   no central platform context or skill change is required because the existing governed pattern is
   already established by Lotus CI guidance.
 - Follow-Up: #502 remains open for the separate Docker-local Node/Spectral environment defect found
-  during validation. Issue #500 is QA-pending for the standalone Advise runtime restoration and
-  product-container preservation acceptance evidence.
+  during validation. Issue #500 acceptance is verified by the post-merge preservation evidence and
+  can close after this ledger reconciliation merges.
 
 ## LA-REV-495-CI-QUALITY
 
