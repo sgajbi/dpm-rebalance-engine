@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-08-23T06:40:01.420098+00:00",
+  "generatedAt": "2026-08-23T06:55:45.351217+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -54800,7 +54800,7 @@
           {
             "name": "readiness.dependencies[].required_by_enabled_capability",
             "location": "body",
-            "required": false,
+            "required": true,
             "type": "boolean",
             "semanticId": "lotus.required_by_enabled_capability",
             "attributeRef": "#/attributeCatalog/lotus.required_by_enabled_capability"
