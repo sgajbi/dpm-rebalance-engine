@@ -559,7 +559,14 @@ Important validation expectations:
     checkout-specific `CI_LOCAL_COMPOSE_PROJECT` identity, derived from the absolute checkout path
     unless an orchestrator supplies an explicit, unique CI-owned override. Cleanup must remain
     scoped to that project and callers must verify the health of any shared product runtime
-    afterward; arbitrary overrides are not collision-safe.
+    afterward; arbitrary overrides are not collision-safe. The CI-local image includes the pinned
+    Node `22.14.0` runtime used by the workflow Spectral gate, and OpenAPI tooling must fail closed
+    when that executable is unavailable. Docker-local CI mounts the central Platform contract tree
+    read-only at `/lotus-platform` from `LOTUS_PLATFORM_ROOT` (default `../lotus-platform`) and
+    all repo-native domain-product source checkouts at their canonical `/lotus-*` paths from
+    `LOTUS_REPOSITORIES_ROOT` (default `..`) so domain-data-product validation and trust-telemetry
+    catalog generation use the same federated source topology as the host lane rather than
+    silently omitting or inventing upstream declarations.
 
 ## Standards And RFCs That Govern This Repository
 

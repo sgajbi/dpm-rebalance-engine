@@ -9,6 +9,14 @@ change reaches `main`.
 This page is the operating map for local gates, GitHub Actions lanes, release evidence, and
 post-merge wiki publication. It names blocking commands and the evidence each lane protects.
 
+`make ci-local-docker` mounts the central Platform contract tree read-only at `/lotus-platform`,
+plus all repo-native domain-product source checkouts at their canonical `/lotus-*` paths. The
+platform host path defaults to `../lotus-platform` and can be overridden with
+`LOTUS_PLATFORM_ROOT`; the federated repository root defaults to `..` and can be overridden with
+`LOTUS_REPOSITORIES_ROOT`. The image includes the workflow-matching pinned Node `22.14.0` runtime
+for Spectral; if Spectral cannot execute, the gate fails rather than treating a report-only `127`
+result as evidence.
+
 ## Reader Map
 
 | Reader | Start here |
@@ -75,6 +83,13 @@ prevents collision with the product Compose project or an active Advise containe
 `CI_LOCAL_COMPOSE_PROJECT` may override the derived identity only when an orchestrator supplies a
 unique, CI-owned name; arbitrary overrides are not collision-safe. If a shared runtime is active,
 verify its health after both targets complete.
+
+The CI-local image carries the pinned Node `22.14.0` runtime used by the workflow OpenAPI Spectral
+gate. If Spectral cannot execute, `make openapi-gate` fails closed; a report containing a tool
+execution error is not a passing CI result.
+The Docker-local lane mounts the central Platform contract tree read-only at `/lotus-platform`;
+`LOTUS_PLATFORM_ROOT` overrides the default sibling checkout path `../lotus-platform` so the
+domain-data-products gate runs against the same governed contracts as hosted CI.
 
 Use focused pytest, Ruff, or script targets for diagnosis, but PR evidence should state whether the
 full repo-native target or a focused target was run.

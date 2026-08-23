@@ -17,6 +17,7 @@ env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
   PYTHONUNBUFFERED: "1"
   PYTHON_VERSION: "3.11"
+  NODE_VERSION: "22.14.0"
 
 jobs:
   quality-baseline:
@@ -33,7 +34,7 @@ jobs:
           cache: "pip"
       - uses: actions/setup-node@v6
         with:
-          node-version: "22"
+          node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
       - name: Install
         run: make install-ci

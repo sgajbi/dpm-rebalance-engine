@@ -1,5 +1,55 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-502-CI-LOCAL-SPECTRAL-TOOLCHAIN
+
+- Scope: CI-local Docker OpenAPI/Spectral toolchain parity
+- Pattern: `Dockerfile.ci-local` lacked Node even though the repository Spectral gate depended on
+  it, so Docker-local CI stopped with return code 127 after recording an incomplete report.
+- Status: Implemented on the PR branch; exact-mainline closure pending
+- Finding Class: CI evidence integrity, dependency parity, fail-closed quality gates
+- Summary: GitHub issue #502 requires the Docker-local image and workflow runner to use the same
+  pinned Node runtime so OpenAPI governance is actually exercised in the Docker lane.
+- Evidence:
+  - `Dockerfile.ci-local` supplies Node `22.14.0` and validates `node`, `npm`, and `npx` during
+    image construction.
+  - Feature, PR merge, quality-baseline, and main-releasability workflows share
+    `NODE_VERSION=22.14.0` for `actions/setup-node`.
+  - The Spectral report command already returns non-zero when the executable cannot run; regression
+    coverage now pins that fail-closed behavior and the image/toolchain contract.
+- Consequence: Docker-local OpenAPI evidence can no longer silently stop at missing Node; product
+  API, persistence, and runtime behavior are unchanged.
+- Documentation decision: operations context and wiki source updated because the governed CI image
+  dependency and failure behavior changed; no OpenAPI contract or migration change is needed.
+- Follow-Up: After merge, run the full scoped `make ci-local-docker` lane, record the successful
+  Spectral evidence, validate exact mainline, publish/verify the wiki, and close #502.
+
+### LA-REV-502-CI-LOCAL-FEDERATED-SOURCE-TOPOLOGY
+
+- Scope: CI-local Docker execution of the full Advise governance and coverage lane
+- Pattern: Mounting only `lotus-platform` made the domain-data-products gate pass but left the
+  platform source manifest's repo-native `/lotus-*` declaration paths absent from the container;
+  the full suite then failed in two trust-telemetry catalog tests instead of validating the same
+  federated source topology as the host lane.
+- Status: Implemented on the PR branch; exact-mainline closure pending
+- Finding Class: CI evidence integrity, cross-repository contract parity, fail-closed validation
+- Summary: The CI-local Compose lane must mount each governed repo-native declaration checkout
+  read-only at its canonical `/lotus-*` path so platform catalog generation and trust-telemetry
+  tests exercise real source declarations rather than an incomplete filesystem.
+- Evidence:
+  - `docker-compose.ci-local.yml` mounts `lotus-core`, `lotus-performance`, `lotus-risk`,
+    `lotus-advise`, `lotus-report`, `lotus-manage`, `lotus-gateway`, and `lotus-idea` from the
+    configurable `LOTUS_REPOSITORIES_ROOT` (default `..`).
+  - The mount contract is covered by `tests/unit/test_ci_workflow_contracts.py`.
+  - The prior full lane reached 2,632 tests and exposed this topology gap with 2 failures; the
+    product container, network, volume, and readiness remained unchanged after cleanup.
+- Consequence: Full Docker-local evidence is blocked until the federated mounts are verified by a
+  green end-to-end lane; no product API, persistence, or runtime behavior changes are intended.
+- Documentation decision: operations context and wiki source updated because the governed local
+  CI filesystem contract changed; no OpenAPI contract or migration change is needed.
+- Follow-Up: Rerun the full scoped lane, record all test and gate evidence, validate exact mainline,
+  publish/verify the wiki, and close #502 only after both toolchain and source-topology acceptance
+  are proven.
+
 ## LA-REV-500-CI-COMPOSE-ISOLATION
 
 - Scope: CI-local Docker Compose lifecycle isolation

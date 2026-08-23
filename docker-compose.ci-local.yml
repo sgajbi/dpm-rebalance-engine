@@ -20,12 +20,22 @@ services:
     working_dir: /workspace
     volumes:
       - ./:/workspace
+      - ${LOTUS_PLATFORM_ROOT:-../lotus-platform}:/lotus-platform:ro
+      - ${LOTUS_REPOSITORIES_ROOT:-..}/lotus-core:/lotus-core:ro
+      - ${LOTUS_REPOSITORIES_ROOT:-..}/lotus-performance:/lotus-performance:ro
+      - ${LOTUS_REPOSITORIES_ROOT:-..}/lotus-risk:/lotus-risk:ro
+      - ${LOTUS_REPOSITORIES_ROOT:-..}/lotus-advise:/lotus-advise:ro
+      - ${LOTUS_REPOSITORIES_ROOT:-..}/lotus-report:/lotus-report:ro
+      - ${LOTUS_REPOSITORIES_ROOT:-..}/lotus-manage:/lotus-manage:ro
+      - ${LOTUS_REPOSITORIES_ROOT:-..}/lotus-gateway:/lotus-gateway:ro
+      - ${LOTUS_REPOSITORIES_ROOT:-..}/lotus-idea:/lotus-idea:ro
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       PIP_DISABLE_PIP_VERSION_CHECK: "1"
       PYTHONUNBUFFERED: "1"
+      LOTUS_PLATFORM_ROOT: /lotus-platform
       DPM_SUPPORTABILITY_POSTGRES_DSN: postgresql://advise:advise@postgres:5432/advise_supportability
       PROPOSAL_POSTGRES_DSN: postgresql://advise:advise@postgres:5432/advise_supportability
       DPM_POSTGRES_INTEGRATION_DSN: postgresql://advise:advise@postgres:5432/advise_supportability
