@@ -1,0 +1,134 @@
+{
+  "schema_version": "lotus.advise.proposal-decision-vocabulary.v1",
+  "contract_version": "proposal-decision-vocabulary.v1",
+  "source_owner": {
+    "service": "lotus-advise",
+    "authority": "Advise owns proposal decision statuses, top-level status pairings, recommended next actions, workflow gates, and gate next-step mappings.",
+    "rule_modules": [
+      "src/core/advisory/decision_summary_status_rules.py",
+      "src/core/common/workflow_gates.py"
+    ]
+  },
+  "decision_statuses": [
+    {
+      "status": "READY_FOR_CLIENT_REVIEW",
+      "allowed_top_level_statuses": [
+        "READY"
+      ],
+      "allowed_recommended_next_actions": [
+        "DISCUSS_WITH_CLIENT"
+      ],
+      "allowed_workflow_gates": [
+        "EXECUTION_READY",
+        "NONE"
+      ]
+    },
+    {
+      "status": "REQUIRES_RISK_REVIEW",
+      "allowed_top_level_statuses": [
+        "READY",
+        "PENDING_REVIEW"
+      ],
+      "allowed_recommended_next_actions": [
+        "REVIEW_RISK"
+      ],
+      "allowed_workflow_gates": [
+        "RISK_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "status": "REQUIRES_COMPLIANCE_REVIEW",
+      "allowed_top_level_statuses": [
+        "READY",
+        "PENDING_REVIEW"
+      ],
+      "allowed_recommended_next_actions": [
+        "REVIEW_COMPLIANCE"
+      ],
+      "allowed_workflow_gates": [
+        "COMPLIANCE_REVIEW_REQUIRED"
+      ]
+    },
+    {
+      "status": "REQUIRES_CLIENT_CONSENT",
+      "allowed_top_level_statuses": [
+        "READY",
+        "PENDING_REVIEW"
+      ],
+      "allowed_recommended_next_actions": [
+        "DISCUSS_WITH_CLIENT"
+      ],
+      "allowed_workflow_gates": [
+        "CLIENT_CONSENT_REQUIRED"
+      ]
+    },
+    {
+      "status": "BLOCKED_REMEDIATION_REQUIRED",
+      "allowed_top_level_statuses": [
+        "BLOCKED"
+      ],
+      "allowed_recommended_next_actions": [
+        "FIX_INPUT"
+      ],
+      "allowed_workflow_gates": [
+        "BLOCKED"
+      ]
+    },
+    {
+      "status": "INSUFFICIENT_EVIDENCE",
+      "allowed_top_level_statuses": [
+        "READY",
+        "PENDING_REVIEW"
+      ],
+      "allowed_recommended_next_actions": [
+        "REQUEST_CLIENT_CONTEXT",
+        "REQUEST_MANDATE_CONTEXT",
+        "REVISE_PROPOSAL"
+      ],
+      "allowed_workflow_gates": [
+        "RISK_REVIEW_REQUIRED",
+        "COMPLIANCE_REVIEW_REQUIRED",
+        "CLIENT_CONSENT_REQUIRED"
+      ]
+    },
+    {
+      "status": "REVISION_RECOMMENDED",
+      "allowed_top_level_statuses": [
+        "PENDING_REVIEW"
+      ],
+      "allowed_recommended_next_actions": [
+        "REVISE_PROPOSAL"
+      ],
+      "allowed_workflow_gates": [
+        "EXECUTION_READY",
+        "NONE"
+      ]
+    }
+  ],
+  "workflow_gates": [
+    {
+      "gate": "BLOCKED",
+      "recommended_next_step": "FIX_INPUT"
+    },
+    {
+      "gate": "RISK_REVIEW_REQUIRED",
+      "recommended_next_step": "RISK_REVIEW"
+    },
+    {
+      "gate": "COMPLIANCE_REVIEW_REQUIRED",
+      "recommended_next_step": "COMPLIANCE_REVIEW"
+    },
+    {
+      "gate": "CLIENT_CONSENT_REQUIRED",
+      "recommended_next_step": "REQUEST_CLIENT_CONSENT"
+    },
+    {
+      "gate": "EXECUTION_READY",
+      "recommended_next_step": "EXECUTE"
+    },
+    {
+      "gate": "NONE",
+      "recommended_next_step": "NONE"
+    }
+  ]
+}
