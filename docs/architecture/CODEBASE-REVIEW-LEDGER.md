@@ -162,8 +162,7 @@
 - Scope: deterministic dead/unused-code regression enforcement for `src` and `scripts`
 - Pattern: Vulture produced a real inventory, but report-only evidence allowed a new unused-code
   finding to enter `main` without an objective review gate.
-- Status: Hardened on `main` at merge commit
-  `44497e256b61a82ca74d75e78412b881ae9c9aed`; exact-mainline closure validated
+- Status: Extended on the feature branch; exact-mainline closure pending
 - Finding Class: CI quality gate, dead-code prevention, compatibility exception governance
 - Summary: The bounded #495 slice promotes the pinned Vulture inventory to a fail-closed
   no-new-regression gate. Existing compatibility-facade findings are fingerprinted and retained
@@ -182,6 +181,10 @@
     contract tests protect all required CI lanes.
   - The six current findings are intentional helper re-exports consumed by existing advisory
     contract tests/downstream compatibility surfaces, so no product code was deleted.
+  - The follow-up regression test proves a resolved exception fails closed and records
+    `counts.resolved == 1`; `policy_version` now carries a canonical 12-character content
+    fingerprint, and policy-content changes fail closed until the version is explicitly updated.
+    The gate report records both the version and full content fingerprint for comparable evidence.
 - Mainline closure evidence:
   - PR #506 merged through the required rebase path after all GitHub Feature Lane and PR Merge
     Gate checks passed and the review lead posted `VERDICT: mergeable` on implementation head

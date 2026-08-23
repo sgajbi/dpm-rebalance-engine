@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.dead-code-policy.v1",
-  "policy_version": "lotus-advise-dead-code.v1",
+  "policy_version": "lotus-advise-dead-code.v1+6de54fbc4197",
   "tool": "vulture",
   "min_confidence": 80,
   "scan_paths": [

@@ -20,9 +20,11 @@ result as evidence.
 The fast static lanes also run `make dead-code-gate`. It scans `src` and `scripts` with the pinned
 Vulture version and fails on any finding outside the versioned
 `quality/dead-code-policy.v1.json` exception set. Each reviewed compatibility exception carries a
-stable fingerprint, owner, reason, and expiry date; scanner or parser failures fail closed. This
-gate covers new dead/unused-code regressions only. Duplicate-code, unused-dependency, oversized
-module/function, and trend-comparison gates remain separately bounded quality work.
+stable fingerprint, owner, reason, and expiry date; scanner or parser failures fail closed. The
+policy version ends with a 12-character content fingerprint, so changing policy content without
+an explicit version update fails closed and keeps evidence comparable. This gate covers new
+dead/unused-code regressions only. Duplicate-code, unused-dependency, oversized module/function,
+and trend-comparison gates remain separately bounded quality work.
 
 ## Reader Map
 
