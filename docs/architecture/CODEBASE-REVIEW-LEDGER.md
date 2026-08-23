@@ -6,7 +6,9 @@
 - Pattern: advisor cockpit, advisory copilot review, idea intake, and policy control each carried
   a copy of the same header normalization, service-identity fallback, principal-status check,
   role authorization, and capability authorization logic. The repeated implementation created 16
-  duplicate-code baseline clones and allowed security-boundary behavior to drift by surface.
+  duplicate-code baseline entries and allowed security-boundary behavior to drift by surface. The
+  six resolution/authorization logic entries are now removed; ten declarative dependency-signature
+  entries remain and are explicitly documented below.
 - Status: Implemented on the feature branch; exact-mainline closure pending
 - Finding Class: API boundary architecture, authorization consistency, duplicate-code reduction
 - Summary: GitHub issue #512 consolidates common principal resolution behind
@@ -28,8 +30,17 @@
     rejection. Existing advisor cockpit, copilot, idea-intake, policy-pack, and policy-evaluation
     API suites remain green (`76 passed`), with the new suite at `12 passed`.
   - `make duplicate-code-gate` passes with `37 findings`, `0 new`; the reviewed baseline removes
-    six resolved fingerprints from the prior 43-finding inventory, records baseline version v2,
-    and updates the policy content fingerprint. No duplicate exception was added.
+    six resolved resolution/authorization fingerprints from the prior 43-finding inventory,
+    records baseline version v2, and updates the policy content fingerprint. Ten principal-file
+    baseline entries remain, all covering repeated declarative FastAPI dependency-signature blocks:
+    `03cd967c…` occurs once as the advisor-cockpit self-pair and four times for the
+    advisor-cockpit/policy-control pair; `73e6dd37…` occurs once for advisor-cockpit/copilot
+    review and twice for advisor-cockpit/policy-control; `62dd0e68…` and `f2a853f2…` each occur
+    once for advisor-cockpit/policy-control. These are the repeated
+    `Annotated[str | None, Header(alias=…)]` public dependency-signature shapes, not principal
+    resolution or authorization logic. They remain because replacing them with a shared
+    header-parameters dependency would change the frozen FastAPI signature shape and is outside
+    this compatibility-preserving slice; no duplicate exception was added.
   - The repository-native `make check` passed on the feature branch with `2,670` unit tests. The
     separate full-coverage command exposed an existing local aggregate-floor discrepancy:
     `make test-all-fast` reported `2,739 passed`, `12 skipped`, and `96.58%` on the feature branch;
@@ -38,8 +49,9 @@
     final evidence; no threshold was weakened. This aggregate discrepancy is retained as open
     #495 quality-gate follow-up rather than presented as green coverage evidence.
 - Consequence: All four proposal API boundaries now share one normalization and authorization
-  implementation, reducing drift risk and removing the reviewed principal clone inventory without
-  changing accepted or rejected request contracts.
+  implementation, reducing drift risk and removing the reviewed resolution/authorization clone
+  inventory without changing accepted or rejected request contracts. The remaining declarative
+  signature clones are visible, bounded, and captured for a future optional signature-shape slice.
 - Documentation decision: repository context and review ledger updated because module ownership
   and the durable review finding changed. No wiki source change is needed because no operator
   workflow, supported API behavior, or runbook command changed; no OpenAPI, migration, or central
