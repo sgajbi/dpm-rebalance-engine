@@ -20,7 +20,9 @@
     runtime-smoke wiring, and explicit override propagation.
   - A direct workflow invocation initially exposed an import-path regression; the runtime smoke
     module now supports both package imports and `python scripts/run_runtime_smoke_checks.py`, with
-    a subprocess regression test proving the documented command remains executable.
+    a subprocess regression test proving the documented command remains executable. The helper CLI
+    also resolves the repository root from its own path, so Make and runtime-smoke derivation stay
+    identical regardless of caller directory.
   - The operations runbook, repository engineering context, and wiki source document the runtime
     boundary and the required shared-runtime health verification.
 - Consequence: With the default derived identity, CI-local cleanup is limited to CI-owned
