@@ -31,8 +31,8 @@
     freshness check passed, and `git diff --check` passed.
   - Follow-up parser-integrity slice hardens the same gate against malformed or mismatched Python
     hunks: one full diff is parsed, new-line counts are validated, and parse failures produce
-    failed evidence before the no-op success path. The focused parser/gate suite is now `33 passed`,
-    including a literal `+++ b/` added-content case.
+    failed evidence before the no-op success path. The focused parser/gate suite is now `34 passed`,
+    including literal `+++ b/` added-content and non-Python-before-Python hunk cases.
 - Consequence:
   - A deliberately uncovered changed source line fails the required PR coverage context even when
     aggregate coverage remains above 97%; docs-only and test-only changes produce explicit no-op

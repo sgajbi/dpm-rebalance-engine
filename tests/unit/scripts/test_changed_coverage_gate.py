@@ -61,6 +61,21 @@ def _completed_diff(diff: str) -> object:
             "+new again\n",
             {"src/new.py": {1, 2}},
         ),
+        (
+            "diff --git a/src/001_add.sql b/src/001_add.sql\n"
+            "--- a/src/001_add.sql\n"
+            "+++ b/src/001_add.sql\n"
+            "@@ -1 +1,2 @@\n"
+            " CREATE TABLE old_table;\n"
+            "+CREATE TABLE new_table;\n"
+            "diff --git a/src/sample.py b/src/sample.py\n"
+            "--- a/src/sample.py\n"
+            "+++ b/src/sample.py\n"
+            "@@ -1 +1 @@\n"
+            "-old\n"
+            "+new\n",
+            {"src/sample.py": {1}},
+        ),
     ],
 )
 def test_changed_source_lines_parses_supported_git_hunk_shapes(
