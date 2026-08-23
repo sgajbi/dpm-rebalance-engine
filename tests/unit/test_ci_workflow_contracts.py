@@ -75,6 +75,9 @@ def test_local_ci_targets_enforce_quality_baseline_freshness() -> None:
     for target in ("check", "check-all", "ci", "ci-local"):
         assert "unused-dependency-gate" in _makefile_target_dependencies(makefile, target)
         assert "oversized-code-gate" in _makefile_target_dependencies(makefile, target)
+        assert "proposal-decision-vocabulary-gate" in _makefile_target_dependencies(
+            makefile, target
+        )
 
 
 def test_dead_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> None:
@@ -183,6 +186,30 @@ def test_oversized_code_regression_gate_is_hard_and_versioned_across_ci_lanes() 
         assert "run: make oversized-code-gate" in section
         assert "Upload Oversized Code Evidence" in section
         assert "path: output/oversized-code-gate.json" in section
+
+
+def test_proposal_decision_vocabulary_is_source_owned_and_hard_across_ci_lanes() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    contract = Path("docs/standards/proposal-decision-vocabulary.v1.json").read_text(
+        encoding="utf-8"
+    )
+
+    assert "proposal-decision-vocabulary-gate" in makefile
+    assert "python scripts/proposal_decision_vocabulary.py --validate-only" in makefile
+    assert '"schema_version": "lotus.advise.proposal-decision-vocabulary.v1"' in contract
+    assert '"service": "lotus-advise"' in contract
+    assert "decision_summary_status_rules.py" in contract
+    assert "workflow_gates.py" in contract
+    for workflow_name in ("feature-lane.yml", "pr-merge-gate.yml", "main-releasability.yml"):
+        workflow = _workflow_text(workflow_name)
+        governance_job = (
+            "lint-dependency-governance"
+            if workflow_name == "feature-lane.yml"
+            else "lint-typecheck-governance"
+        )
+        section = _workflow_job_section(workflow, governance_job)
+        assert "Proposal Decision Vocabulary Contract" in section
+        assert "run: make proposal-decision-vocabulary-gate" in section
 
 
 def test_coverage_gate_enforces_changed_source_floor_with_versioned_policy() -> None:

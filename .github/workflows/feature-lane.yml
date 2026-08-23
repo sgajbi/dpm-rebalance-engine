@@ -57,6 +57,8 @@ jobs:
         run: make no-alias-gate
       - name: API Vocabulary Gate
         run: make api-vocabulary-gate
+      - name: Proposal Decision Vocabulary Contract
+        run: make proposal-decision-vocabulary-gate
       - name: Quality Baseline Freshness
         run: make quality-baseline-check
       - name: Dead Code Regression Gate

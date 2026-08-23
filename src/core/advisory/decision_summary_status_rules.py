@@ -49,6 +49,41 @@ _DECISION_STATUS_NEXT_ACTIONS: dict[ProposalDecisionStatus, ProposalDecisionNext
     "READY_FOR_CLIENT_REVIEW": "DISCUSS_WITH_CLIENT",
 }
 
+# These pairings are the Advise-owned source contract consumed by downstream
+# anti-corruption validators. Keep the runtime derivation rules above and this
+# published vocabulary in the same module so a vocabulary change cannot be
+# made only in a consumer-owned snapshot.
+_DECISION_STATUS_TOP_LEVELS: dict[ProposalDecisionStatus, tuple[str, ...]] = {
+    "READY_FOR_CLIENT_REVIEW": ("READY",),
+    "REQUIRES_RISK_REVIEW": ("READY", "PENDING_REVIEW"),
+    "REQUIRES_COMPLIANCE_REVIEW": ("READY", "PENDING_REVIEW"),
+    "REQUIRES_CLIENT_CONSENT": ("READY", "PENDING_REVIEW"),
+    "BLOCKED_REMEDIATION_REQUIRED": ("BLOCKED",),
+    "INSUFFICIENT_EVIDENCE": ("READY", "PENDING_REVIEW"),
+    "REVISION_RECOMMENDED": ("PENDING_REVIEW",),
+}
+_DECISION_STATUS_ALLOWED_NEXT_ACTIONS: dict[ProposalDecisionStatus, tuple[str, ...]] = {
+    **{status: (next_action,) for status, next_action in _DECISION_STATUS_NEXT_ACTIONS.items()},
+    "INSUFFICIENT_EVIDENCE": (
+        "REQUEST_CLIENT_CONTEXT",
+        "REQUEST_MANDATE_CONTEXT",
+        "REVISE_PROPOSAL",
+    ),
+}
+_DECISION_STATUS_WORKFLOW_GATES: dict[ProposalDecisionStatus, tuple[str, ...]] = {
+    "READY_FOR_CLIENT_REVIEW": ("EXECUTION_READY", "NONE"),
+    "REQUIRES_RISK_REVIEW": ("RISK_REVIEW_REQUIRED",),
+    "REQUIRES_COMPLIANCE_REVIEW": ("COMPLIANCE_REVIEW_REQUIRED",),
+    "REQUIRES_CLIENT_CONSENT": ("CLIENT_CONSENT_REQUIRED",),
+    "BLOCKED_REMEDIATION_REQUIRED": ("BLOCKED",),
+    "INSUFFICIENT_EVIDENCE": (
+        "RISK_REVIEW_REQUIRED",
+        "COMPLIANCE_REVIEW_REQUIRED",
+        "CLIENT_CONSENT_REQUIRED",
+    ),
+    "REVISION_RECOMMENDED": ("EXECUTION_READY", "NONE"),
+}
+
 _CLIENT_CONTEXT_EVIDENCE_GAPS = {
     "MISSING_CLIENT_CONTEXT",
     "MISSING_CLIENT_PRODUCT_COMPLEXITY_EVIDENCE",
@@ -146,6 +181,24 @@ def _insufficient_evidence_next_action(
         if item.reason_code in _MANDATE_CONTEXT_EVIDENCE_GAPS:
             return "REQUEST_MANDATE_CONTEXT"
     return "REVISE_PROPOSAL"
+
+
+def proposal_decision_vocabulary() -> dict[str, dict[str, tuple[str, ...]]]:
+    """Return the versioned decision pairings owned by the Advise rule module."""
+
+    statuses = set(_DECISION_STATUS_TOP_LEVELS)
+    if statuses != set(_DECISION_STATUS_ALLOWED_NEXT_ACTIONS) or statuses != set(
+        _DECISION_STATUS_WORKFLOW_GATES
+    ):
+        raise RuntimeError("decision vocabulary maps do not cover the same statuses")
+    return {
+        status: {
+            "allowed_top_level_statuses": _DECISION_STATUS_TOP_LEVELS[status],
+            "allowed_recommended_next_actions": _DECISION_STATUS_ALLOWED_NEXT_ACTIONS[status],
+            "allowed_workflow_gates": _DECISION_STATUS_WORKFLOW_GATES[status],
+        }
+        for status in _DECISION_STATUS_TOP_LEVELS
+    }
 
 
 def decision_confidence(
