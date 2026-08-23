@@ -162,7 +162,8 @@
 - Scope: deterministic dead/unused-code regression enforcement for `src` and `scripts`
 - Pattern: Vulture produced a real inventory, but report-only evidence allowed a new unused-code
   finding to enter `main` without an objective review gate.
-- Status: Implemented on the feature branch; exact-mainline closure pending
+- Status: Hardened on `main` at merge commit
+  `44497e256b61a82ca74d75e78412b881ae9c9aed`; exact-mainline closure validated
 - Finding Class: CI quality gate, dead-code prevention, compatibility exception governance
 - Summary: The bounded #495 slice promotes the pinned Vulture inventory to a fail-closed
   no-new-regression gate. Existing compatibility-facade findings are fingerprinted and retained
@@ -181,6 +182,19 @@
     contract tests protect all required CI lanes.
   - The six current findings are intentional helper re-exports consumed by existing advisory
     contract tests/downstream compatibility surfaces, so no product code was deleted.
+- Mainline closure evidence:
+  - PR #506 merged through the required rebase path after all GitHub Feature Lane and PR Merge
+    Gate checks passed and the review lead posted `VERDICT: mergeable` on implementation head
+    `ecb839983c5c68c167ac855996a877253c438d01`; no BLOCKING/MUST-FIX/hold finding remained.
+  - Exact-mainline validation at `44497e256b61a82ca74d75e78412b881ae9c9aed` passed the focused
+    40-test regression/contract suite, documentation-source reference gate, quality-baseline
+    freshness check, dead-code gate, and `git diff --check`.
+  - The isolated Docker lane used checkout-specific project
+    `lotus-advise-ci-local-lotus-advise-c1cace0b6f`, passed 2,641 unit, 66 integration, and 12
+    E2E tests (3 environment-gated skips) with 97% combined coverage, and removed all scoped
+    resources without changing the canonical Advise runtime or its health/readiness responses.
+  - Wiki source publication completed at `d237f07` with strict source/published parity
+    (`DiffCount 0`).
 - Consequence: New dead/unused-code findings cannot hide behind aggregate coverage or unrelated
   green checks; current API, persistence, migration, and runtime behavior are unchanged.
 - Documentation decision: repo-native CI guidance, repository context, generated quality reports,
