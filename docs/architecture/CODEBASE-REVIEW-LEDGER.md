@@ -43,6 +43,18 @@
   - The mount contract is covered by `tests/unit/test_ci_workflow_contracts.py`.
   - The prior full lane reached 2,632 tests and exposed this topology gap with 2 failures; the
     product container, network, volume, and readiness remained unchanged after cleanup.
+  - Exact successful rerun provenance at Advise head `fa0f20a4acb8618acbbd0abcf63ec703c3849c3a`:
+    Platform `2e0e834e145a295005d9882e4d8e47b76ccfae80`, Core
+    `6822323634417abffd133a0cfb43081072497e4f`, Performance
+    `d5a8912b780895175d19a0cfd57dd96485e7cb23`, Risk
+    `39514f398e7f6d5dcd2de899ab5ee5609dfaaae9`, Report
+    `79e67c7a5556bc791a83aee5aa0e933986491b1f`, Manage
+    `ccf35bd848128a683954ed9132ec8a4699af13dd`, Gateway
+    `718cee4b41e50cefdeb99ed9fd59e0fc1a8d2878`, and Idea
+    `a762097681e71ce8d419be5992e9401e2d8d7958`.
+- Validation: That exact run passed 2,632 unit, 66 integration, and 12 e2e tests (3 live skips),
+  combined coverage 97%, changed-source coverage, all CI-local governance/security/dependency/
+  migration/release gates, and scoped cleanup with canonical runtime preservation.
 - Consequence: Full Docker-local evidence is blocked until the federated mounts are verified by a
   green end-to-end lane; no product API, persistence, or runtime behavior changes are intended.
 - Documentation decision: operations context and wiki source updated because the governed local
