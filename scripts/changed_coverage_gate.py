@@ -63,7 +63,7 @@ def _coverage_percent(cov: coverage.Coverage, path: Path) -> dict[str, Any]:
     }
 
 
-def _load_policy(path: Path) -> tuple[str, float]:
+def _load_policy(path: Path) -> tuple[str, int | float]:
     policy = json.loads(path.read_text(encoding="utf-8"))
     version = policy.get("policy_version")
     threshold = policy.get("coverage", {}).get("changed_source_min_percent")
@@ -73,7 +73,7 @@ def _load_policy(path: Path) -> tuple[str, float]:
         raise ValueError(
             f"Quality policy {path} must define coverage.changed_source_min_percent in (0, 100]."
         )
-    return version, float(threshold)
+    return version, threshold
 
 
 def evaluate_changed_files(
