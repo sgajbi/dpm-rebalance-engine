@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-23T10:04:25.620973+00:00`
+- Generated At: `2026-08-23T10:14:37.585389+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `baseline/report-only`
@@ -10,7 +10,7 @@
 - Python files: `1056`
 - Packages: `41`
 - Modules: `1015`
-- Total Python lines: `189455`
+- Total Python lines: `189472`
 
 ## Largest Files
 
@@ -82,7 +82,7 @@
 - Available dependency/security tools: `ruff, mypy, pytest, coverage.py, pip-audit, radon, xenon, vulture, deptry, bandit, interrogate`
 - Pending optional tools: ``
 - Deptry config executable: `True`
-- Deptry current issue inventory: `13`
+- Deptry current issue inventory: `14`
 - Bandit config executable: `True`
 - Bandit current issue inventory: `30`
 - Bandit severity inventory: `high=0, medium=30, low=0`
