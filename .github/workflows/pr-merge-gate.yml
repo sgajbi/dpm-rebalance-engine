@@ -74,6 +74,15 @@ jobs:
           name: dependency-hygiene-gate
           path: output/dependency-hygiene-gate.json
           if-no-files-found: error
+      - name: Oversized Module/Function Regression Gate
+        run: make oversized-code-gate
+      - name: Upload Oversized Code Evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: oversized-code-gate
+          path: output/oversized-code-gate.json
+          if-no-files-found: error
       - name: Trust Telemetry Freshness
         run: make trust-telemetry-freshness-gate
       - name: Checkout Lotus Platform Contracts
