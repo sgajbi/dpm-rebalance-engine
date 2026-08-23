@@ -11,7 +11,10 @@ from pathlib import Path
 
 import psycopg
 
-from scripts.ci_local_compose_project import compose_project_name
+if __package__:
+    from .ci_local_compose_project import compose_project_name
+else:
+    from ci_local_compose_project import compose_project_name
 
 _LOCAL_PROPOSAL_POSTGRES_DSN = "postgresql://advise:advise@127.0.0.1:5432/advise_supportability"
 

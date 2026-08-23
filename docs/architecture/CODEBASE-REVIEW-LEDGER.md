@@ -18,6 +18,9 @@
     and cleanup; no unscoped `docker-compose.ci-local.yml` lifecycle command remains.
   - Focused regression tests prove symmetric Makefile scoping, deterministic derivation, default
     runtime-smoke wiring, and explicit override propagation.
+  - A direct workflow invocation initially exposed an import-path regression; the runtime smoke
+    module now supports both package imports and `python scripts/run_runtime_smoke_checks.py`, with
+    a subprocess regression test proving the documented command remains executable.
   - The operations runbook, repository engineering context, and wiki source document the runtime
     boundary and the required shared-runtime health verification.
 - Consequence: With the default derived identity, CI-local cleanup is limited to CI-owned
