@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -36,6 +37,8 @@ def test_wave_one_advise_declaration_is_conservative_and_transitional() -> None:
 
     assert products["AdvisoryProposalLifecycleRecord"]["identifier_refs"] == [
         "portfolio_id",
+        "proposal_id",
+        "version_no",
         "correlation_id",
     ]
     assert products["AdvisoryProposalLifecycleRecord"]["approved_consumers"] == [
@@ -62,6 +65,26 @@ def test_wave_one_advise_declaration_is_conservative_and_transitional() -> None:
         "does not discover the global portfolio universe"
         in (tactical_cohort["freshness_policy"]["max_allowed_age_description"])
     )
+
+
+def test_declared_identifiers_cover_every_advise_route_placeholder() -> None:
+    contract_dir = _local_contract_dir(Path(__file__).resolve().parents[3])
+    declaration = json.loads(
+        (contract_dir / "lotus-advise-products.v1.json").read_text(encoding="utf-8")
+    )
+
+    uncovered: dict[str, list[str]] = {}
+    for product in declaration["products"]:
+        route_identifiers = {
+            match.group(1)
+            for route in product.get("current_routes", [])
+            for match in re.finditer(r"\{([a-z][a-z0-9_]*)\}", route)
+        }
+        missing = sorted(route_identifiers - set(product["identifier_refs"]))
+        if missing:
+            uncovered[product["product_name"]] = missing
+
+    assert uncovered == {}
 
 
 def test_rfc0023_narrative_product_promotion_remains_bounded_to_evidence() -> None:

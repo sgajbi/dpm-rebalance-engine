@@ -24,6 +24,8 @@
       "temporal_semantics_ref": "generated_at",
       "identifier_refs": [
         "portfolio_id",
+        "proposal_id",
+        "version_no",
         "correlation_id"
       ],
       "required_trust_metadata": [
@@ -80,6 +82,8 @@
       "temporal_semantics_ref": "generated_at",
       "identifier_refs": [
         "portfolio_id",
+        "proposal_id",
+        "version_no",
         "correlation_id"
       ],
       "required_trust_metadata": [
@@ -142,6 +146,9 @@
       "temporal_semantics_ref": "generated_at",
       "identifier_refs": [
         "portfolio_id",
+        "proposal_id",
+        "version_no",
+        "memo_id",
         "correlation_id"
       ],
       "required_trust_metadata": [
@@ -208,6 +215,9 @@
       "temporal_semantics_ref": "generated_at",
       "identifier_refs": [
         "portfolio_id",
+        "proposal_id",
+        "proposal_version_id",
+        "evaluation_id",
         "correlation_id"
       ],
       "required_trust_metadata": [
@@ -334,6 +344,7 @@
       "temporal_semantics_ref": "generated_at",
       "identifier_refs": [
         "portfolio_id",
+        "action_item_id",
         "correlation_id"
       ],
       "required_trust_metadata": [
@@ -391,6 +402,9 @@
       "temporal_semantics_ref": "generated_at",
       "identifier_refs": [
         "portfolio_id",
+        "proposal_id",
+        "version_id",
+        "run_id",
         "correlation_id"
       ],
       "required_trust_metadata": [
