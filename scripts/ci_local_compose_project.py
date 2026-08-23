@@ -17,4 +17,4 @@ def compose_project_name(checkout: Path) -> str:
 
 
 if __name__ == "__main__":
-    print(compose_project_name(Path.cwd()))
+    print(compose_project_name(Path(__file__).resolve().parents[1]))

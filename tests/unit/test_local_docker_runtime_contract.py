@@ -1,3 +1,6 @@
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 from scripts.ci_local_compose_project import compose_project_name
@@ -48,7 +51,23 @@ def test_ci_local_compose_project_name_is_stable_and_checkout_specific(tmp_path:
     assert first_name == compose_project_name(first_checkout)
     assert first_name != compose_project_name(second_checkout)
     assert first_name.startswith("lotus-advise-ci-local-lotus-advise-")
-    assert first_name.replace("-", "").isalnum()
+    assert re.fullmatch(r"[a-z0-9][a-z0-9_-]*", first_name)
+
+
+def test_ci_local_compose_project_cli_is_independent_of_caller_directory(
+    tmp_path: Path,
+) -> None:
+    script_path = Path(__file__).resolve().parents[2] / "scripts" / "ci_local_compose_project.py"
+    repository_root = script_path.parents[1]
+    completed = subprocess.run(
+        [sys.executable, str(script_path)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert completed.stdout.strip() == compose_project_name(repository_root)
 
 
 def test_runtime_dockerfile_carries_release_metadata_labels_and_readiness_healthcheck() -> None:
