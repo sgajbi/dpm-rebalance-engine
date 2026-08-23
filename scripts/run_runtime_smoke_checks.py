@@ -11,6 +11,8 @@ from pathlib import Path
 
 import psycopg
 
+from scripts.ci_local_compose_project import compose_project_name
+
 _LOCAL_PROPOSAL_POSTGRES_DSN = "postgresql://advise:advise@127.0.0.1:5432/advise_supportability"
 
 
@@ -23,8 +25,17 @@ def _run(command: list[str], *, env: dict[str, str]) -> None:
 
 
 def _run_docker_compose(arguments: list[str]) -> None:
+    project_name = os.environ.get("CI_LOCAL_COMPOSE_PROJECT") or compose_project_name(_repo_root())
     subprocess.run(
-        ["docker", "compose", "-f", "docker-compose.ci-local.yml", *arguments],
+        [
+            "docker",
+            "compose",
+            "--project-name",
+            project_name,
+            "-f",
+            "docker-compose.ci-local.yml",
+            *arguments,
+        ],
         cwd=_repo_root(),
         check=True,
     )

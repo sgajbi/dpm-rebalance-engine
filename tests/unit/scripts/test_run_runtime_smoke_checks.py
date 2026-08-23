@@ -8,6 +8,55 @@ import pytest
 from scripts import run_runtime_smoke_checks
 
 
+def test_runtime_smoke_compose_uses_checkout_specific_project_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.setenv("CI_LOCAL_COMPOSE_PROJECT", "advise-ci-test")
+    monkeypatch.setattr(
+        run_runtime_smoke_checks.subprocess,
+        "run",
+        lambda command, **kwargs: calls.append(command),
+    )
+
+    run_runtime_smoke_checks._run_docker_compose(["down", "-v", "--remove-orphans"])
+
+    assert calls == [
+        [
+            "docker",
+            "compose",
+            "--project-name",
+            "advise-ci-test",
+            "-f",
+            "docker-compose.ci-local.yml",
+            "down",
+            "-v",
+            "--remove-orphans",
+        ]
+    ]
+
+
+def test_runtime_smoke_compose_derives_project_when_override_is_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+    monkeypatch.delenv("CI_LOCAL_COMPOSE_PROJECT", raising=False)
+    monkeypatch.setattr(
+        run_runtime_smoke_checks,
+        "compose_project_name",
+        lambda checkout: "derived-ci-test",
+    )
+    monkeypatch.setattr(
+        run_runtime_smoke_checks.subprocess,
+        "run",
+        lambda command, **kwargs: calls.append(command),
+    )
+
+    run_runtime_smoke_checks._run_docker_compose(["up", "-d", "postgres"])
+
+    assert calls[0][3] == "derived-ci-test"
+
+
 def test_postgres_env_honors_injected_ci_dsns(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(
         "PROPOSAL_POSTGRES_DSN", "postgresql://lotus:lotus@127.0.0.1:5432/lotus_advise"
