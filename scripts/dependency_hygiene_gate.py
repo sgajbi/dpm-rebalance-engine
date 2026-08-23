@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import re
@@ -13,6 +12,13 @@ from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+from scripts import quality_gate_common
+
+
+def __getattr__(name: str) -> Any:
+    return getattr(quality_gate_common, name)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "quality" / "dependency-hygiene-policy.v1.json"
@@ -37,14 +43,8 @@ class DependencyFinding:
         return {**asdict(self), "fingerprint": self.fingerprint}
 
 
-def _non_empty_string(value: object, *, field: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"Dependency-hygiene field {field!r} must be a non-empty string.")
-    return value
-
-
 def _canonical_repo_path(raw_path: object, *, repo_root: Path) -> str:
-    value = _non_empty_string(raw_path, field="location.file").replace("\\", "/")
+    value = quality_gate_common.non_empty_string(raw_path, field="location.file").replace("\\", "/")
     candidate = Path(value)
     if candidate.is_absolute():
         try:
@@ -75,9 +75,9 @@ def parse_deptry_report(payload: object, *, repo_root: Path) -> list[DependencyF
         error = raw.get("error")
         if not isinstance(error, dict):
             raise ValueError(f"deptry finding {index} must define an error object.")
-        code = _non_empty_string(error.get("code"), field="error.code")
-        message = _non_empty_string(error.get("message"), field="error.message")
-        module = _non_empty_string(raw.get("module"), field="module")
+        code = quality_gate_common.non_empty_string(error.get("code"), field="error.code")
+        message = quality_gate_common.non_empty_string(error.get("message"), field="error.message")
+        module = quality_gate_common.non_empty_string(raw.get("module"), field="module")
         location = raw.get("location")
         if not isinstance(location, dict):
             raise ValueError(f"deptry finding {index} must define a location object.")
@@ -94,30 +94,8 @@ def parse_deptry_report(payload: object, *, repo_root: Path) -> list[DependencyF
     return sorted(findings, key=lambda finding: finding.fingerprint)
 
 
-def _load_json(path: Path, *, description: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"Unable to load {description} {path}: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise ValueError(f"{description.capitalize()} must be a JSON object.")
-    return payload
-
-
-def policy_content_fingerprint(policy: dict[str, Any]) -> str:
-    content = {key: value for key, value in policy.items() if key != "policy_version"}
-    canonical = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def expected_policy_version(policy: dict[str, Any]) -> str:
-    version = _non_empty_string(policy.get("policy_version"), field="policy_version")
-    prefix = version.rsplit("+", 1)[0] if "+" in version else version
-    return f"{prefix}+{policy_content_fingerprint(policy)[:12]}"
-
-
 def _parse_expiry(value: object, *, field: str) -> date:
-    raw = _non_empty_string(value, field=field)
+    raw = quality_gate_common.non_empty_string(value, field=field)
     try:
         return date.fromisoformat(raw)
     except ValueError as exc:
@@ -135,16 +113,18 @@ def validate_tool_version(raw_version: str, *, expected_version: str) -> str:
 
 
 def load_policy(path: Path) -> dict[str, Any]:
-    policy = _load_json(path, description="dependency-hygiene policy")
+    policy = quality_gate_common.load_json_object(path, description="dependency-hygiene policy")
     if policy.get("schema_version") != "lotus.advise.dependency-hygiene-policy.v1":
         raise ValueError("Dependency-hygiene policy has an unsupported schema_version.")
-    version = _non_empty_string(policy.get("policy_version"), field="policy_version")
+    version = quality_gate_common.non_empty_string(
+        policy.get("policy_version"), field="policy_version"
+    )
     if _POLICY_VERSION.fullmatch(version) is None:
         raise ValueError(
             "Dependency-hygiene policy policy_version must end with '+' and a 12-character "
             "content fingerprint."
         )
-    expected = expected_policy_version(policy)
+    expected = quality_gate_common.expected_policy_version(policy)
     if version != expected:
         raise ValueError(
             "Dependency-hygiene policy policy_version does not match its content fingerprint; "
@@ -152,20 +132,20 @@ def load_policy(path: Path) -> dict[str, Any]:
         )
     if policy.get("tool") != "deptry":
         raise ValueError("Dependency-hygiene policy tool must be deptry.")
-    _non_empty_string(policy.get("tool_version"), field="tool_version")
+    quality_gate_common.non_empty_string(policy.get("tool_version"), field="tool_version")
     if policy.get("report_format") != "json":
         raise ValueError("Dependency-hygiene policy report_format must be json.")
-    _non_empty_string(policy.get("config_path"), field="config_path")
+    quality_gate_common.non_empty_string(policy.get("config_path"), field="config_path")
     if policy.get("max_new_findings") != 0 or policy.get("max_resolved_findings") != 0:
         raise ValueError("Dependency-hygiene policy must reject both new and resolved findings.")
 
     baseline = policy.get("baseline")
     if not isinstance(baseline, dict):
         raise ValueError("Dependency-hygiene policy must define baseline provenance.")
-    _non_empty_string(baseline.get("path"), field="baseline.path")
-    _non_empty_string(baseline.get("sha256"), field="baseline.sha256")
-    _non_empty_string(baseline.get("owner"), field="baseline.owner")
-    _non_empty_string(baseline.get("reason"), field="baseline.reason")
+    quality_gate_common.non_empty_string(baseline.get("path"), field="baseline.path")
+    quality_gate_common.non_empty_string(baseline.get("sha256"), field="baseline.sha256")
+    quality_gate_common.non_empty_string(baseline.get("owner"), field="baseline.owner")
+    quality_gate_common.non_empty_string(baseline.get("reason"), field="baseline.reason")
     _parse_expiry(baseline.get("expires_on"), field="baseline.expires_on")
 
     exceptions = policy.get("exceptions")
@@ -182,10 +162,10 @@ def baseline_content_fingerprint(baseline: dict[str, Any]) -> str:
 
 
 def load_baseline(path: Path, *, expected_sha256: str) -> list[dict[str, Any]]:
-    baseline = _load_json(path, description="dependency-hygiene baseline")
+    baseline = quality_gate_common.load_json_object(path, description="dependency-hygiene baseline")
     if baseline.get("schema_version") != "lotus.advise.dependency-hygiene-baseline.v1":
         raise ValueError("Dependency-hygiene baseline has an unsupported schema_version.")
-    _non_empty_string(baseline.get("baseline_version"), field="baseline_version")
+    quality_gate_common.non_empty_string(baseline.get("baseline_version"), field="baseline_version")
     findings = baseline.get("findings")
     if not isinstance(findings, list):
         raise ValueError("Dependency-hygiene baseline findings must be a list.")
@@ -193,12 +173,16 @@ def load_baseline(path: Path, *, expected_sha256: str) -> list[dict[str, Any]]:
     for entry in findings:
         if not isinstance(entry, dict):
             raise ValueError("Each dependency-hygiene baseline finding must be an object.")
-        code = _non_empty_string(entry.get("code"), field="code")
-        module = _non_empty_string(entry.get("module"), field="module")
-        path_value = _non_empty_string(entry.get("path"), field="path").replace("\\", "/")
+        code = quality_gate_common.non_empty_string(entry.get("code"), field="code")
+        module = quality_gate_common.non_empty_string(entry.get("module"), field="module")
+        path_value = quality_gate_common.non_empty_string(entry.get("path"), field="path").replace(
+            "\\", "/"
+        )
         if Path(path_value).is_absolute() or ".." in PurePosixPath(path_value).parts:
             raise ValueError(f"Dependency-hygiene baseline path must be relative: {path_value}")
-        fingerprint = _non_empty_string(entry.get("fingerprint"), field="fingerprint")
+        fingerprint = quality_gate_common.non_empty_string(
+            entry.get("fingerprint"), field="fingerprint"
+        )
         expected_fingerprint = f"deptry.v1|{code}|{path_value}|{module}"
         if fingerprint != expected_fingerprint:
             raise ValueError(
@@ -208,9 +192,9 @@ def load_baseline(path: Path, *, expected_sha256: str) -> list[dict[str, Any]]:
         if fingerprint in observed_fingerprints:
             raise ValueError(f"Duplicate dependency-hygiene baseline fingerprint: {fingerprint}")
         observed_fingerprints.add(fingerprint)
-        _non_empty_string(entry.get("classification"), field="classification")
-        _non_empty_string(entry.get("owner"), field="owner")
-        _non_empty_string(entry.get("reason"), field="reason")
+        quality_gate_common.non_empty_string(entry.get("classification"), field="classification")
+        quality_gate_common.non_empty_string(entry.get("owner"), field="owner")
+        quality_gate_common.non_empty_string(entry.get("reason"), field="reason")
         _parse_expiry(entry.get("expires_on"), field="expires_on")
     actual_sha256 = baseline_content_fingerprint(baseline)
     if actual_sha256 != expected_sha256:
@@ -276,11 +260,6 @@ def _run_deptry(
     )
 
 
-def _write_report(output_path: Path, report: dict[str, Any]) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
 def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
     report: dict[str, Any] = {
         "schema_version": "lotus.advise.dependency-hygiene-gate.v1",
@@ -344,7 +323,9 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         report.update(
             {
                 "policy_version": policy["policy_version"],
-                "policy_content_fingerprint": policy_content_fingerprint(policy),
+                "policy_content_fingerprint": quality_gate_common.policy_content_fingerprint(
+                    policy
+                ),
                 "tool": policy["tool"],
                 "tool_version": policy["tool_version"],
                 "tool_runtime_version": tool_runtime_version,
@@ -367,7 +348,9 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
                 "baseline_provenance": {
                     **policy["baseline"],
                     "content_fingerprint": baseline_content_fingerprint(
-                        _load_json(baseline_path, description="dependency-hygiene baseline")
+                        quality_gate_common.load_json_object(
+                            baseline_path, description="dependency-hygiene baseline"
+                        )
                     ),
                     "findings": baseline,
                 },
@@ -380,32 +363,24 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         report["failures"] = [str(exc)]
         report["status"] = "failed"
 
-    _write_report(output_path, report)
-    if report["failures"]:
-        print("Dependency-hygiene gate FAILED.")
-        for failure in report["failures"]:
-            print(f"- {failure}")
-        print(f"Machine-readable evidence: {output_path}")
-        return 1
-    print(
-        "Dependency-hygiene gate passed: "
-        f"{report['counts']['findings']} findings, "
-        f"{report['counts']['new']} new, "
-        f"{report['counts']['resolved']} resolved, "
-        f"policy={report['policy_version']}."
+    return quality_gate_common.finish_gate(
+        report,
+        output_path,
+        "Dependency-hygiene gate",
+        "Dependency-hygiene gate passed: {findings} findings, {new} new, "
+        "{resolved} resolved, policy={policy}.",
     )
-    print(f"Machine-readable evidence: {output_path}")
-    return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
-    parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY_PATH)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_PATH)
-    args = parser.parse_args()
+    args = quality_gate_common.parse_gate_arguments(
+        description=__doc__ or "Dependency-hygiene regression gate",
+        default_policy_path=DEFAULT_POLICY_PATH,
+        default_output_path=DEFAULT_OUTPUT_PATH,
+        include_repo_root=True,
+    )
     return run_gate(
-        repo_root=args.repo_root.resolve(),
+        repo_root=(args.repo_root or REPO_ROOT).resolve(),
         policy_path=args.policy.resolve(),
         output_path=args.output.resolve(),
     )

@@ -7,7 +7,7 @@
 - Pattern: the executable deptry inventory was report-only, so a new direct requirement or a
   stale reviewed finding could enter `main` without a measured, owner-accountable regression
   decision.
-- Status: Implemented on the feature branch; exact-mainline closure pending review and merge
+- Status: Implementation complete on the feature branch; exact-mainline closure pending review and merge
 - Finding Class: CI quality gate, dependency hygiene, reproducible evidence
 - Summary: The bounded #495 slice promotes deptry `0.25.1` to a fail-closed no-new-regression
   gate. The known `ci_local_compose_project` local-module false positive is corrected through
@@ -24,6 +24,10 @@
     normalized paths and identities, malformed output, duplicate findings, new/resolved findings,
     and expiry; it emits `output/dependency-hygiene-gate.json` with policy, measured counts,
     current findings, baseline findings, and provenance.
+  - The gate modules share `scripts/quality_gate_common.py` and are invoked as package modules;
+    this removed duplicated gate scaffolding that initially created four new jscpd findings during
+    the slice's own validation. The findings were fixed in code rather than added to the duplicate
+    baseline.
   - Focused regression tests cover path normalization, malformed/unsafe reports, tool-version
     drift, reviewed pass evidence, new finding failure, resolved baseline failure, expired
     baseline failure, unavailable tooling, and duplicate identities (`11 passed`). Workflow
@@ -31,6 +35,9 @@
   - `make unused-dependency-gate` is wired into `make check`, `make check-all`, `make ci`, and
     `make ci-local`; Feature Lane, PR Merge Gate, and Main Releasability run it as a named
     governance step and upload its machine-readable evidence.
+  - The complete repository-native `make check` passed on the implementation state with `2,682`
+    unit tests and all configured formatting, typing, architecture, API, migration, security,
+    licensing, dead-code, duplicate-code, and dependency-hygiene checks green.
 - Compatibility: CI/developer/evidence behavior only. No runtime, API/OpenAPI, persistence,
   migration, data-model, dependency-version, or lock/license contract change is intended.
 - Documentation decision: dependency hygiene standard, repository context, generated quality

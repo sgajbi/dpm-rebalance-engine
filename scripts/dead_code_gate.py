@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
-import hashlib
-import json
 import re
 import subprocess
 import sys
@@ -12,6 +9,13 @@ from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
+
+from scripts import quality_gate_common
+
+
+def __getattr__(name: str) -> Any:
+    return getattr(quality_gate_common, name)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "quality" / "dead-code-policy.v1.json"
@@ -66,42 +70,20 @@ def parse_finding(line: str, *, repo_root: Path) -> DeadCodeFinding:
     )
 
 
-def _non_empty_string(value: object, *, field: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"Dead-code policy field {field!r} must be a non-empty string.")
-    return value
-
-
-def policy_content_fingerprint(policy: dict[str, Any]) -> str:
-    content = {key: value for key, value in policy.items() if key != "policy_version"}
-    canonical = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def expected_policy_version(policy: dict[str, Any]) -> str:
-    prefix = _non_empty_string(policy.get("policy_version"), field="policy_version")
-    if "+" in prefix:
-        prefix = prefix.rsplit("+", 1)[0]
-    return f"{prefix}+{policy_content_fingerprint(policy)[:12]}"
-
-
 def load_policy(path: Path) -> dict[str, Any]:
-    try:
-        policy = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"Unable to load dead-code policy {path}: {exc}") from exc
-    if not isinstance(policy, dict):
-        raise ValueError("Dead-code policy must be a JSON object.")
+    policy = quality_gate_common.load_json_object(path, description="dead-code policy")
     if policy.get("schema_version") != "lotus.advise.dead-code-policy.v1":
         raise ValueError("Dead-code policy has an unsupported schema_version.")
-    policy_version = _non_empty_string(policy.get("policy_version"), field="policy_version")
+    policy_version = quality_gate_common.non_empty_string(
+        policy.get("policy_version"), field="policy_version"
+    )
     version_match = _POLICY_VERSION.fullmatch(policy_version)
     if version_match is None:
         raise ValueError(
             "Dead-code policy policy_version must end with '+' and the 12-character "
             "content fingerprint."
         )
-    expected_version = expected_policy_version(policy)
+    expected_version = quality_gate_common.expected_policy_version(policy)
     if policy_version != expected_version:
         raise ValueError(
             "Dead-code policy policy_version does not match its content fingerprint; "
@@ -132,12 +114,16 @@ def load_policy(path: Path) -> dict[str, Any]:
     for entry in entries:
         if not isinstance(entry, dict):
             raise ValueError("Each dead-code exception must be a JSON object.")
-        fingerprint = _non_empty_string(entry.get("fingerprint"), field="fingerprint")
+        fingerprint = quality_gate_common.non_empty_string(
+            entry.get("fingerprint"), field="fingerprint"
+        )
         if fingerprint in fingerprints:
             raise ValueError(f"Duplicate dead-code exception fingerprint: {fingerprint}")
         fingerprints.add(fingerprint)
-        path_value = _non_empty_string(entry.get("path"), field="path").replace("\\", "/")
-        kind = _non_empty_string(entry.get("kind"), field="kind")
+        path_value = quality_gate_common.non_empty_string(entry.get("path"), field="path").replace(
+            "\\", "/"
+        )
+        kind = quality_gate_common.non_empty_string(entry.get("kind"), field="kind")
         symbol_value = entry.get("symbol")
         if not isinstance(symbol_value, str):
             raise ValueError("Dead-code exception field 'symbol' must be a string.")
@@ -155,9 +141,11 @@ def load_policy(path: Path) -> dict[str, Any]:
             raise ValueError(
                 f"Dead-code exception fingerprint does not match its identity: {fingerprint}"
             )
-        _non_empty_string(entry.get("owner"), field="owner")
-        _non_empty_string(entry.get("reason"), field="reason")
-        expires_on = _non_empty_string(entry.get("expires_on"), field="expires_on")
+        quality_gate_common.non_empty_string(entry.get("owner"), field="owner")
+        quality_gate_common.non_empty_string(entry.get("reason"), field="reason")
+        expires_on = quality_gate_common.non_empty_string(
+            entry.get("expires_on"), field="expires_on"
+        )
         try:
             date.fromisoformat(expires_on)
         except ValueError as exc:
@@ -200,11 +188,6 @@ def _run_vulture(
     )
 
 
-def _write_report(output_path: Path, report: dict[str, Any]) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
 def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
     report: dict[str, Any] = {
         "schema_version": "lotus.advise.dead-code-gate.v1",
@@ -217,7 +200,9 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         report.update(
             {
                 "policy_version": policy["policy_version"],
-                "policy_content_fingerprint": policy_content_fingerprint(policy),
+                "policy_content_fingerprint": quality_gate_common.policy_content_fingerprint(
+                    policy
+                ),
                 "tool": policy["tool"],
                 "min_confidence": policy["min_confidence"],
                 "scan_paths": policy["scan_paths"],
@@ -294,29 +279,24 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         report["failures"] = [str(exc)]
         report["status"] = "failed"
 
-    _write_report(output_path, report)
-    if report["failures"]:
-        print("Dead-code gate FAILED.")
-        for failure in report["failures"]:
-            print(f"- {failure}")
-        print(f"Machine-readable evidence: {output_path}")
-        return 1
-    print(
-        f"Dead-code gate passed: {report['counts']['findings']} finding(s), "
-        f"{report['counts']['allowed']} reviewed exception(s), no new findings."
+    return quality_gate_common.finish_gate(
+        report,
+        output_path,
+        "Dead-code gate",
+        "Dead-code gate passed: {findings} finding(s), {allowed} reviewed exception(s), "
+        "no new findings.",
     )
-    print(f"Machine-readable evidence: {output_path}")
-    return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
-    parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY_PATH)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_PATH)
-    args = parser.parse_args()
+    args = quality_gate_common.parse_gate_arguments(
+        description=__doc__ or "Dead-code regression gate",
+        default_policy_path=DEFAULT_POLICY_PATH,
+        default_output_path=DEFAULT_OUTPUT_PATH,
+        include_repo_root=True,
+    )
     return run_gate(
-        repo_root=args.repo_root.resolve(),
+        repo_root=(args.repo_root or REPO_ROOT).resolve(),
         policy_path=args.policy.resolve(),
         output_path=args.output.resolve(),
     )

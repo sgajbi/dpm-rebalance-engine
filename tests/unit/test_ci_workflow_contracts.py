@@ -81,7 +81,7 @@ def test_dead_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> No
     policy = Path("quality/dead-code-policy.v1.json").read_text(encoding="utf-8")
 
     assert "dead-code-gate" in makefile
-    assert "scripts/dead_code_gate.py" in makefile
+    assert "python -m scripts.dead_code_gate" in makefile
     assert "quality/dead-code-policy.v1.json" in makefile
     assert '"max_new_findings": 0' in policy
     assert '"exceptions"' in policy
@@ -105,7 +105,7 @@ def test_duplicate_code_regression_gate_is_hard_and_versioned_across_ci_lanes() 
     baseline = Path("quality/duplicate-code-baseline.v1.json").read_text(encoding="utf-8")
 
     assert "duplicate-code-gate" in makefile
-    assert "scripts/duplicate_code_gate.py" in makefile
+    assert "python -m scripts.duplicate_code_gate" in makefile
     assert '"jscpd": "5.0.16"' in package_json
     assert '"max_new_findings": 0' in policy
     assert '"tool_version": "5.0.16"' in policy
@@ -130,7 +130,7 @@ def test_unused_dependency_regression_gate_is_hard_and_versioned_across_ci_lanes
     pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
 
     assert "unused-dependency-gate" in makefile
-    assert "scripts/dependency_hygiene_gate.py" in makefile
+    assert "python -m scripts.dependency_hygiene_gate" in makefile
     assert '"tool": "deptry"' in policy
     assert '"tool_version": "0.25.1"' in policy
     assert '"max_new_findings": 0' in policy

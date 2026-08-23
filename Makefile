@@ -181,13 +181,13 @@ refactored-complexity-gate:
 	python scripts/radon_complexity_gate.py --source-path src/core/proposals/memo_response_projection.py --fail-rank B
 
 dead-code-gate:
-	python scripts/dead_code_gate.py --policy quality/dead-code-policy.v1.json --output output/dead-code-gate.json
+	python -m scripts.dead_code_gate --policy quality/dead-code-policy.v1.json --output output/dead-code-gate.json
 
 duplicate-code-gate:
-	python scripts/duplicate_code_gate.py --policy quality/duplicate-code-policy.v1.json --output output/duplicate-code-gate.json
+	python -m scripts.duplicate_code_gate --policy quality/duplicate-code-policy.v1.json --output output/duplicate-code-gate.json
 
 unused-dependency-gate:
-	python scripts/dependency_hygiene_gate.py --policy quality/dependency-hygiene-policy.v1.json --output output/dependency-hygiene-gate.json
+	python -m scripts.dependency_hygiene_gate --policy quality/dependency-hygiene-policy.v1.json --output output/dependency-hygiene-gate.json
 
 observability-diagnostics:
 	python -m pytest tests/unit/advisory/api/test_api_observability.py -q
