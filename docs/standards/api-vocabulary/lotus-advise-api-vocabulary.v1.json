@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-08-23T06:55:45.351217+00:00",
+  "generatedAt": "2026-08-23T07:14:15.974229+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -2910,7 +2910,7 @@
       "semanticId": "lotus.degraded_dependency_count",
       "canonicalTerm": "degraded_dependency_count",
       "preferredName": "degraded_dependency_count",
-      "description": "Number of required advisory dependency boundaries currently degraded. Optional unconfigured dependencies are excluded from this count.",
+      "description": "Number of required advisory dependency boundaries currently degraded. Optional unconfigured dependencies are excluded from this count; required boundaries absent from the readiness inventory are counted as degraded.",
       "example": 10,
       "type": "integer",
       "locations": [
@@ -3015,7 +3015,7 @@
       "semanticId": "lotus.dependency_count",
       "canonicalTerm": "dependency_count",
       "preferredName": "dependency_count",
-      "description": "Number of advisory dependency boundaries evaluated for supportability.",
+      "description": "Number of advisory dependency boundaries evaluated for supportability, including required boundaries absent from the readiness inventory.",
       "example": 10,
       "type": "integer",
       "locations": [

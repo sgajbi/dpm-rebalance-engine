@@ -38,12 +38,13 @@ def build_integration_capabilities(
         ai_rationale_enabled=runtime_flags.ai_rationale_enabled,
         dependencies=dependencies,
     )
+    required_dependency_keys = enabled_capability_dependency_keys(
+        features=features,
+        workflows=workflows,
+    )
     readiness_payload = classify_operational_readiness(
         readiness_payload,
-        required_dependency_keys=enabled_capability_dependency_keys(
-            features=features,
-            workflows=workflows,
-        ),
+        required_dependency_keys=required_dependency_keys,
     )
 
     return IntegrationCapabilitiesResponse(
@@ -66,5 +67,6 @@ def build_integration_capabilities(
             readiness=readiness_payload,
             lifecycle_enabled=runtime_flags.lifecycle_enabled,
             features=features,
+            required_dependency_keys=required_dependency_keys,
         ),
     )

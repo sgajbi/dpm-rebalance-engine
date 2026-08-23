@@ -34,8 +34,13 @@ def build_advisory_supportability(
     readiness: dict[str, object],
     lifecycle_enabled: bool,
     features: list[FeatureCapability],
+    required_dependency_keys: set[str] | None = None,
 ) -> AdvisorySupportability:
-    counts = _supportability_counts(readiness=readiness, features=features)
+    counts = _supportability_counts(
+        readiness=readiness,
+        features=features,
+        required_dependency_keys=required_dependency_keys,
+    )
     posture = _supportability_posture(lifecycle_enabled=lifecycle_enabled, counts=counts)
     supportability = AdvisorySupportability(
         state=posture.state,
@@ -55,9 +60,11 @@ def _supportability_counts(
     *,
     readiness: dict[str, object],
     features: list[FeatureCapability],
+    required_dependency_keys: set[str] | None,
 ) -> _SupportabilityCounts:
     dependency_count, ready_dependency_count, degraded_dependency_count = _dependency_counts(
-        readiness
+        readiness,
+        required_dependency_keys=required_dependency_keys,
     )
     enabled_feature_count, ready_feature_count = _feature_counts(features)
     return _SupportabilityCounts(
@@ -69,8 +76,18 @@ def _supportability_counts(
     )
 
 
-def _dependency_counts(readiness: dict[str, object]) -> tuple[int, int, int]:
+def _dependency_counts(
+    readiness: dict[str, object],
+    *,
+    required_dependency_keys: set[str] | None,
+) -> tuple[int, int, int]:
     rows = dependency_rows(readiness)
+    observed_dependency_keys = {
+        dependency_key
+        for dependency in rows
+        if isinstance(dependency_key := dependency.get("dependency_key"), str)
+    }
+    unobserved_required_count = len((required_dependency_keys or set()) - observed_dependency_keys)
     ready_dependency_count = sum(
         1 for dependency in rows if bool(dependency.get("operational_ready"))
     )
@@ -80,7 +97,11 @@ def _dependency_counts(readiness: dict[str, object]) -> tuple[int, int, int]:
         if bool(dependency.get("required_by_enabled_capability", True))
         and not bool(dependency.get("operational_ready"))
     )
-    return len(rows), ready_dependency_count, degraded_dependency_count
+    return (
+        len(rows) + unobserved_required_count,
+        ready_dependency_count,
+        degraded_dependency_count + unobserved_required_count,
+    )
 
 
 def _feature_counts(features: list[FeatureCapability]) -> tuple[int, int]:

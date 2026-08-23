@@ -997,6 +997,9 @@ def test_integration_capabilities_service_fails_closed_for_missing_dependency():
         == "LOTUS_AI_DEPENDENCY_UNAVAILABLE"
     )
     assert response.supportability.state == "degraded"
+    assert response.supportability.dependency_count == 4
+    assert response.supportability.ready_dependency_count == 3
+    assert response.supportability.degraded_dependency_count == 1
     assert (
         response.supportability.ready_feature_count < response.supportability.enabled_feature_count
     )
