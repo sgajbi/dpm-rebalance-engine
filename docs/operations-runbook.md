@@ -8,6 +8,11 @@
   freshness.
 - `make quality-baseline`: regenerate report-only quality artifacts in `quality/`.
 - `make engineering-health`: regenerate the structural engineering-health baseline.
+- `make ci-local-docker` and `make ci-local-docker-down`: run and clean up the CI-local Compose
+  project. By default, both targets derive the same checkout-specific project identity, so `down
+  --remove-orphans` is scoped to CI-owned containers, networks, and volumes and cannot collide with
+  the product Compose project. `CI_LOCAL_COMPOSE_PROJECT` may override the derived identity only
+  when an orchestrator supplies a unique, CI-owned name; arbitrary overrides are not collision-safe.
 - `make demo-certification-live`: run live app-level demo certification against
   `LOTUS_ADVISE_DEMO_BASE_URL` or `http://127.0.0.1:8000`, writing machine-readable evidence to
   `LOTUS_ADVISE_DEMO_EVIDENCE` or

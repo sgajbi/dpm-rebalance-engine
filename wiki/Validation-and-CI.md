@@ -68,6 +68,14 @@ make observability-diagnostics
 make advisory-domain-golden-regressions
 ```
 
+The CI-local Docker targets derive one checkout-specific Compose project from the absolute
+repository path and use it for both startup and cleanup. With the default identity, this keeps
+`make ci-local-docker-down` and its `--remove-orphans` cleanup scoped to CI-owned resources and
+prevents collision with the product Compose project or an active Advise container.
+`CI_LOCAL_COMPOSE_PROJECT` may override the derived identity only when an orchestrator supplies a
+unique, CI-owned name; arbitrary overrides are not collision-safe. If a shared runtime is active,
+verify its health after both targets complete.
+
 Use focused pytest, Ruff, or script targets for diagnosis, but PR evidence should state whether the
 full repo-native target or a focused target was run.
 
