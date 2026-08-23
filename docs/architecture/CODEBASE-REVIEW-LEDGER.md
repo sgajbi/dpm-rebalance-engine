@@ -18,6 +18,8 @@
     workflow catalogs are built, including fail-closed handling for a future required dependency.
   - `src/api/capabilities/supportability.py` counts required unavailable dependencies as degraded,
     while preserving ready and total dependency counts for observability.
+  - `src/api/capabilities/models.py` and the generated API vocabulary inventory publish the new
+    readiness field in both the OpenAPI example and canonical attribute/route metadata.
   - `tests/unit/advisory/api/test_api_integration_capabilities.py` proves optional unconfigured
     Performance is ready/non-degrading and that an enabled capability declaration makes it
     required/degrading.
