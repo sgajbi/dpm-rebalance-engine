@@ -222,7 +222,7 @@
 - Scope: deterministic duplicate-code regression enforcement for `src` and `scripts`
 - Pattern: aggregate quality and coverage gates did not prevent new copy/paste fragments from
   entering the repository when the existing duplicate inventory remained below a broad threshold.
-- Status: Implemented on the feature branch; exact-mainline closure pending
+- Status: Hardened on `main` at `66f7135c`; exact-mainline closure validated
 - Finding Class: CI quality gate, maintainability regression prevention, baseline governance
 - Summary: The bounded #495 slice adds a pinned strict jscpd gate with stable normalized clone
   fingerprints. Existing findings are retained only in a reviewed, content-hashed baseline;
@@ -246,16 +246,36 @@
     unsupported output, new-finding failure, resolved-baseline failure, scanner failure,
     policy-version drift, and baseline hash drift; workflow contract tests protect all required
     lanes.
-  - Current feature-branch gate evidence: `43 findings`, `0 new`, policy
-    `lotus-advise-duplicate-code.v1+6936e1cf71d2`.
+- Mainline implementation commits are `86dcd2a8` (`feat(ci): enforce duplicate-code regressions`)
+  and `66f7135c` (`fix(ci): reject resolved duplicate baselines`); the signed feature-head
+  commits were `e3299531` and `55d4f613`.
+- The review lead's verdict on exact feature head `55d4f613` was
+  `VERDICT: mergeable`; no `BLOCKING`, `MUST-FIX`, or `hold` finding remained, and all PR checks
+  were green before merge.
+- Exact-mainline focused validation passed `55` tests; `make quality-baseline-check`,
+  `make duplicate-code-gate` (`43 findings`, `0 new`, policy
+  `lotus-advise-duplicate-code.v1+6936e1cf71d2`), `make dead-code-gate`, the documentation-source
+  reference check, and `git diff --check` all passed. Final feature-head `make check` passed
+  `2652` tests.
+- Isolated checkout-specific Docker validation passed `2650` unit, `66` integration, and `12`
+  E2E tests with `3` governed skips and combined coverage of `97%`; project
+  `lotus-advise-ci-local-lotus-advise-c1cace0b6` was removed and verified clean afterward.
+- Canonical runtime preservation was verified after the isolated lane: product container
+  `f88bf8657604` remained healthy, `/health` and `/health/ready` returned `200`, and the canonical
+  network ID remained `8c57aff70e7f3ac35a7af189cf9dd458d768ae7d455459be329b8749e86ea981`.
+- Wiki publication completed in commit `7bfa42d`; strict source/publication parity returned
+  `DiffCount 0`.
 - Consequence: new duplicate-code findings cannot hide behind aggregate coverage or the reviewed
   inventory; no runtime, API/OpenAPI, persistence, migration, or data-model behavior changes.
 - Documentation decision: repository context, generated quality report, wiki CI guidance, and
   review-ledger source updated because the developer/operator validation surface changed; no
   OpenAPI, migration, or central platform context change is needed.
-- Follow-Up: Unused-dependency, oversized module/function, and trend-comparison gates remain
-  separate bounded #495 slices. Exact-mainline commit, Docker-lane, runtime-preservation, wiki
-  parity, and issue-closure evidence must be added after merge.
+- Follow-Up: The duplicate-code slice is closed on exact mainline. Unused-dependency,
+  oversized module/function, and trend-comparison gates remain separate bounded #495 slices.
+  The review-discovered principal consolidation is tracked in #512; it covers 16 baseline clones
+  across the four proposal principal modules and must preserve their existing API contracts.
+- Issue evidence: #495 records the merged PR, exact-mainline validation, Docker-lane cleanup,
+  canonical-runtime preservation, wiki publication, and the remaining bounded follow-up scope.
 
 ## LA-REV-492-SUPPORTABILITY
 
