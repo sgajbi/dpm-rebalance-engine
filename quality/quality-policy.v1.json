@@ -3,7 +3,17 @@
   "policy_version": "lotus-advise-quality.v1",
   "coverage": {
     "aggregate_min_percent": 97.0,
-    "changed_source_min_percent": 90.0
+    "changed_source_min_percent": 90.0,
+    "small_file_policy": "The same threshold applies to every changed executable statement; no file-size grace is permitted."
   },
-  "exceptions": []
+  "exceptions": {
+    "allowed": false,
+    "entry_schema": {
+      "path": "repository-relative path",
+      "reason": "reviewed justification",
+      "approver": "GitHub identity",
+      "expires_on": "YYYY-MM-DD"
+    },
+    "entries": []
+  }
 }

@@ -81,6 +81,8 @@ def test_coverage_gate_enforces_changed_source_floor_with_versioned_policy() -> 
     assert "quality/quality-policy.v1.json" in makefile
     assert "Enforce changed source coverage floor" in coverage_section
     assert "github.event.pull_request.base.sha" in coverage_section
+    assert "github.event.pull_request.head.sha" in coverage_section
+    assert "Record changed coverage skip outside pull request" in coverage_section
     assert "quality/quality-policy.v1.json" in coverage_section
     assert "Upload changed coverage evidence" in coverage_section
 

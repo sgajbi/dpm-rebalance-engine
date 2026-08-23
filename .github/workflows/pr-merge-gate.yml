@@ -144,6 +144,7 @@ jobs:
           python -m coverage combine coverage-data
           python -m coverage report --fail-under=97
       - name: Enforce changed source coverage floor
+        if: github.event_name == 'pull_request'
         run: |
           python scripts/changed_coverage_gate.py \
             --base-ref "${{ github.event.pull_request.base.sha }}" \
@@ -151,6 +152,13 @@ jobs:
             --coverage-data .coverage \
             --policy quality/quality-policy.v1.json \
             --output output/changed-coverage-gate.json
+      - name: Record changed coverage skip outside pull request
+        if: github.event_name != 'pull_request'
+        run: |
+          python scripts/changed_coverage_gate.py \
+            --policy quality/quality-policy.v1.json \
+            --output output/changed-coverage-gate.json \
+            --skip-reason "PR base/head refs are unavailable for this workflow event"
       - name: Upload changed coverage evidence
         if: always()
         uses: actions/upload-artifact@v7

@@ -14,16 +14,18 @@
   - `quality/quality-policy.v1.json` defines policy version `lotus-advise-quality.v1` and the
     changed-source threshold of 90% with an empty exception set.
   - `scripts/changed_coverage_gate.py` compares pull-request base/head refs, evaluates every
-    changed Python file under `src/`, prints file-level threshold failures, and emits versioned JSON
+    changed executable source lines under `src/`, prints file-level threshold failures, and emits
+    versioned JSON
     evidence with explicit exception provenance.
   - `PR Merge Gate / Coverage Gate (Combined)` runs the new gate after combining unit, integration,
     and E2E coverage artifacts, so the existing required branch-protection context remains hard.
   - `tests/unit/scripts/test_changed_coverage_gate.py` covers uncovered executable lines and policy
     threshold loading; CI workflow contract tests verify policy/script/evidence wiring.
 - Consequence:
-  - A deliberately uncovered changed source path fails the required PR coverage context even when
+  - A deliberately uncovered changed source line fails the required PR coverage context even when
     aggregate coverage remains above 97%; docs-only and test-only changes produce explicit no-op
-    evidence. Duplicate/dead-code, size, and trend gates remain follow-up slices under #495.
+    evidence, and manual non-PR runs record a skip reason. Small files use the same threshold with
+    no grace. Duplicate/dead-code, size, and trend gates remain follow-up slices under #495.
 - Documentation decision: No wiki change; this is developer CI policy and local evidence wiring,
   not an operator workflow or supported product behavior.
 
