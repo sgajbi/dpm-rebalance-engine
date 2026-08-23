@@ -99,6 +99,8 @@ jobs:
         run: make api-vocabulary-gate
       - name: Quality Baseline Freshness
         run: make quality-baseline-check
+      - name: Dead Code Regression Gate
+        run: make dead-code-gate
       - name: Trust Telemetry Freshness
         run: make trust-telemetry-freshness-gate
       - name: Checkout Lotus Platform Contracts
