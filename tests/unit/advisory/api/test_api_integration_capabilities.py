@@ -13,6 +13,11 @@ from src.api.capabilities.dependencies import (
     first_unready_dependency_reason,
     resolve_capability_dependency_status,
 )
+from src.api.capabilities.models import FeatureCapability
+from src.api.capabilities.readiness import (
+    classify_operational_readiness,
+    enabled_capability_dependency_keys,
+)
 from src.api.capabilities.runtime_flags import resolve_capability_runtime_flags
 from src.api.capabilities.service import build_integration_capabilities
 from src.api.capabilities.supportability import build_advisory_supportability
@@ -421,7 +426,7 @@ def test_integration_capabilities_reports_lotus_dependency_readiness(monkeypatch
         "metric_labels": list(ADVISORY_SUPPORTABILITY_METRIC_LABELS),
         "dependency_count": 5,
         "ready_dependency_count": 2,
-        "degraded_dependency_count": 3,
+        "degraded_dependency_count": 2,
         "enabled_feature_count": 16,
         "ready_feature_count": 10,
     }
@@ -653,6 +658,79 @@ def test_integration_capabilities_reports_ready_advisory_supportability(monkeypa
         "enabled_feature_count": 16,
         "ready_feature_count": 16,
     }
+
+
+def test_integration_capabilities_treats_unused_performance_as_optional(monkeypatch):
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8201")
+    monkeypatch.setenv("LOTUS_RISK_BASE_URL", "http://lotus-risk:8130")
+    monkeypatch.setenv("LOTUS_REPORT_BASE_URL", "http://lotus-report:8300")
+    monkeypatch.setenv("LOTUS_AI_BASE_URL", "http://lotus-ai:8400")
+    monkeypatch.delenv("LOTUS_PERFORMANCE_BASE_URL", raising=False)
+
+    with TestClient(app) as client:
+        response = client.get("/platform/capabilities")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["readiness"]["operational_ready"] is True
+    assert payload["readiness"]["degraded"] is False
+    assert payload["readiness"]["degraded_reasons"] == []
+    performance = {item["dependency_key"]: item for item in payload["readiness"]["dependencies"]}[
+        "lotus_performance"
+    ]
+    assert performance["configured"] is False
+    assert performance["operational_ready"] is False
+    assert performance["readiness_basis"] == "not_configured"
+    assert performance["required_by_enabled_capability"] is False
+    assert payload["supportability"]["state"] == "ready"
+    assert payload["supportability"]["reason"] == "advisory_ready"
+    assert payload["supportability"]["dependency_count"] == 5
+    assert payload["supportability"]["ready_dependency_count"] == 4
+    assert payload["supportability"]["degraded_dependency_count"] == 0
+
+
+def test_optional_dependency_becomes_required_when_enabled_capability_declares_it():
+    readiness = {
+        "dependencies": [
+            {
+                "dependency_key": "lotus_performance",
+                "operational_ready": False,
+                "degraded_reason": "LOTUS_PERFORMANCE_DEPENDENCY_UNAVAILABLE",
+            }
+        ]
+    }
+    feature = FeatureCapability(
+        key="advisory.performance.valuation",
+        enabled=True,
+        operational_ready=False,
+        owner_service="ADVISORY",
+        description="Synthetic future capability for dependency classification coverage.",
+        fallback_mode="NONE",
+        dependency_keys=["lotus_performance"],
+        degraded_reason="LOTUS_PERFORMANCE_DEPENDENCY_UNAVAILABLE",
+    )
+
+    optional = classify_operational_readiness(
+        readiness,
+        required_dependency_keys=enabled_capability_dependency_keys(
+            features=[],
+            workflows=[],
+        ),
+    )
+    required = classify_operational_readiness(
+        readiness,
+        required_dependency_keys=enabled_capability_dependency_keys(
+            features=[feature],
+            workflows=[],
+        ),
+    )
+
+    assert optional["operational_ready"] is True
+    assert optional["degraded_reasons"] == []
+    assert optional["dependencies"][0]["required_by_enabled_capability"] is False
+    assert required["operational_ready"] is False
+    assert required["degraded_reasons"] == ["LOTUS_PERFORMANCE_DEPENDENCY_UNAVAILABLE"]
+    assert required["dependencies"][0]["required_by_enabled_capability"] is True
 
 
 def test_integration_capabilities_records_bounded_supportability_metric(monkeypatch):

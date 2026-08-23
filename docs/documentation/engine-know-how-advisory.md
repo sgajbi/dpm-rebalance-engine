@@ -352,6 +352,9 @@ Current capability-truth rule:
 - feature enablement is separated from operational readiness
 - workflow readiness now exposes dependency keys, degraded reasons, and fallback posture where applicable
 - report-request readiness now reflects `lotus-report` dependency truth
+- `/platform/capabilities` publishes every known integration boundary, but only dependencies declared
+  by enabled features or workflows degrade deployment-wide readiness and supportability; optional
+  unconfigured boundaries remain visible with `required_by_enabled_capability=false`
 - execution handoff remains advisory-owned while external provider state stays upstream-owned
 
 Dependency quality gate:

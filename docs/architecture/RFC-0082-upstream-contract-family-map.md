@@ -15,8 +15,10 @@ performance analytics, or risk analytics.
 3. `lotus-core` remains the source-data and simulation-execution authority for advisory proposal
    context.
 4. `lotus-risk` remains the risk methodology authority for advisory risk-lens enrichment.
-5. `lotus-performance` is currently a readiness dependency only; `lotus-advise` does not consume
-   performance analytics data as an input contract.
+5. `lotus-performance` is currently a published integration boundary only; `lotus-advise` does
+   not consume performance analytics data as an input contract. When it is unconfigured and no
+   enabled feature or workflow declares it, Advise publishes that optional posture without
+   degrading deployment-wide readiness or supportability.
 
 ## `lotus-core` Contract Family Map
 
@@ -69,11 +71,14 @@ Environment binding:
 
 ## `lotus-performance` Posture
 
-`lotus-advise` currently checks `lotus-performance` dependency readiness, but it does not consume
-performance analytics as proposal source data. If advisory proposal behavior later depends on
-performance analytics, that dependency must be classified explicitly and should consume
-`lotus-performance` as the analytics authority rather than sourcing performance conclusions from
-`lotus-core` operational reads.
+`lotus-advise` currently publishes `lotus-performance` dependency readiness, but it does not
+consume performance analytics as proposal source data. Its unconfigured `not_configured` row is
+marked `required_by_enabled_capability=false`, so optional absence is visible without becoming a
+deployment-wide degraded signal. If advisory proposal behavior later depends on performance
+analytics, the enabled feature or workflow must declare `lotus-performance` explicitly; the same
+row then becomes required and an unavailable dependency degrades readiness and supportability.
+Advise should consume `lotus-performance` as the analytics authority rather than sourcing
+performance conclusions from `lotus-core` operational reads.
 
 ## Conformance Rules
 

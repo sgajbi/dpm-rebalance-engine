@@ -7,7 +7,11 @@ from src.api.capabilities.models import (
     IntegrationCapabilitiesResponse,
     OperationalReadiness,
 )
-from src.api.capabilities.readiness import build_operational_readiness
+from src.api.capabilities.readiness import (
+    build_operational_readiness,
+    classify_operational_readiness,
+    enabled_capability_dependency_keys,
+)
 from src.api.capabilities.runtime_flags import resolve_capability_runtime_flags
 from src.api.capabilities.supportability import build_advisory_supportability
 from src.api.capabilities.workflow_catalog import build_workflow_capabilities
@@ -29,6 +33,18 @@ def build_integration_capabilities(
         ai_rationale_enabled=runtime_flags.ai_rationale_enabled,
         dependencies=dependencies,
     )
+    workflows = build_workflow_capabilities(
+        lifecycle_enabled=runtime_flags.lifecycle_enabled,
+        ai_rationale_enabled=runtime_flags.ai_rationale_enabled,
+        dependencies=dependencies,
+    )
+    readiness_payload = classify_operational_readiness(
+        readiness_payload,
+        required_dependency_keys=enabled_capability_dependency_keys(
+            features=features,
+            workflows=workflows,
+        ),
+    )
 
     return IntegrationCapabilitiesResponse(
         contract_version="v1",
@@ -44,11 +60,7 @@ def build_integration_capabilities(
         policy_version="advisory.v1",
         supported_input_modes=["stateless", "stateful"],
         features=features,
-        workflows=build_workflow_capabilities(
-            lifecycle_enabled=runtime_flags.lifecycle_enabled,
-            ai_rationale_enabled=runtime_flags.ai_rationale_enabled,
-            dependencies=dependencies,
-        ),
+        workflows=workflows,
         readiness=OperationalReadiness.model_validate(readiness_payload),
         supportability=build_advisory_supportability(
             readiness=readiness_payload,

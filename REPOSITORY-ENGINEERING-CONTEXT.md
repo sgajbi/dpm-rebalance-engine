@@ -541,6 +541,12 @@ Important validation expectations:
 18. HTTP boundary changes should run focused API tests covering host/origin policy, approved
     security headers, validation-error responses, and enterprise denial responses before broader
     merge-gate validation.
+19. `/platform/capabilities` publishes known Lotus integration boundaries with explicit
+    `required_by_enabled_capability` posture. Only dependencies declared by enabled features or
+    workflows degrade deployment-wide readiness and supportability; optional unconfigured
+    dependencies remain visible and use `readiness_basis=not_configured` without degrading the
+    contract. A future feature or workflow must declare its dependency key before that dependency
+    becomes required.
 
 ## Standards And RFCs That Govern This Repository
 
