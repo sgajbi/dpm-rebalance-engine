@@ -74,6 +74,7 @@ def test_local_ci_targets_enforce_quality_baseline_freshness() -> None:
         assert "duplicate-code-gate" in _makefile_target_dependencies(makefile, target)
     for target in ("check", "check-all", "ci", "ci-local"):
         assert "unused-dependency-gate" in _makefile_target_dependencies(makefile, target)
+        assert "oversized-code-gate" in _makefile_target_dependencies(makefile, target)
 
 
 def test_dead_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> None:
@@ -153,6 +154,35 @@ def test_unused_dependency_regression_gate_is_hard_and_versioned_across_ci_lanes
         assert "run: make unused-dependency-gate" in section
         assert "Upload Dependency Hygiene Evidence" in section
         assert "path: output/dependency-hygiene-gate.json" in section
+
+
+def test_oversized_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    policy = Path("quality/oversized-code-policy.v1.json").read_text(encoding="utf-8")
+    baseline = Path("quality/oversized-code-baseline.v1.json").read_text(encoding="utf-8")
+
+    assert "oversized-code-gate" in makefile
+    assert "python -m scripts.oversized_code_gate" in makefile
+    assert '"module_max_lines": 1000' in policy
+    assert '"function_max_lines": 200' in policy
+    assert '"allowed": false' in policy
+    assert '"fingerprint"' in baseline
+    assert '"max_lines"' in baseline
+    assert '"owner"' in baseline
+    assert '"reason"' in baseline
+    assert '"expires_on"' in baseline
+    for workflow_name in ("feature-lane.yml", "pr-merge-gate.yml", "main-releasability.yml"):
+        workflow = _workflow_text(workflow_name)
+        governance_job = (
+            "lint-dependency-governance"
+            if workflow_name == "feature-lane.yml"
+            else "lint-typecheck-governance"
+        )
+        section = _workflow_job_section(workflow, governance_job)
+        assert "Oversized Module/Function Regression Gate" in section
+        assert "run: make oversized-code-gate" in section
+        assert "Upload Oversized Code Evidence" in section
+        assert "path: output/oversized-code-gate.json" in section
 
 
 def test_coverage_gate_enforces_changed_source_floor_with_versioned_policy() -> None:

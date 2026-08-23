@@ -1,0 +1,106 @@
+{
+  "schema_version": "lotus.advise.oversized-code-baseline.v1",
+  "baseline_version": "lotus-advise-oversized-code-baseline.v1",
+  "findings": [
+    {
+      "kind": "module",
+      "path": "scripts/quality_baseline_report.py",
+      "symbol": "__module__",
+      "fingerprint": "oversized-code.v1|module|scripts/quality_baseline_report.py",
+      "max_lines": 1636,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Quality evidence generation remains a large transitional module; split work is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "module",
+      "path": "scripts/validate_cross_service_parity_live.py",
+      "symbol": "__module__",
+      "fingerprint": "oversized-code.v1|module|scripts/validate_cross_service_parity_live.py",
+      "max_lines": 4010,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Live parity certification remains a large transitional orchestration module; split work is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "function",
+      "path": "scripts/quality_baseline_report.py",
+      "symbol": "render_refactor_health_report",
+      "fingerprint": "oversized-code.v1|function|scripts/quality_baseline_report.py|render_refactor_health_report",
+      "max_lines": 494,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Refactor-health report rendering is a transitional formatter; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "function",
+      "path": "scripts/quality_baseline_report.py",
+      "symbol": "render_quality_scorecard",
+      "fingerprint": "oversized-code.v1|function|scripts/quality_baseline_report.py|render_quality_scorecard",
+      "max_lines": 256,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Quality scorecard rendering is a transitional formatter; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "function",
+      "path": "scripts/validate_cross_service_parity_live.py",
+      "symbol": "_assert_live_policy_evaluation_flow",
+      "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_assert_live_policy_evaluation_flow",
+      "max_lines": 252,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Live policy-evaluation certification flow remains a transitional orchestration helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "function",
+      "path": "scripts/validate_cross_service_parity_live.py",
+      "symbol": "_assert_lifecycle_and_delivery_flow",
+      "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_assert_lifecycle_and_delivery_flow",
+      "max_lines": 249,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Live lifecycle certification flow remains a transitional orchestration helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "function",
+      "path": "scripts/validate_cross_service_parity_live.py",
+      "symbol": "_validate_live_proposal_alternatives_paths",
+      "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_validate_live_proposal_alternatives_paths",
+      "max_lines": 230,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Live alternatives certification flow remains a transitional orchestration helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "function",
+      "path": "scripts/validate_cross_service_parity_live.py",
+      "symbol": "_assert_live_proposal_memo_flow",
+      "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_assert_live_proposal_memo_flow",
+      "max_lines": 228,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Live memo certification flow remains a transitional orchestration helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "function",
+      "path": "scripts/validate_cross_service_parity_live.py",
+      "symbol": "_assert_persisted_read_surfaces",
+      "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_assert_persisted_read_surfaces",
+      "max_lines": 271,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Live persisted-read certification flow remains a transitional orchestration helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "kind": "function",
+      "path": "scripts/validate_cross_service_parity_live.py",
+      "symbol": "validate_live_cross_service_parity",
+      "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|validate_live_cross_service_parity",
+      "max_lines": 274,
+      "owner": "lotus-advise-quality-governance",
+      "reason": "Live parity certification orchestration remains a transitional helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
+      "expires_on": "2027-08-24"
+    }
+  ]
+}
