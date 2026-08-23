@@ -208,3 +208,16 @@ def test_gate_rejects_expired_baseline_provenance(tmp_path: Path) -> None:
 
     assert report["exit_code"] == 1
     assert "Expired oversized-code baseline provenance" in report["failures"][0]
+
+
+def test_gate_rejects_baseline_path_traversal_after_policy_version_update(tmp_path: Path) -> None:
+    repo_root, policy_path, output_path = _fixture(tmp_path)
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    policy["baseline"]["path"] = "../outside.json"
+    policy["policy_version"] = expected_policy_version(policy)
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
+
+    report = _run(repo_root, policy_path, output_path)
+
+    assert report["exit_code"] == 1
+    assert "baseline.path must be repository-relative" in report["failures"][0]
