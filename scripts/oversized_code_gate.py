@@ -80,6 +80,21 @@ def _validate_scan_paths(policy: dict[str, Any]) -> tuple[str, ...]:
     return tuple(paths)
 
 
+def _validate_relative_policy_path(value: object, *, field: str) -> str:
+    raw = quality_gate_common.non_empty_string(value, field=field).replace("\\", "/")
+    candidate = Path(raw)
+    normalized = PurePosixPath(raw).as_posix().removeprefix("./")
+    if (
+        candidate.is_absolute()
+        or normalized.startswith("/")
+        or ".." in PurePosixPath(normalized).parts
+    ):
+        raise ValueError(f"Oversized-code {field} must be repository-relative: {raw}")
+    if normalized in {"", "."}:
+        raise ValueError(f"Oversized-code {field} must name a repository file: {raw}")
+    return normalized
+
+
 def load_policy(path: Path) -> dict[str, Any]:
     policy = quality_gate_common.load_json_object(path, description="oversized-code policy")
     if policy.get("schema_version") != "lotus.advise.oversized-code-policy.v1":
@@ -109,7 +124,7 @@ def load_policy(path: Path) -> dict[str, Any]:
     baseline = policy.get("baseline")
     if not isinstance(baseline, dict):
         raise ValueError("Oversized-code policy must define baseline provenance.")
-    quality_gate_common.non_empty_string(baseline.get("path"), field="baseline.path")
+    _validate_relative_policy_path(baseline.get("path"), field="baseline.path")
     quality_gate_common.non_empty_string(baseline.get("sha256"), field="baseline.sha256")
     quality_gate_common.non_empty_string(baseline.get("owner"), field="baseline.owner")
     quality_gate_common.non_empty_string(baseline.get("reason"), field="baseline.reason")
@@ -137,6 +152,7 @@ def _expected_fingerprint(kind: str, path: str, symbol: str) -> str:
 def load_baseline(
     path: Path,
     *,
+    repo_root: Path,
     expected_sha256: str,
     thresholds: dict[str, int],
     scan_paths: tuple[str, ...],
@@ -155,7 +171,7 @@ def load_baseline(
         kind = quality_gate_common.non_empty_string(entry.get("kind"), field="kind")
         if kind not in _KINDS:
             raise ValueError(f"Unsupported oversized-code baseline kind: {kind}")
-        path_value = _canonical_path(entry.get("path"), repo_root=path.parent.parent)
+        path_value = _canonical_path(entry.get("path"), repo_root=repo_root)
         if not any(path_value == root or path_value.startswith(f"{root}/") for root in scan_paths):
             raise ValueError(f"Oversized-code baseline path is outside scan_paths: {path_value}")
         symbol = quality_gate_common.non_empty_string(entry.get("symbol"), field="symbol")
@@ -287,9 +303,13 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         policy = load_policy(policy_path)
         thresholds = policy["thresholds"]
         scan_paths = tuple(policy["scan_paths"])
-        baseline_path = repo_root / policy["baseline"]["path"]
+        baseline_relative_path = _validate_relative_policy_path(
+            policy["baseline"]["path"], field="baseline.path"
+        )
+        baseline_path = repo_root / baseline_relative_path
         baseline = load_baseline(
             baseline_path,
+            repo_root=repo_root,
             expected_sha256=policy["baseline"]["sha256"],
             thresholds=thresholds,
             scan_paths=scan_paths,
