@@ -7,6 +7,12 @@ from typing import Annotated, Any, NoReturn
 from fastapi import Header, status
 
 from src.api.proposals.errors import raise_policy_control_http_exception
+from src.api.proposals.principal import (
+    ProposalPrincipalContext,
+    ProposalPrincipalErrors,
+    ProposalPrincipalHeaders,
+    resolve_proposal_principal,
+)
 
 POLICY_PACK_VALIDATE_CAPABILITY = "advisory.policy_pack.validate"
 POLICY_PACK_ACTIVATE_CAPABILITY = "advisory.policy_pack.activate"
@@ -28,6 +34,13 @@ POLICY_CONTROL_CAPABILITY_REQUIRED = "POLICY_CONTROL_CAPABILITY_REQUIRED"
 POLICY_CONTROL_ACTOR_MISMATCH = "POLICY_CONTROL_ACTOR_MISMATCH"
 POLICY_CONTROL_SCOPE_REQUIRED = "POLICY_CONTROL_SCOPE_REQUIRED"
 POLICY_CONTROL_SCOPE_FORBIDDEN = "POLICY_CONTROL_SCOPE_FORBIDDEN"
+
+_PRINCIPAL_ERRORS = ProposalPrincipalErrors(
+    required=POLICY_CONTROL_PRINCIPAL_REQUIRED,
+    invalid=POLICY_CONTROL_PRINCIPAL_INVALID,
+    role_not_authorized=POLICY_CONTROL_ROLE_NOT_AUTHORIZED,
+    capability_required=POLICY_CONTROL_CAPABILITY_REQUIRED,
+)
 
 
 @dataclass(frozen=True)
@@ -54,9 +67,6 @@ class PolicyControlPrincipal:
         }
 
 
-PrincipalHeader = Annotated[str | None, Header()]
-
-
 def resolve_policy_control_principal(
     *,
     required_capability: str,
@@ -77,31 +87,24 @@ def resolve_policy_control_principal(
         str | None, Header(alias="X-Authorized-Portfolio-Id")
     ] = None,
 ) -> PolicyControlPrincipal:
-    actor_id = _required_header(x_actor_id)
-    role = _required_header(x_role).upper()
-    tenant_id = _required_header(x_tenant_id)
-    legal_entity_code = _required_header(x_legal_entity_code).upper()
-    correlation_id = _required_header(x_correlation_id)
-    service_identity = _service_identity(x_service_identity, authorization)
-    capabilities = _capability_set(x_capabilities)
-
-    if (x_principal_status or "ACTIVE").strip().upper() != "ACTIVE":
-        _raise_authn(POLICY_CONTROL_PRINCIPAL_INVALID)
-    if role not in {item.upper() for item in authorized_roles}:
-        _raise_authz(POLICY_CONTROL_ROLE_NOT_AUTHORIZED)
-    if required_capability not in capabilities:
-        _raise_authz(POLICY_CONTROL_CAPABILITY_REQUIRED)
-
-    return PolicyControlPrincipal(
-        actor_id=actor_id,
-        role=role,
-        tenant_id=tenant_id,
-        legal_entity_code=legal_entity_code,
-        correlation_id=correlation_id,
-        service_identity=service_identity,
-        capabilities=frozenset(capabilities),
-        authorized_proposal_id=_optional_header(x_authorized_proposal_id),
-        authorized_portfolio_id=_optional_header(x_authorized_portfolio_id),
+    return resolve_proposal_principal(
+        required_capability=required_capability,
+        authorized_roles=authorized_roles,
+        errors=_PRINCIPAL_ERRORS,
+        principal_factory=_build_policy_control_principal,
+        headers=ProposalPrincipalHeaders(
+            actor_id=x_actor_id,
+            role=x_role,
+            tenant_id=x_tenant_id,
+            legal_entity_code=x_legal_entity_code,
+            correlation_id=x_correlation_id,
+            service_identity=x_service_identity,
+            authorization=authorization,
+            capabilities=x_capabilities,
+            principal_status=x_principal_status,
+            authorized_proposal_id=x_authorized_proposal_id,
+            authorized_portfolio_id=x_authorized_portfolio_id,
+        ),
     )
 
 
@@ -398,11 +401,20 @@ def assert_policy_evaluation_record_scope(
         _raise_authz(POLICY_CONTROL_SCOPE_FORBIDDEN)
 
 
-def _required_header(value: str | None) -> str:
-    normalized = _optional_header(value)
-    if normalized is None:
-        _raise_authn(POLICY_CONTROL_PRINCIPAL_REQUIRED)
-    return normalized
+def _build_policy_control_principal(
+    context: ProposalPrincipalContext,
+) -> PolicyControlPrincipal:
+    return PolicyControlPrincipal(
+        actor_id=context.actor_id,
+        role=context.role,
+        tenant_id=context.tenant_id,
+        legal_entity_code=context.legal_entity_code,
+        correlation_id=context.correlation_id,
+        service_identity=context.service_identity,
+        capabilities=context.capabilities,
+        authorized_proposal_id=context.authorized_proposal_id,
+        authorized_portfolio_id=context.authorized_portfolio_id,
+    )
 
 
 def _optional_header(value: str | None) -> str | None:
@@ -410,19 +422,6 @@ def _optional_header(value: str | None) -> str | None:
         return None
     normalized = value.strip()
     return normalized or None
-
-
-def _service_identity(x_service_identity: str | None, authorization: str | None) -> str:
-    service_identity = _optional_header(x_service_identity)
-    if service_identity is not None:
-        return service_identity
-    if _optional_header(authorization) is not None:
-        return "authorization"
-    _raise_authn(POLICY_CONTROL_PRINCIPAL_REQUIRED)
-
-
-def _capability_set(value: str | None) -> set[str]:
-    return {part.strip() for part in (value or "").split(",") if part.strip()}
 
 
 def _require_scope(value: str | None) -> None:
@@ -477,10 +476,12 @@ def _upper_set(values: Iterable[Any]) -> set[str]:
 
 def _raise_authn(detail: str) -> NoReturn:
     raise_policy_control_http_exception(status_code=status.HTTP_401_UNAUTHORIZED, detail=detail)
+    raise AssertionError("unreachable")  # pragma: no cover
 
 
 def _raise_authz(detail: str) -> NoReturn:
     raise_policy_control_http_exception(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
+    raise AssertionError("unreachable")  # pragma: no cover
 
 
 __all__ = [
