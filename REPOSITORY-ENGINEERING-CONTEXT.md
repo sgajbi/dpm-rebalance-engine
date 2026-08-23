@@ -281,6 +281,10 @@ Repository organization rule:
    ports or dependencies instead of stale helper imports,
 5. when moving behavior out of a flat service module, prefer cohesive subpackages with explicit
    interfaces and retire compatibility wrappers only after downstream contracts are safe.
+6. `src/api/proposals/principal.py` owns shared proposal-principal header normalization,
+   authentication status, role/capability authorization, and service-identity fallback. The
+   surface modules retain their typed principal constructors, error vocabulary, and declarative
+   role/capability policy; do not copy common principal resolution into another proposal surface.
 
 ## Runtime And Integration Boundaries
 
@@ -359,9 +363,10 @@ Boundary rules:
    missing, malformed, over-length, or control-character-bearing; do not reintroduce synthetic
    production defaults such as a hardcoded tenant or service actor,
 21. policy-control write routes must resolve `PolicyControlPrincipal` at the API boundary before
-    application commands run; do not pass caller-supplied actor strings into policy-pack or
-    evaluation state transitions unless they have been bound to the trusted principal and
-    authorized proposal, portfolio, tenant, and legal-entity scope,
+    application commands run through the shared proposal-principal resolver; do not pass
+    caller-supplied actor strings into policy-pack or evaluation state transitions unless they
+    have been bound to the trusted principal and authorized proposal, portfolio, tenant, and
+    legal-entity scope,
 22. finalized policy-evaluation workflow receipts must derive `as_of_date` from explicit
     source-owned context, portfolio, or market-data evidence; current clock time, generated-at
     timestamps, request-body dates, and consumer-supplied dates cannot certify producer as-of

@@ -1,10 +1,15 @@
 from __future__ import annotations
 
-from typing import Annotated, NoReturn
+from typing import Annotated
 
-from fastapi import Header, status
+from fastapi import Header
 
-from src.api.proposals.errors import raise_proposal_api_http_exception
+from src.api.proposals.principal import (
+    ProposalPrincipalContext,
+    ProposalPrincipalErrors,
+    ProposalPrincipalHeaders,
+    resolve_proposal_principal,
+)
 from src.core.advisory_copilot.review_authority import (
     COPILOT_REVIEW_AUTHORIZED_ROLES,
     COPILOT_REVIEW_CAPABILITY,
@@ -15,6 +20,13 @@ COPILOT_REVIEW_PRINCIPAL_REQUIRED = "COPILOT_REVIEW_PRINCIPAL_REQUIRED"
 COPILOT_REVIEW_PRINCIPAL_INVALID = "COPILOT_REVIEW_PRINCIPAL_INVALID"
 COPILOT_REVIEW_ROLE_NOT_AUTHORIZED = "COPILOT_REVIEW_ROLE_NOT_AUTHORIZED"
 COPILOT_REVIEW_CAPABILITY_REQUIRED = "COPILOT_REVIEW_CAPABILITY_REQUIRED"
+
+_PRINCIPAL_ERRORS = ProposalPrincipalErrors(
+    required=COPILOT_REVIEW_PRINCIPAL_REQUIRED,
+    invalid=COPILOT_REVIEW_PRINCIPAL_INVALID,
+    role_not_authorized=COPILOT_REVIEW_ROLE_NOT_AUTHORIZED,
+    capability_required=COPILOT_REVIEW_CAPABILITY_REQUIRED,
+)
 
 
 def require_advisory_copilot_review_principal(
@@ -34,72 +46,40 @@ def require_advisory_copilot_review_principal(
         str | None, Header(alias="X-Authorized-Portfolio-Id")
     ] = None,
 ) -> CopilotReviewPrincipal:
-    actor_id = _required_header(x_actor_id)
-    role = _required_header(x_role).upper()
-    tenant_id = _required_header(x_tenant_id)
-    legal_entity_code = _required_header(x_legal_entity_code).upper()
-    correlation_id = _required_header(x_correlation_id)
-    service_identity = _service_identity(x_service_identity, authorization)
-    capabilities = _capability_set(x_capabilities)
+    return resolve_proposal_principal(
+        required_capability=COPILOT_REVIEW_CAPABILITY,
+        authorized_roles=COPILOT_REVIEW_AUTHORIZED_ROLES,
+        errors=_PRINCIPAL_ERRORS,
+        principal_factory=_build_copilot_review_principal,
+        headers=ProposalPrincipalHeaders(
+            actor_id=x_actor_id,
+            role=x_role,
+            tenant_id=x_tenant_id,
+            legal_entity_code=x_legal_entity_code,
+            correlation_id=x_correlation_id,
+            service_identity=x_service_identity,
+            authorization=authorization,
+            capabilities=x_capabilities,
+            principal_status=x_principal_status,
+            authorized_proposal_id=x_authorized_proposal_id,
+            authorized_portfolio_id=x_authorized_portfolio_id,
+        ),
+    )
 
-    if (x_principal_status or "ACTIVE").strip().upper() != "ACTIVE":
-        _raise_authn(COPILOT_REVIEW_PRINCIPAL_INVALID)
-    if role not in COPILOT_REVIEW_AUTHORIZED_ROLES:
-        _raise_authz(COPILOT_REVIEW_ROLE_NOT_AUTHORIZED)
-    if COPILOT_REVIEW_CAPABILITY not in capabilities:
-        _raise_authz(COPILOT_REVIEW_CAPABILITY_REQUIRED)
 
+def _build_copilot_review_principal(
+    context: ProposalPrincipalContext,
+) -> CopilotReviewPrincipal:
     return CopilotReviewPrincipal(
-        actor_id=actor_id,
-        role=role,
-        tenant_id=tenant_id,
-        legal_entity_code=legal_entity_code,
-        correlation_id=correlation_id,
-        service_identity=service_identity,
-        capabilities=frozenset(capabilities),
-        authorized_proposal_id=_optional_header(x_authorized_proposal_id),
-        authorized_portfolio_id=_optional_header(x_authorized_portfolio_id),
-    )
-
-
-def _required_header(value: str | None) -> str:
-    normalized = _optional_header(value)
-    if normalized is None:
-        _raise_authn(COPILOT_REVIEW_PRINCIPAL_REQUIRED)
-    return normalized
-
-
-def _optional_header(value: str | None) -> str | None:
-    if value is None:
-        return None
-    normalized = value.strip()
-    return normalized or None
-
-
-def _service_identity(x_service_identity: str | None, authorization: str | None) -> str:
-    service_identity = _optional_header(x_service_identity)
-    if service_identity is not None:
-        return service_identity
-    if _optional_header(authorization) is not None:
-        return "authorization"
-    _raise_authn(COPILOT_REVIEW_PRINCIPAL_REQUIRED)
-
-
-def _capability_set(value: str | None) -> set[str]:
-    return {part.strip() for part in (value or "").split(",") if part.strip()}
-
-
-def _raise_authn(detail: str) -> NoReturn:
-    raise_proposal_api_http_exception(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=detail,
-    )
-
-
-def _raise_authz(detail: str) -> NoReturn:
-    raise_proposal_api_http_exception(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail=detail,
+        actor_id=context.actor_id,
+        role=context.role,
+        tenant_id=context.tenant_id,
+        legal_entity_code=context.legal_entity_code,
+        correlation_id=context.correlation_id,
+        service_identity=context.service_identity,
+        capabilities=context.capabilities,
+        authorized_proposal_id=context.authorized_proposal_id,
+        authorized_portfolio_id=context.authorized_portfolio_id,
     )
 
 

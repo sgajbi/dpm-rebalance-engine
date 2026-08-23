@@ -1,5 +1,54 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-512-PROPOSAL-PRINCIPAL-OWNER
+
+- Scope: trusted principal resolution across the four proposal API surface modules
+- Pattern: advisor cockpit, advisory copilot review, idea intake, and policy control each carried
+  a copy of the same header normalization, service-identity fallback, principal-status check,
+  role authorization, and capability authorization logic. The repeated implementation created 16
+  duplicate-code baseline clones and allowed security-boundary behavior to drift by surface.
+- Status: Implemented on the feature branch; exact-mainline closure pending
+- Finding Class: API boundary architecture, authorization consistency, duplicate-code reduction
+- Summary: GitHub issue #512 consolidates common principal resolution behind
+  `src/api/proposals/principal.py` while preserving each domain principal type and surface-owned
+  authorization vocabulary. `ProposalPrincipalHeaders` is the typed handoff into the shared owner;
+  the four surface modules retain only their public FastAPI dependency signatures, declarative
+  role/capability policy, error details, and typed principal factories. Policy-specific proposal,
+  portfolio, tenant, and legal-entity scope assertions remain policy-owned.
+- Evidence:
+  - `ProposalPrincipalContext` preserves normalized actor, role, tenant, legal entity,
+    correlation, service identity, capabilities, and optional surface scopes. The idea-intake
+    `route-correlation-pending` compatibility fallback remains explicit and unchanged.
+  - Existing public dependency signatures and domain principal constructors remain in place; no
+    OpenAPI, migration, persistence, data-model, Gateway, Workbench, auth-policy, or RFC-0002
+    boundary change is intended.
+  - `tests/unit/advisory/api/test_proposal_principal_resolution.py` adds cross-surface
+    characterization coverage for normalized success construction, authorization fallback,
+    optional scope preservation, correlation compatibility, and consistent inactive-principal
+    rejection. Existing advisor cockpit, copilot, idea-intake, policy-pack, and policy-evaluation
+    API suites remain green (`76 passed`), with the new suite at `12 passed`.
+  - `make duplicate-code-gate` passes with `37 findings`, `0 new`; the reviewed baseline removes
+    six resolved fingerprints from the prior 43-finding inventory, records baseline version v2,
+    and updates the policy content fingerprint. No duplicate exception was added.
+  - The repository-native `make check` passed on the feature branch with `2,670` unit tests. The
+    separate full-coverage command exposed an existing local aggregate-floor discrepancy:
+    `make test-all-fast` reported `2,739 passed`, `12 skipped`, and `96.58%` on the feature branch;
+    a clean exact-`main` audit independently reported `2,727 passed`, `12 skipped`, and `96.51%`.
+    The changed-source gate remains the slice-specific control and requires a committed head for
+    final evidence; no threshold was weakened. This aggregate discrepancy is retained as open
+    #495 quality-gate follow-up rather than presented as green coverage evidence.
+- Consequence: All four proposal API boundaries now share one normalization and authorization
+  implementation, reducing drift risk and removing the reviewed principal clone inventory without
+  changing accepted or rejected request contracts.
+- Documentation decision: repository context and review ledger updated because module ownership
+  and the durable review finding changed. No wiki source change is needed because no operator
+  workflow, supported API behavior, or runbook command changed; no OpenAPI, migration, or central
+  platform-context change is needed.
+- Follow-Up: After merge, record the exact mainline commit, full focused/repository-native gates,
+  issue evidence, and branch/worktree reconciliation before closing #512. The baseline/policy
+  version update must remain paired with the implementation in the same merge path.
+- Issue evidence: GitHub issue #512 tracks acceptance and the merge/validation closure record.
+
 ## LA-REV-502-CI-LOCAL-SPECTRAL-TOOLCHAIN
 
 - Scope: CI-local Docker OpenAPI/Spectral toolchain parity
