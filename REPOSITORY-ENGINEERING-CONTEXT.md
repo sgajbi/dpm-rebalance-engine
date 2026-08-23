@@ -547,6 +547,11 @@ Important validation expectations:
     dependencies remain visible and use `readiness_basis=not_configured` without degrading the
     contract. A future feature or workflow must declare its dependency key before that dependency
     becomes required.
+20. PR coverage quality retains the aggregate 97% floor and additionally enforces the versioned
+    `quality/quality-policy.v1.json` changed-source threshold through
+    `scripts/changed_coverage_gate.py`. The gate compares the pull request base/head, reports every
+    changed Python file under `src/` with measured and threshold percentages, and emits
+    `output/changed-coverage-gate.json`; it has no exceptions in this initial slice.
 
 ## Standards And RFCs That Govern This Repository
 

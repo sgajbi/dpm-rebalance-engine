@@ -71,6 +71,20 @@ def test_local_ci_targets_enforce_quality_baseline_freshness() -> None:
         assert "quality-baseline-check" in _makefile_target_dependencies(makefile, target)
 
 
+def test_coverage_gate_enforces_changed_source_floor_with_versioned_policy() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    workflow = _workflow_text("pr-merge-gate.yml")
+    coverage_section = _workflow_job_section(workflow, "coverage-gate")
+
+    assert "changed-coverage-gate" in makefile
+    assert "scripts/changed_coverage_gate.py" in makefile
+    assert "quality/quality-policy.v1.json" in makefile
+    assert "Enforce changed source coverage floor" in coverage_section
+    assert "github.event.pull_request.base.sha" in coverage_section
+    assert "quality/quality-policy.v1.json" in coverage_section
+    assert "Upload changed coverage evidence" in coverage_section
+
+
 def test_local_ci_targets_enforce_trust_telemetry_freshness() -> None:
     makefile = Path("Makefile").read_text(encoding="utf-8")
 

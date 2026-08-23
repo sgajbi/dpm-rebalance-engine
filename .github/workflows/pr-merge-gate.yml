@@ -125,6 +125,8 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -141,6 +143,21 @@ jobs:
         run: |
           python -m coverage combine coverage-data
           python -m coverage report --fail-under=97
+      - name: Enforce changed source coverage floor
+        run: |
+          python scripts/changed_coverage_gate.py \
+            --base-ref "${{ github.event.pull_request.base.sha }}" \
+            --head-ref "${{ github.event.pull_request.head.sha }}" \
+            --coverage-data .coverage \
+            --policy quality/quality-policy.v1.json \
+            --output output/changed-coverage-gate.json
+      - name: Upload changed coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: changed-coverage-gate-evidence
+          path: output/changed-coverage-gate.json
+          if-no-files-found: error
 
   postgres-migration-smoke:
     name: PR Merge Gate / Postgres Migration Smoke
