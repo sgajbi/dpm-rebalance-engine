@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "e11eed3ae9c718c9abcfad65ff4ebfa9e0d0de8a819e29704803b4d85e527f74"
+license-inventory-sha256 = "35153e7c924db25fbca452f147ba609820616075b8420f726123005927a894ea"
 
 [[requirement-files]]
 group = "development"
@@ -743,7 +743,7 @@ requirement-hashes = ["c7b32c25b11590581a85a3b4d7432700a5b7795bef3d209174dfdaa10
 
 [[package]]
 name = "stevedore"
-version = "5.9.0"
+version = "5.9.1"
 direct = false
 groups = ["development"]
 requirement-files = []
