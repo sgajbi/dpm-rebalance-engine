@@ -9,7 +9,7 @@
   duplicate-code baseline entries and allowed security-boundary behavior to drift by surface. The
   six resolution/authorization logic entries are now removed; ten declarative dependency-signature
   entries remain and are explicitly documented below.
-- Status: Implemented on the feature branch; exact-mainline closure pending
+- Status: Implemented and merged to `main`; exact-mainline closure complete
 - Finding Class: API boundary architecture, authorization consistency, duplicate-code reduction
 - Summary: GitHub issue #512 consolidates common principal resolution behind
   `src/api/proposals/principal.py` while preserving each domain principal type and surface-owned
@@ -48,6 +48,13 @@
     The changed-source gate remains the slice-specific control and requires a committed head for
     final evidence; no threshold was weakened. This aggregate discrepancy is retained as open
     #495 quality-gate follow-up rather than presented as green coverage evidence.
+  - PR #516 merged by the repository-approved rebase method. Exact `main` is
+    `066e4af94dac44a82e710f6c529971e8ad5617eb`; the Main Releasability Gate run
+    `32664375628` passed its exact-revision assertion, coverage, unit/integration/e2e,
+    migration/startup/guardrail, Docker, security/dependency/license, and image
+    SBOM/signing/provenance lanes. Exact-mainline focused compatibility tests passed `88`,
+    and exact-mainline `make check` passed `2,670` unit tests with the duplicate-code,
+    dead-code, quality-baseline, and documentation-reference gates green.
 - Consequence: All four proposal API boundaries now share one normalization and authorization
   implementation, reducing drift risk and removing the reviewed resolution/authorization clone
   inventory without changing accepted or rejected request contracts. The remaining declarative
@@ -56,10 +63,13 @@
   and the durable review finding changed. No wiki source change is needed because no operator
   workflow, supported API behavior, or runbook command changed; no OpenAPI, migration, or central
   platform-context change is needed.
-- Follow-Up: After merge, record the exact mainline commit, full focused/repository-native gates,
-  issue evidence, and branch/worktree reconciliation before closing #512. The baseline/policy
-  version update must remain paired with the implementation in the same merge path.
-- Issue evidence: GitHub issue #512 tracks acceptance and the merge/validation closure record.
+- Follow-Up: No remaining #512 action. The baseline/policy version update, implementation, ledger
+  correction, and acceptance amendment are all on the merged mainline path. The optional shared
+  header-parameters dependency remains a future signature-shape slice; the aggregate coverage
+  floor discrepancy remains tracked on #495.
+- Issue evidence: PR #516 merged to `main` at `066e4af94dac44a82e710f6c529971e8ad5617eb`; GitHub
+  issue #512 is closed with reason `completed` after exact-mainline validation and branch/worktree
+  reconciliation.
 
 ## LA-REV-502-CI-LOCAL-SPECTRAL-TOOLCHAIN
 
