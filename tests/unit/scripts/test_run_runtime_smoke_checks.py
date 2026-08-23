@@ -2,10 +2,24 @@ from __future__ import annotations
 
 import io
 import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
 from scripts import run_runtime_smoke_checks
+
+
+def test_runtime_smoke_script_supports_direct_invocation() -> None:
+    completed = subprocess.run(
+        [sys.executable, str(Path("scripts/run_runtime_smoke_checks.py")), "--help"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0
+    assert "postgres-runtime-contracts" in completed.stdout
 
 
 def test_runtime_smoke_compose_uses_checkout_specific_project_override(
