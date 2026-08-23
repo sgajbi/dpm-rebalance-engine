@@ -94,6 +94,42 @@ def test_docker_local_ci_image_supports_changed_coverage_git_diff() -> None:
     assert "apt-get install -y --no-install-recommends git make" in dockerfile
 
 
+def test_docker_local_ci_image_and_workflows_share_pinned_spectral_node_runtime() -> None:
+    dockerfile = Path("Dockerfile.ci-local").read_text(encoding="utf-8")
+
+    assert "FROM node:22.14.0-bookworm-slim AS node-runtime" in dockerfile
+    assert "COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node" in dockerfile
+    assert "ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx" in dockerfile
+    assert "node --version" in dockerfile
+    assert "npm --version" in dockerfile
+    assert "npx --version" in dockerfile
+
+    for workflow_name in (
+        "feature-lane.yml",
+        "pr-merge-gate.yml",
+        "quality-baseline-report.yml",
+        "main-releasability.yml",
+    ):
+        workflow = _workflow_text(workflow_name)
+        assert 'NODE_VERSION: "22.14.0"' in workflow
+        assert "node-version: ${{ env.NODE_VERSION }}" in workflow
+
+
+def test_docker_local_ci_mounts_platform_contracts_for_domain_product_gate() -> None:
+    compose = Path("docker-compose.ci-local.yml").read_text(encoding="utf-8")
+
+    assert "${LOTUS_PLATFORM_ROOT:-../lotus-platform}:/lotus-platform:ro" in compose
+    assert "${LOTUS_REPOSITORIES_ROOT:-..}/lotus-core:/lotus-core:ro" in compose
+    assert "${LOTUS_REPOSITORIES_ROOT:-..}/lotus-performance:/lotus-performance:ro" in compose
+    assert "${LOTUS_REPOSITORIES_ROOT:-..}/lotus-risk:/lotus-risk:ro" in compose
+    assert "${LOTUS_REPOSITORIES_ROOT:-..}/lotus-advise:/lotus-advise:ro" in compose
+    assert "${LOTUS_REPOSITORIES_ROOT:-..}/lotus-report:/lotus-report:ro" in compose
+    assert "${LOTUS_REPOSITORIES_ROOT:-..}/lotus-manage:/lotus-manage:ro" in compose
+    assert "${LOTUS_REPOSITORIES_ROOT:-..}/lotus-gateway:/lotus-gateway:ro" in compose
+    assert "${LOTUS_REPOSITORIES_ROOT:-..}/lotus-idea:/lotus-idea:ro" in compose
+    assert "LOTUS_PLATFORM_ROOT: /lotus-platform" in compose
+
+
 def test_local_ci_targets_enforce_trust_telemetry_freshness() -> None:
     makefile = Path("Makefile").read_text(encoding="utf-8")
 

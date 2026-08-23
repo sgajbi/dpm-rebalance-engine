@@ -13,6 +13,12 @@
   --remove-orphans` is scoped to CI-owned containers, networks, and volumes and cannot collide with
   the product Compose project. `CI_LOCAL_COMPOSE_PROJECT` may override the derived identity only
   when an orchestrator supplies a unique, CI-owned name; arbitrary overrides are not collision-safe.
+  The CI-local image carries the pinned Node `22.14.0` runtime used by the workflow OpenAPI
+  Spectral gate; missing Spectral tooling is a hard failure, not a report-only success. The
+  Docker-local lane also mounts the central Platform contract tree read-only at `/lotus-platform`
+  and all repo-native domain-product source checkouts at their canonical `/lotus-*` paths;
+  `LOTUS_PLATFORM_ROOT` overrides the default sibling platform checkout path `../lotus-platform`,
+  and `LOTUS_REPOSITORIES_ROOT` overrides the default sibling repository root `..`.
 - `make demo-certification-live`: run live app-level demo certification against
   `LOTUS_ADVISE_DEMO_BASE_URL` or `http://127.0.0.1:8000`, writing machine-readable evidence to
   `LOTUS_ADVISE_DEMO_EVIDENCE` or

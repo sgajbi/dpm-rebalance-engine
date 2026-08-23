@@ -77,6 +77,31 @@ def test_spectral_report_records_execution_failure(monkeypatch, tmp_path: Path) 
     assert report["stderr"] == "Error running Spectral!"
 
 
+def test_spectral_report_cli_fails_closed_when_spectral_is_unavailable(
+    monkeypatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        openapi_spectral_report.app,
+        "openapi",
+        lambda: {"paths": {"/advisory/example": {}}},
+    )
+
+    def fake_run(*args, **kwargs) -> CompletedProcess[str]:
+        return CompletedProcess(args=args, returncode=127, stdout="", stderr="node: not found")
+
+    monkeypatch.setattr(openapi_spectral_report.subprocess, "run", fake_run)
+    output_path = tmp_path / "spectral-report.json"
+
+    exit_code = openapi_spectral_report.main(
+        ["--repo-root", str(tmp_path), "--output", str(output_path)]
+    )
+
+    assert exit_code == 1
+    report = json.loads(output_path.read_text(encoding="utf-8"))
+    assert report["spectralExecutable"] is False
+    assert report["returnCode"] == 127
+
+
 def test_spectral_report_accepts_empty_success_output(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         openapi_spectral_report.app,
