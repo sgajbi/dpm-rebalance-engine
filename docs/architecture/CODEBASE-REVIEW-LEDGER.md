@@ -1,12 +1,12 @@
 # Lotus Advise Codebase Review Ledger
 
-## LA-REV-492
+## LA-REV-492-SUPPORTABILITY
 
 - Scope: `/platform/capabilities` dependency readiness and supportability classification
 - Pattern: Deployment-wide degradation must be derived from dependencies declared by enabled
   feature and workflow boundaries; optional integration adapters must remain observable without
   falsely reporting the whole advisory surface as degraded.
-- Status: Hardened on feature branch; merge and exact-mainline validation pending
+- Status: Hardened on `main` at `a9f03ef81d6eb8e861c2f0dc30b27530bb50699a`
 - Finding Class: Supportability, capability contract, dependency ownership, downstream truthfulness
 - Summary: GitHub issue #492 identified that unconfigured `lotus-performance` was counted as a
   deployment-wide degraded dependency even though no enabled Advise feature or workflow consumed
@@ -22,8 +22,10 @@
     readiness field in both the OpenAPI example and canonical attribute/route metadata.
   - `tests/unit/advisory/api/test_api_integration_capabilities.py` proves optional unconfigured
     Performance is ready/non-degrading and that an enabled capability declaration makes it
-    required/degrading.
+    required/degrading; a missing required readiness row is counted as evaluated and degraded.
   - RFC-0082, advisory engineering context, and capability know-how document the ownership rule.
+  - Merged through Advise PR #494; exact-main focused validation passed: 43 capability/contract
+    tests, OpenAPI quality, API vocabulary, documentation references, and quality-baseline freshness.
 - Consequence:
   - Gateway and Workbench consumers receive truthful deployment-wide supportability while retaining
     transparent dependency inventory. Adding a Performance-backed capability requires an explicit
@@ -38,7 +40,7 @@
 - Pattern: Every route placeholder used by a Lotus Advise product declaration must be represented
   in that product's `identifier_refs`; the producer regression test scans the complete declaration
   set rather than protecting only the originally reported lifecycle product.
-- Status: Hardened on feature branch; awaiting producer merge and platform catalog refresh
+- Status: Hardened on `main` at `ba66bf41aba19809c4921282a5116d0f4b567d28`
 - Finding Class: Contract governance, domain vocabulary, cross-repository discovery metadata
 - Summary: GitHub issue #486 identified missing `proposal_id` and `version_no` route identifiers in
   `AdvisoryProposalLifecycleRecord:v1`. The bounded slice extended the same explicit metadata rule
@@ -52,12 +54,13 @@
     from every Advise declaration and fails if any product has an uncovered identifier.
   - Focused declaration validation passes, and the full `make ci` gate passed through unit, integration,
     E2E, coverage, image, and runtime smoke lanes on signed commit `00d63c35`.
-  - Platform vocabulary prerequisite is implemented by signed commit `59b6bd3` in lotus-platform PR
-    #716; generated discovery artifacts remain intentionally deferred until this producer is merged.
+  - Platform vocabulary prerequisite is merged by signed commit `bc6f4c06984d7e335358771c9d40375d87fa95b4`
+    in lotus-platform PR #716; generated discovery artifacts are merged by signed commit
+    `2e0e834e145a295005d9882e4d8e47b76ccfae80` in lotus-platform PR #717.
 - Consequence:
   - Cross-repository discovery can resolve proposal route identity without inferring placeholders,
-    while existing API and persistence compatibility is unchanged. Final closure requires the
-    producer merge followed by platform generated-catalog regeneration from exact Advise main.
+    while existing API and persistence compatibility is unchanged. Advise PR #493 and the two
+    platform prerequisite/catalog PRs are merged; issue #486 is closed as completed.
 - Documentation decision: No wiki change; this is internal contract/discovery metadata with no new
   operator workflow or supported product behavior.
 
