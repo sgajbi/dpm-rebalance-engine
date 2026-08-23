@@ -7,7 +7,7 @@
 - Pattern: the executable deptry inventory was report-only, so a new direct requirement or a
   stale reviewed finding could enter `main` without a measured, owner-accountable regression
   decision.
-- Status: Implementation complete on the feature branch; exact-mainline closure pending review and merge
+- Status: Implemented and merged to `main`; exact-mainline closure complete
 - Finding Class: CI quality gate, dependency hygiene, reproducible evidence
 - Summary: The bounded #495 slice promotes deptry `0.25.1` to a fail-closed no-new-regression
   gate. The known `ci_local_compose_project` local-module false positive is corrected through
@@ -38,16 +38,32 @@
   - The complete repository-native `make check` passed on the implementation state with `2,682`
     unit tests and all configured formatting, typing, architecture, API, migration, security,
     licensing, dead-code, duplicate-code, and dependency-hygiene checks green.
+  - PR #518 merged by the repository-approved rebase/non-squash method. The exact mainline
+    commits are `e787e965` (gate), `956320d0` (evidence/docs), and `7a75e7a3` (shared gate
+    scaffolding fix and ledger implementation state); the signed feature commits were
+    `5e71fa8`, `a50898e`, and `5a30e4c5`.
+  - Exact-mainline local validation at `7a75e7a3` passed `make check` with `2,682` tests;
+    `make unused-dependency-gate` reported `13 findings, 0 new, 0 resolved`, while the
+    dead-code and duplicate-code gates reported `6 reviewed/0 new` and `37/0 new` respectively.
+  - Main Releasability Gate run `32668766404` passed with the exact-revision assertion for
+    `7a75e7a3`, including governance/evidence upload, migration/runtime, coverage, Docker, and
+    image security/provenance lanes.
+  - Repo-authored wiki source was published at wiki commit `07be5a7`; strict parity verification
+    returned `DiffCount 0`. The canonical Advise runtime remained preserved and healthy: product
+    container `f88bf8657604` stayed running/healthy, the canonical network ID remained
+    `8c57aff70e7f3ac35a7af189cf9dd458d768ae7d455459be329b8749e86ea981`, and `/health` plus
+    `/health/ready` returned `200`.
 - Compatibility: CI/developer/evidence behavior only. No runtime, API/OpenAPI, persistence,
   migration, data-model, dependency-version, or lock/license contract change is intended.
 - Documentation decision: dependency hygiene standard, repository context, generated quality
   reports, wiki validation guidance, and this ledger change because the blocking developer/operator
   validation surface changed. No OpenAPI, migration, or platform-wide context change is needed.
-- Follow-Up: Complete signed implementation/review commits, exact-mainline validation, post-merge
-  Main Releasability evidence, wiki publication/parity, issue evidence, and branch reconciliation.
-  Oversized module/function and trend-comparison gates remain separate #495 slices.
+- Follow-Up: The review lead recorded one non-blocking hygiene follow-up: remove the compatibility
+  `__getattr__` helper-path shims after no callers use the old gate-module helper paths. Oversized
+  module/function and trend-comparison gates remain separate #495 slices.
 - Issue evidence: GitHub issue #495 records the bounded objective, measured 14-to-13
-  classification, compatibility boundary, and remaining follow-up scope.
+  classification, compatibility boundary, merged commit/run evidence, wiki publication/parity,
+  canonical-runtime preservation, and remaining follow-up scope.
 
 ## LA-REV-512-PROPOSAL-PRINCIPAL-OWNER
 
