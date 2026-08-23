@@ -6,7 +6,8 @@
 - Pattern: CI-local Compose startup and `down --remove-orphans` cleanup used the repository's
   default Compose project, allowing cleanup to collide with an active product runtime from the
   same checkout.
-- Status: Implemented on the PR branch; exact-mainline closure pending
+- Status: Hardened on `main` at merge commit
+  `7e750943c1b60abd774c2a0a198e8aaea55e2465`; exact-mainline validation passed
 - Finding Class: CI safety, runtime isolation, regression prevention
 - Summary: GitHub issue #500 identified that local CI orchestration needed an explicit, stable
   project boundary. The bounded fix applies one checkout-specific project identity to Makefile and
@@ -25,6 +26,11 @@
     identical regardless of caller directory.
   - The operations runbook, repository engineering context, and wiki source document the runtime
     boundary and the required shared-runtime health verification.
+  - Exact-mainline validation at `7e750943c1b60abd774c2a0a198e8aaea55e2465` passed: 46 focused
+    contract/runtime/workflow tests, full lint/format/monetary-float/import-boundary/complexity
+    gates, mypy across 653 source files, documentation-source validation, and quality-baseline
+    freshness.
+  - Wiki publication completed at `89c604a` with strict source/published parity (`DiffCount 0`).
 - Consequence: With the default derived identity, CI-local cleanup is limited to CI-owned
   containers, networks, and volumes, reducing the risk that local validation removes the canonical
   product Compose runtime. Explicit overrides are safe only when they remain unique and CI-owned.
@@ -32,9 +38,9 @@
 - Documentation decision: Wiki source updated because the local validation/runtime boundary changed;
   no central platform context or skill change is required because the existing governed pattern is
   already established by Lotus CI guidance.
-- Follow-Up: #502 tracks the separate Docker-local Node/Spectral environment defect found during
-  validation. After merge, validate the exact mainline revision, publish and strictly verify the
-  wiki, record the merge SHA and runtime evidence, then close #500.
+- Follow-Up: #502 remains open for the separate Docker-local Node/Spectral environment defect found
+  during validation. Issue #500 closure evidence records merge `7e750943`, exact-mainline
+  validation, wiki publication, and shared-runtime health preservation.
 
 ## LA-REV-495-CI-QUALITY
 
