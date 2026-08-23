@@ -474,7 +474,7 @@
 - Keep Spectral OpenAPI enforcement green while route and schema contracts evolve.
 - Convert the Interrogate docstring inventory into a targeted documentation-quality gate
   after classifying public API and module ownership thresholds.
-- Extend CI quality enforcement with duplicate-code, oversized-module/function, and
+- Extend CI quality enforcement with oversized-module/function and
   machine-readable trend/regression slices; keep reviewed Vulture exceptions expiring.
 - Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate after
   classifying current B-ranked blocks.

@@ -2,6 +2,7 @@
   "name": "lotus-advise",
   "private": true,
   "devDependencies": {
-    "@stoplight/spectral-cli": "6.16.0"
+    "@stoplight/spectral-cli": "6.16.0",
+    "jscpd": "5.0.16"
   }
 }

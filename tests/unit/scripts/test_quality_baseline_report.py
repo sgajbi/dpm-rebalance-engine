@@ -172,6 +172,8 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "make check, make ci, make ci-local" in scorecard
     assert "Feature Lane, PR Merge Gate, and Main Releasability" in scorecard
     assert "Hard no-new-regression Vulture gate" in scorecard
+    assert "Hard no-new-regression jscpd gate" in scorecard
+    assert "make duplicate-code-gate" in baseline
     assert "Enforced plus deptry inventory" in scorecard
     assert "severity-regression gate enforced" in scorecard
     assert "quality/bandit_security_baseline.v1.json" in scorecard
@@ -356,7 +358,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate" in (
         refactor_health
     )
-    assert "duplicate-code, oversized-module/function" in refactor_health
+    assert "oversized-module/function" in refactor_health
     assert "Interrogate docstring inventory" in refactor_health
     assert "Reduce the governed Bandit medium/low baseline before expiry" in refactor_health
     assert "Spectral OpenAPI enforcement" in refactor_health
@@ -389,7 +391,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Proposal idempotency replay delegates event and approval replay matching" in (
         refactor_health
     )
-    assert "Quality evidence freshness and dead-code regression prevention are now enforced" in (
+    assert "Quality evidence freshness, dead-code regression prevention, and duplicate-code" in (
         scorecard
     )
     assert "wiki validation guidance now maps local, Feature Lane, PR Merge Gate" in scorecard

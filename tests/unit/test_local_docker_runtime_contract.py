@@ -42,6 +42,14 @@ def test_ci_local_compose_uses_symmetric_checkout_specific_project_identity() ->
     assert "docker compose -f docker-compose.ci-local.yml down" not in makefile
 
 
+def test_ci_local_compose_installs_locked_node_dependencies_before_quality_gates() -> None:
+    compose_text = Path("docker-compose.ci-local.yml").read_text(encoding="utf-8")
+
+    assert (
+        'command: ["sh", "-lc", "npm ci --ignore-scripts --no-audit --no-fund && make ci-local"]'
+    ) in compose_text
+
+
 def test_ci_local_compose_project_name_is_stable_and_checkout_specific(tmp_path: Path) -> None:
     first_checkout = tmp_path / "first" / "lotus-advise"
     second_checkout = tmp_path / "second" / "lotus-advise"

@@ -674,6 +674,18 @@ def _dead_code_section(context: QualityContext) -> list[str]:
     ]
 
 
+def _duplicate_code_section() -> list[str]:
+    return [
+        "## Duplicate Code",
+        "",
+        "- jscpd is pinned at `5.0.16` in `package-lock.json`.",
+        "- New clone fingerprints are hard-gated by `make duplicate-code-gate`; the reviewed",
+        "  baseline is versioned with owner, reason, expiry, and content-hash provenance.",
+        "- Scanner, parser, policy, or baseline-integrity failures fail closed.",
+        "",
+    ]
+
+
 def _dependency_security_sections(
     context: QualityContext, gates: dict[str, list[str]]
 ) -> list[str]:
@@ -792,6 +804,7 @@ def render_baseline_report(context: QualityContext) -> str:
         *_complexity_section(context),
         *_lint_type_coverage_sections(gates),
         *_dead_code_section(context),
+        *_duplicate_code_section(),
         *_dependency_security_sections(context, gates),
         *_openapi_section(context, gates),
         *_architecture_section(context),
@@ -1279,7 +1292,7 @@ def render_refactor_health_report(context: QualityContext) -> str:
         "- Keep Spectral OpenAPI enforcement green while route and schema contracts evolve.",
         "- Convert the Interrogate docstring inventory into a targeted documentation-quality gate",
         "  after classifying public API and module ownership thresholds.",
-        "- Extend CI quality enforcement with duplicate-code, oversized-module/function, and",
+        "- Extend CI quality enforcement with oversized-module/function and",
         "  machine-readable trend/regression slices; keep reviewed Vulture exceptions expiring.",
         "- Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate after",
         "  classifying current B-ranked blocks.",
@@ -1333,6 +1346,11 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "Dead code",
             "Hard no-new-regression Vulture gate",
             "make dead-code-gate + fingerprinted exception evidence",
+        ),
+        (
+            "Duplicate code",
+            "Hard no-new-regression jscpd gate",
+            "make duplicate-code-gate + fingerprinted baseline evidence",
         ),
         (
             "Dependencies",
@@ -1462,15 +1480,17 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "CI measurement",
             "Quality-baseline freshness was enforced locally, with GitHub CI carrying the "
             "report-only quality artifact lane.",
-            "`make quality-baseline-check` and `make dead-code-gate` now run in `make check`, "
+            "`make quality-baseline-check`, `make dead-code-gate`, and `make duplicate-code-gate` "
+            "now run in `make check`, "
             "`make ci`, `make ci-local`, Feature Lane, PR Merge Gate, and Main Releasability "
             "static governance jobs; workflow contract tests protect local CI target "
             "freshness, demo-assurance checks, parallel runtime jobs, least-privilege "
             "permissions, concurrency, coverage artifact handling, refactored-complexity "
             "enforcement, pull-request-target auto-merge guards, protected-main verification, "
             "and the baseline freshness step.",
-            "Quality evidence freshness and dead-code regression prevention are now enforced "
-            "before merge and after merge, not only during local `make check`.",
+            "Quality evidence freshness, dead-code regression prevention, and duplicate-code "
+            "regression prevention are now enforced before merge and after merge, not only "
+            "during local `make check`.",
         ),
         (
             "Security",
@@ -1537,7 +1557,7 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "- This scorecard proves measurable engineering improvement; it does not claim bank",
             "  certification, regulatory approval, client-ready publication, or production",
             "  deployment approval.",
-            "- Xenon strict thresholds, Deptry fail-on-new-regression, duplicate-code/size",
+            "- Xenon strict thresholds, Deptry fail-on-new-regression, oversized module/function",
             "  thresholds, Bandit baseline reduction, and public API docstring",
             "  thresholds remain governed follow-up work.",
             "",
