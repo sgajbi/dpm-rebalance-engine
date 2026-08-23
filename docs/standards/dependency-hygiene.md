@@ -27,7 +27,7 @@ This repository adopts the platform-wide standard defined in:
   - `make license-ip-gate`
 - Unused-dependency regression gate:
   - `make unused-dependency-gate`
-  - `python scripts/dependency_hygiene_gate.py --policy quality/dependency-hygiene-policy.v1.json --output output/dependency-hygiene-gate.json`
+  - `python -m scripts.dependency_hygiene_gate --policy quality/dependency-hygiene-policy.v1.json --output output/dependency-hygiene-gate.json`
 
 Deptry `0.25.1` is now a fail-closed, no-new-regression gate. The policy and baseline are
 content-hashed and the gate rejects tool-version drift, malformed output, new findings, resolved

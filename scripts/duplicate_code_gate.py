@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import re
@@ -14,6 +13,13 @@ from dataclasses import asdict, dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
+
+from scripts import quality_gate_common
+
+
+def __getattr__(name: str) -> Any:
+    return getattr(quality_gate_common, name)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "quality" / "duplicate-code-policy.v1.json"
@@ -38,14 +44,8 @@ class DuplicateFinding:
         return asdict(self)
 
 
-def _non_empty_string(value: object, *, field: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"Duplicate-code policy field {field!r} must be a non-empty string.")
-    return value
-
-
 def _canonical_path(value: object) -> str:
-    path = _non_empty_string(value, field="path").replace("\\", "/")
+    path = quality_gate_common.non_empty_string(value, field="path").replace("\\", "/")
     if path.startswith("/") or ":/" in path:
         raise ValueError(f"Duplicate-code finding path must be repository-relative: {path}")
     return path.removeprefix("./")
@@ -62,39 +62,19 @@ def _scoped_path(path: str, *, repo_root: Path | None, scan_paths: tuple[str, ..
     return matches[0] if matches else path
 
 
-def policy_content_fingerprint(policy: dict[str, Any]) -> str:
-    content = {key: value for key, value in policy.items() if key != "policy_version"}
-    canonical = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-def expected_policy_version(policy: dict[str, Any]) -> str:
-    version = _non_empty_string(policy.get("policy_version"), field="policy_version")
-    prefix = version.rsplit("+", 1)[0] if "+" in version else version
-    return f"{prefix}+{policy_content_fingerprint(policy)[:12]}"
-
-
-def _load_json(path: Path, *, description: str) -> dict[str, Any]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"Unable to load {description} {path}: {exc}") from exc
-    if not isinstance(payload, dict):
-        raise ValueError(f"{description.capitalize()} must be a JSON object.")
-    return payload
-
-
 def load_policy(path: Path) -> dict[str, Any]:
-    policy = _load_json(path, description="duplicate-code policy")
+    policy = quality_gate_common.load_json_object(path, description="duplicate-code policy")
     if policy.get("schema_version") != "lotus.advise.duplicate-code-policy.v1":
         raise ValueError("Duplicate-code policy has an unsupported schema_version.")
-    version = _non_empty_string(policy.get("policy_version"), field="policy_version")
+    version = quality_gate_common.non_empty_string(
+        policy.get("policy_version"), field="policy_version"
+    )
     if _POLICY_VERSION.fullmatch(version) is None:
         raise ValueError(
             "Duplicate-code policy policy_version must end with '+' and a 12-character "
             "content fingerprint."
         )
-    expected = expected_policy_version(policy)
+    expected = quality_gate_common.expected_policy_version(policy)
     if version != expected:
         raise ValueError(
             "Duplicate-code policy policy_version does not match its content fingerprint; "
@@ -102,7 +82,7 @@ def load_policy(path: Path) -> dict[str, Any]:
         )
     if policy.get("tool") != "jscpd":
         raise ValueError("Duplicate-code policy tool must be jscpd.")
-    _non_empty_string(policy.get("tool_version"), field="tool_version")
+    quality_gate_common.non_empty_string(policy.get("tool_version"), field="tool_version")
     if policy.get("mode") != "strict":
         raise ValueError("Duplicate-code policy mode must remain strict.")
     scan_paths = policy.get("scan_paths")
@@ -133,11 +113,13 @@ def load_policy(path: Path) -> dict[str, Any]:
     baseline = policy.get("baseline")
     if not isinstance(baseline, dict):
         raise ValueError("Duplicate-code policy must define baseline provenance.")
-    _non_empty_string(baseline.get("path"), field="baseline.path")
-    _non_empty_string(baseline.get("sha256"), field="baseline.sha256")
-    _non_empty_string(baseline.get("owner"), field="baseline.owner")
-    _non_empty_string(baseline.get("reason"), field="baseline.reason")
-    expires_on = _non_empty_string(baseline.get("expires_on"), field="baseline.expires_on")
+    quality_gate_common.non_empty_string(baseline.get("path"), field="baseline.path")
+    quality_gate_common.non_empty_string(baseline.get("sha256"), field="baseline.sha256")
+    quality_gate_common.non_empty_string(baseline.get("owner"), field="baseline.owner")
+    quality_gate_common.non_empty_string(baseline.get("reason"), field="baseline.reason")
+    expires_on = quality_gate_common.non_empty_string(
+        baseline.get("expires_on"), field="baseline.expires_on"
+    )
     try:
         if date.fromisoformat(expires_on) < date.today():
             raise ValueError(f"Duplicate-code baseline has expired: {expires_on}")
@@ -156,7 +138,7 @@ def _baseline_fingerprint(baseline: dict[str, Any]) -> str:
 
 
 def load_baseline(path: Path, *, expected_sha256: str) -> set[str]:
-    baseline = _load_json(path, description="duplicate-code baseline")
+    baseline = quality_gate_common.load_json_object(path, description="duplicate-code baseline")
     if baseline.get("schema_version") != "lotus.advise.duplicate-code-baseline.v1":
         raise ValueError("Duplicate-code baseline has an unsupported schema_version.")
     actual_sha256 = _baseline_fingerprint(baseline)
@@ -219,10 +201,10 @@ def parse_jscpd_report(
     for index, raw in enumerate(raw_duplicates):
         if not isinstance(raw, dict):
             raise ValueError(f"jscpd duplicate {index} must be an object.")
-        format_name = _non_empty_string(raw.get("format"), field="format")
+        format_name = quality_gate_common.non_empty_string(raw.get("format"), field="format")
         if format_name not in allowed_formats:
             raise ValueError(f"jscpd reported unsupported format: {format_name}")
-        fragment = _non_empty_string(raw.get("fragment"), field="fragment")
+        fragment = quality_gate_common.non_empty_string(raw.get("fragment"), field="fragment")
         first = _finding_location(
             raw.get("firstFile"),
             field="firstFile",
@@ -384,7 +366,9 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         report.update(
             {
                 "policy_version": policy["policy_version"],
-                "policy_content_fingerprint": policy_content_fingerprint(policy),
+                "policy_content_fingerprint": quality_gate_common.policy_content_fingerprint(
+                    policy
+                ),
                 "tool": policy["tool"],
                 "tool_version": policy["tool_version"],
                 "mode": policy["mode"],
@@ -413,28 +397,20 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         report["failures"] = [str(exc)]
         report["status"] = "failed"
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    if report["failures"]:
-        print("Duplicate-code gate FAILED.")
-        for failure in report["failures"]:
-            print(f"- {failure}")
-        print(f"Machine-readable evidence: {output_path}")
-        return 1
-    print(
-        "Duplicate-code gate passed: "
-        f"{report['counts']['findings']} findings, "
-        f"{report['counts']['new']} new, policy={report['policy_version']}."
+    return quality_gate_common.finish_gate(
+        report,
+        output_path,
+        "Duplicate-code gate",
+        "Duplicate-code gate passed: {findings} findings, {new} new, policy={policy}.",
     )
-    print(f"Machine-readable evidence: {output_path}")
-    return 0
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--policy", type=Path, default=DEFAULT_POLICY_PATH)
-    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_PATH)
-    args = parser.parse_args()
+    args = quality_gate_common.parse_gate_arguments(
+        description=__doc__ or "Duplicate-code regression gate",
+        default_policy_path=DEFAULT_POLICY_PATH,
+        default_output_path=DEFAULT_OUTPUT_PATH,
+    )
     return run_gate(
         repo_root=REPO_ROOT,
         policy_path=args.policy,
