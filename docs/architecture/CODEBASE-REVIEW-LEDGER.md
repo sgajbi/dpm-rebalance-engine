@@ -5,7 +5,8 @@
 - Scope: PR coverage quality beyond the aggregate coverage floor
 - Pattern: A high aggregate coverage percentage can conceal an uncovered changed source path;
   changed-source coverage needs a versioned threshold and machine-readable evidence.
-- Status: Bounded slice implemented on feature branch; merge and exact-mainline validation pending
+- Status: Hardened on `main` at `4763a09abf43a8db9b94196b3d16f7c34503e22d`; exact-mainline
+  validation passed
 - Finding Class: CI quality gate, regression prevention, measurable maintainability
 - Summary: GitHub issue #495 identified that aggregate coverage alone did not prevent a new or
   changed Python source path from entering `main` with weak behavioral regression protection.
@@ -20,7 +21,14 @@
   - `PR Merge Gate / Coverage Gate (Combined)` runs the new gate after combining unit, integration,
     and E2E coverage artifacts, so the existing required branch-protection context remains hard.
   - `tests/unit/scripts/test_changed_coverage_gate.py` covers uncovered executable lines and policy
-    threshold loading; CI workflow contract tests verify policy/script/evidence wiring.
+    threshold loading, including multiline continuation mapping; CI workflow contract tests verify
+    policy/script/evidence wiring and the Docker-local Git prerequisite.
+  - Required PR checks passed on PR #497, including the combined coverage gate, lint/typecheck
+    governance, workflow lint, migration smoke, startup/negative guardrails, integration, unit,
+    E2E, and Docker build checks.
+  - Exact-mainline validation after merge: focused tests `26 passed`, changed-source gate explicit
+    no-op against `origin/main`, documentation source-reference check passed, quality baseline
+    freshness check passed, and `git diff --check` passed.
 - Consequence:
   - A deliberately uncovered changed source line fails the required PR coverage context even when
     aggregate coverage remains above 97%; docs-only and test-only changes produce explicit no-op
