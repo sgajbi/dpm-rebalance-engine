@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import subprocess
@@ -89,7 +90,13 @@ def _coverage_percent(
 ) -> dict[str, Any]:
     _, statements, _, missing, _ = cov.analysis2(str(path))
     missing_statement_lines = set(missing)
-    measured_lines = set(statements) if changed_lines is None else set(statements) & changed_lines
+    measured_lines = (
+        set(statements)
+        if changed_lines is None
+        else _changed_executable_statements(
+            path, statements=set(statements), changed_lines=changed_lines
+        )
+    )
     missing_statement_lines &= measured_lines
     statement_count = len(measured_lines)
     missing_count = len(missing_statement_lines)
@@ -111,6 +118,33 @@ def _coverage_percent(
         "changed_executable_lines": sorted(measured_lines),
         "missing_lines": sorted(missing_statement_lines),
     }
+
+
+def _changed_executable_statements(
+    path: Path,
+    *,
+    statements: set[int],
+    changed_lines: set[int],
+) -> set[int]:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    candidates: dict[int, list[tuple[int, int]]] = {line: [] for line in changed_lines}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.stmt) or node.lineno not in statements:
+            continue
+        end_lineno = getattr(node, "end_lineno", node.lineno)
+        span = end_lineno - node.lineno
+        for changed_line in changed_lines:
+            if node.lineno <= changed_line <= end_lineno:
+                candidates[changed_line].append((span, node.lineno))
+    changed_statements: set[int] = set()
+    for line_candidates in candidates.values():
+        if not line_candidates:
+            continue
+        smallest_span = min(span for span, _ in line_candidates)
+        changed_statements.update(
+            statement_line for span, statement_line in line_candidates if span == smallest_span
+        )
+    return changed_statements
 
 
 def _load_policy(path: Path) -> tuple[str, int | float]:
