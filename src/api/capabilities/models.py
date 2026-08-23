@@ -73,6 +73,7 @@ class IntegrationCapabilitiesResponse(BaseModel):
                             "base_url_env": "LOTUS_CORE_BASE_URL",
                             "configured": False,
                             "operational_ready": False,
+                            "required_by_enabled_capability": True,
                             "runtime_probe_enabled": False,
                             "readiness_basis": "not_configured",
                             "degraded_reason": "LOTUS_CORE_DEPENDENCY_UNAVAILABLE",

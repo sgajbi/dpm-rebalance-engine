@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-07-28T11:39:48.569066+00:00",
+  "generatedAt": "2026-08-23T06:40:01.420098+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -2910,7 +2910,7 @@
       "semanticId": "lotus.degraded_dependency_count",
       "canonicalTerm": "degraded_dependency_count",
       "preferredName": "degraded_dependency_count",
-      "description": "Number of advisory dependency boundaries currently degraded.",
+      "description": "Number of required advisory dependency boundaries currently degraded. Optional unconfigured dependencies are excluded from this count.",
       "example": 10,
       "type": "integer",
       "locations": [
@@ -8533,6 +8533,7 @@
             "fallback_mode": "CONTROLLED_LOCAL_SIMULATION_FALLBACK",
             "operational_ready": false,
             "readiness_basis": "not_configured",
+            "required_by_enabled_capability": true,
             "runtime_probe_enabled": false,
             "service_name": "lotus-core"
           }
@@ -8565,7 +8566,7 @@
       "semanticId": "lotus.ready_dependency_count",
       "canonicalTerm": "ready_dependency_count",
       "preferredName": "ready_dependency_count",
-      "description": "Number of advisory dependency boundaries currently operationally ready.",
+      "description": "Number of advisory dependency boundaries currently operationally ready; this may be lower than dependency_count when an optional dependency is unconfigured.",
       "example": 10,
       "type": "integer",
       "locations": [
@@ -9539,6 +9540,20 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.required_by_enabled_capability",
+      "canonicalTerm": "required_by_enabled_capability",
+      "preferredName": "required_by_enabled_capability",
+      "description": "Whether at least one enabled feature or workflow currently requires this dependency. Optional unconfigured dependencies are published for transparency but do not degrade overall readiness or supportability.",
+      "example": true,
+      "type": "boolean",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "boolean"
       ]
     },
     {
@@ -54781,6 +54796,14 @@
             "type": "boolean",
             "semanticId": "lotus.operational_ready",
             "attributeRef": "#/attributeCatalog/lotus.operational_ready"
+          },
+          {
+            "name": "readiness.dependencies[].required_by_enabled_capability",
+            "location": "body",
+            "required": false,
+            "type": "boolean",
+            "semanticId": "lotus.required_by_enabled_capability",
+            "attributeRef": "#/attributeCatalog/lotus.required_by_enabled_capability"
           },
           {
             "name": "readiness.dependencies[].runtime_probe_enabled",
