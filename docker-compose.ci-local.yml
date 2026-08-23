@@ -40,4 +40,4 @@ services:
       PROPOSAL_POSTGRES_DSN: postgresql://advise:advise@postgres:5432/advise_supportability
       DPM_POSTGRES_INTEGRATION_DSN: postgresql://advise:advise@postgres:5432/advise_supportability
       PROPOSAL_POSTGRES_INTEGRATION_DSN: postgresql://advise:advise@postgres:5432/advise_supportability
-    command: ["sh", "-lc", "make ci-local"]
+    command: ["sh", "-lc", "npm ci --ignore-scripts --no-audit --no-fund && make ci-local"]

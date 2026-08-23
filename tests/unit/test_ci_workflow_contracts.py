@@ -71,6 +71,7 @@ def test_local_ci_targets_enforce_quality_baseline_freshness() -> None:
         assert "quality-baseline-check" in _makefile_target_dependencies(makefile, target)
     for target in ("check", "check-all", "ci", "ci-local"):
         assert "dead-code-gate" in _makefile_target_dependencies(makefile, target)
+        assert "duplicate-code-gate" in _makefile_target_dependencies(makefile, target)
 
 
 def test_dead_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> None:
@@ -93,6 +94,31 @@ def test_dead_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> No
         section = _workflow_job_section(workflow, governance_job)
         assert "Dead Code Regression Gate" in section
         assert "run: make dead-code-gate" in section
+
+
+def test_duplicate_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    package_json = Path("package.json").read_text(encoding="utf-8")
+    policy = Path("quality/duplicate-code-policy.v1.json").read_text(encoding="utf-8")
+    baseline = Path("quality/duplicate-code-baseline.v1.json").read_text(encoding="utf-8")
+
+    assert "duplicate-code-gate" in makefile
+    assert "scripts/duplicate_code_gate.py" in makefile
+    assert '"jscpd": "5.0.16"' in package_json
+    assert '"max_new_findings": 0' in policy
+    assert '"tool_version": "5.0.16"' in policy
+    assert '"mode": "strict"' in policy
+    assert '"fingerprints"' in baseline
+    for workflow_name in ("feature-lane.yml", "pr-merge-gate.yml", "main-releasability.yml"):
+        workflow = _workflow_text(workflow_name)
+        governance_job = (
+            "lint-dependency-governance"
+            if workflow_name == "feature-lane.yml"
+            else "lint-typecheck-governance"
+        )
+        section = _workflow_job_section(workflow, governance_job)
+        assert "Duplicate Code Regression Gate" in section
+        assert "run: make duplicate-code-gate" in section
 
 
 def test_coverage_gate_enforces_changed_source_floor_with_versioned_policy() -> None:

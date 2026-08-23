@@ -1,0 +1,35 @@
+{
+  "schema_version": "lotus.advise.duplicate-code-policy.v1",
+  "policy_version": "lotus-advise-duplicate-code.v1+6936e1cf71d2",
+  "tool": "jscpd",
+  "tool_version": "5.0.16",
+  "mode": "strict",
+  "scan_paths": [
+    "src",
+    "scripts"
+  ],
+  "formats": [
+    "python",
+    "sql"
+  ],
+  "min_tokens": 100,
+  "min_lines": 10,
+  "max_new_findings": 0,
+  "baseline": {
+    "path": "quality/duplicate-code-baseline.v1.json",
+    "sha256": "2dcdc70e3227f02c28275e41c9e0a89b78a927bdb06743048b621bbb931f390f",
+    "owner": "lotus-advise-quality",
+    "reason": "Reviewed duplicate inventory at hard-gate introduction; new clone fingerprints must fail closed.",
+    "expires_on": "2027-08-23"
+  },
+  "exceptions": {
+    "allowed": false,
+    "entry_schema": {
+      "fingerprint": "jscpd.v1 normalized clone fingerprint",
+      "owner": "GitHub identity",
+      "reason": "reviewed justification",
+      "expires_on": "YYYY-MM-DD"
+    },
+    "entries": []
+  }
+}

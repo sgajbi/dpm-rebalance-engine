@@ -101,6 +101,8 @@ jobs:
         run: make quality-baseline-check
       - name: Dead Code Regression Gate
         run: make dead-code-gate
+      - name: Duplicate Code Regression Gate
+        run: make duplicate-code-gate
       - name: Trust Telemetry Freshness
         run: make trust-telemetry-freshness-gate
       - name: Checkout Lotus Platform Contracts

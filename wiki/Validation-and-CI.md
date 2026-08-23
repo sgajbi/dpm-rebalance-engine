@@ -23,8 +23,15 @@ Vulture version and fails on any finding outside the versioned
 stable fingerprint, owner, reason, and expiry date; scanner or parser failures fail closed. The
 policy version ends with a 12-character content fingerprint, so changing policy content without
 an explicit version update fails closed and keeps evidence comparable. This gate covers new
-dead/unused-code regressions only. Duplicate-code, unused-dependency, oversized module/function,
-and trend-comparison gates remain separately bounded quality work.
+dead/unused-code regressions only.
+
+The same fast static lanes also run `make duplicate-code-gate`. It scans `src` and `scripts` with
+pinned jscpd `5.0.16` in strict mode, requiring at least 100 tokens and 10 lines per clone. The
+reviewed 43-finding inventory is committed as stable content fingerprints with owner, reason,
+expiry, and policy/baseline hash provenance; any new fingerprint or scanner, parser, policy, or
+baseline-integrity failure blocks the lane. This gate is CI/developer evidence only and does not
+change runtime, API, persistence, migration, or data-model behavior. Unused-dependency,
+oversized module/function, and trend-comparison gates remain separately bounded quality work.
 
 ## Reader Map
 
@@ -38,11 +45,11 @@ and trend-comparison gates remain separately bounded quality work.
 
 | Lane | Primary proof | What it protects |
 | --- | --- | --- |
-| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, dead-code regression gate, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
-| Local PR-grade gate | `make ci` | Dependency health, static governance including the dead-code regression gate, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
-| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, dependency governance including dead-code regression, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
-| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck/dead-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
-| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same static dead-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
+| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, dead-code and duplicate-code regression gates, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
+| Local PR-grade gate | `make ci` | Dependency health, static governance including dead-code and duplicate-code regression gates, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
+| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, dependency governance including dead-code and duplicate-code regression gates, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
+| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck/dead-code/duplicate-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
+| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same static dead-code/duplicate-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
 | Report-only quality evidence | `Quality Baseline / Report Only` and `make quality-baseline` | Trend evidence for code health and refactoring scorecards. Report-only signals should not be promoted until deterministic, low-noise, locally runnable, and policy-backed. |
 
 ```mermaid
@@ -68,6 +75,7 @@ make ci-local
 make ci-local-docker
 make quality-baseline-check
 make dead-code-gate
+make duplicate-code-gate
 make demo-assurance-gate
 make demo-certification-live
 make security-audit
@@ -144,30 +152,34 @@ The current blocking posture is intentionally high-signal:
    evidence to reference real regression tests.
 10. `make quality-baseline-check`
    blocks stale committed quality report and scorecard truth.
-10. `make migration-rollout-contract-gate`
+11. `make duplicate-code-gate`
+   runs strict jscpd against `src` and `scripts`, compares normalized clone fingerprints with
+   the reviewed baseline, and fails on new findings or any tool/parser/policy/baseline-integrity
+   failure. Baseline changes require a policy hash/version update and remain reviewable in Git.
+12. `make migration-rollout-contract-gate`
    validates every checked-in Postgres migration has explicit namespace coverage, rollout phase,
    old/new application compatibility, lock and online behavior, backfill checkpoint/resume/quarantine
    posture, rollback limits, and non-production rehearsal evidence.
-11. `make bandit-severity-regression-gate`
+13. `make bandit-severity-regression-gate`
    blocks high-severity Bandit findings and fails on any new, stale, expired, or worsened
    medium/low finding relative to `quality/bandit_security_baseline.v1.json`.
-12. `make security-audit`
+14. `make security-audit`
    runs dependency health with audit posture and the Bandit severity-regression gate in PR-grade
    paths.
-13. `make release-image-provenance-gate`
+15. `make release-image-provenance-gate`
      blocks drift in Dockerfile build metadata args, OCI labels, Docker build arguments, and
      support-safe metadata naming before the image is built or pushed.
-14. `make dependency-lock-gate`
+16. `make dependency-lock-gate`
      validates `uv.lock` as the generated mirror of the requirements install strategy and
      dependency inventory.
-15. `make license-ip-gate`
+17. `make license-ip-gate`
      validates the committed runtime/development dependency license inventory and owner-approved
      expiring exceptions in a temporary virtual environment installed from governed
      runtime/development requirements files with pinned pip/setuptools bootstrap tooling and pip
      isolated from caller configuration.
-16. `make coverage-combined`
+18. `make coverage-combined`
      enforces the combined coverage floor across unit, integration, and e2e suites.
-17. `make postgres-runtime-contracts-local` and `make production-profile-guardrail-negatives-local`
+19. `make postgres-runtime-contracts-local` and `make production-profile-guardrail-negatives-local`
      protect supported runtime startup and production-profile guardrail behavior.
 
 These gates are blocking because they are measured, deterministic, repo-native, and low-noise for
