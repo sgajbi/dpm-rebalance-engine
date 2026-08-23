@@ -59,7 +59,6 @@ class DependencyReadiness(BaseModel):
         examples=[True],
     )
     required_by_enabled_capability: bool = Field(
-        default=True,
         description=(
             "Whether at least one enabled feature or workflow currently requires this "
             "dependency. Optional unconfigured dependencies are published for transparency "
