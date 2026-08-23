@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-20T10:22:27Z",
-  "git_commit_sha": "99a01a211c13b5ce642f66bc18f8ec6c989b8e93",
+  "generated_at_utc": "2026-08-23T04:52:29Z",
+  "git_commit_sha": "b2c973fc900914f68bcb57754c5367004a22f15d",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -1551,7 +1551,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "5.9.0",
+      "installed_version": "5.9.1",
       "license_term": "Apache-2.0",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1559,7 +1559,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "5.9.0"
+      "version": "5.9.1"
     },
     {
       "declared_name": "tabulate",
