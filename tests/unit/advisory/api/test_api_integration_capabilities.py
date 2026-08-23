@@ -514,6 +514,10 @@ def test_integration_capabilities_mark_simulation_degraded_when_core_missing(mon
     )
     assert workflows["advisory_proposal_simulation"]["operational_ready"] is False
     assert dependencies["lotus_core"]["fallback_mode"] == "CONTROLLED_LOCAL_SIMULATION_FALLBACK"
+    assert dependencies["lotus_core"]["required_by_enabled_capability"] is True
+    assert payload["readiness"]["operational_ready"] is False
+    assert payload["readiness"]["degraded"] is True
+    assert "LOTUS_CORE_DEPENDENCY_UNAVAILABLE" in payload["readiness"]["degraded_reasons"]
 
 
 def test_integration_capabilities_mark_core_unready_when_production_probe_fails(monkeypatch):
