@@ -1,5 +1,32 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-CI-QUALITY
+
+- Scope: PR coverage quality beyond the aggregate coverage floor
+- Pattern: A high aggregate coverage percentage can conceal an uncovered changed source path;
+  changed-source coverage needs a versioned threshold and machine-readable evidence.
+- Status: Bounded slice implemented on feature branch; merge and exact-mainline validation pending
+- Finding Class: CI quality gate, regression prevention, measurable maintainability
+- Summary: GitHub issue #495 identified that aggregate coverage alone did not prevent a new or
+  changed Python source path from entering `main` with weak behavioral regression protection.
+  This slice adds the first measurable gate while preserving the existing aggregate 97% floor.
+- Evidence:
+  - `quality/quality-policy.v1.json` defines policy version `lotus-advise-quality.v1` and the
+    changed-source threshold of 90% with an empty exception set.
+  - `scripts/changed_coverage_gate.py` compares pull-request base/head refs, evaluates every
+    changed Python file under `src/`, prints file-level threshold failures, and emits versioned JSON
+    evidence with explicit exception provenance.
+  - `PR Merge Gate / Coverage Gate (Combined)` runs the new gate after combining unit, integration,
+    and E2E coverage artifacts, so the existing required branch-protection context remains hard.
+  - `tests/unit/scripts/test_changed_coverage_gate.py` covers uncovered executable lines and policy
+    threshold loading; CI workflow contract tests verify policy/script/evidence wiring.
+- Consequence:
+  - A deliberately uncovered changed source path fails the required PR coverage context even when
+    aggregate coverage remains above 97%; docs-only and test-only changes produce explicit no-op
+    evidence. Duplicate/dead-code, size, and trend gates remain follow-up slices under #495.
+- Documentation decision: No wiki change; this is developer CI policy and local evidence wiring,
+  not an operator workflow or supported product behavior.
+
 ## LA-REV-492-SUPPORTABILITY
 
 - Scope: `/platform/capabilities` dependency readiness and supportability classification
