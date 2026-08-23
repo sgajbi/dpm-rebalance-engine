@@ -200,7 +200,9 @@ Current repository posture:
 12. repo-native CI is already aligned to explicit lane expectations,
 13. RFC-0086 repo-native declaration onboarding now covers the advisory proposal lifecycle product,
    proposal narrative evidence product, and a bounded tactical house-view affected-cohort product
-   in `contracts/domain-data-products/`, with explicit upstream dependencies,
+   in `contracts/domain-data-products/`, with explicit upstream dependencies; every route placeholder
+   in the complete Advise declaration set must be listed in `identifier_refs` and is enforced by the
+   declaration regression gate against the platform vocabulary,
 14. RFC-0087 trust telemetry proof for `AdvisoryProposalLifecycleRecord`, RFC-0023 trust telemetry
    proof for `ProposalNarrativeEvidence`, and RFC-0026 trust telemetry proof for the advisor
    cockpit operating snapshot and action-item register now live under `contracts/trust-telemetry/`

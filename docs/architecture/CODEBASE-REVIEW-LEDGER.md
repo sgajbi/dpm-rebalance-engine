@@ -1,5 +1,34 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-486
+
+- Scope: RFC-0086 domain-data-product declarations and governed route identity metadata
+- Pattern: Every route placeholder used by a Lotus Advise product declaration must be represented
+  in that product's `identifier_refs`; the producer regression test scans the complete declaration
+  set rather than protecting only the originally reported lifecycle product.
+- Status: Hardened on feature branch; awaiting producer merge and platform catalog refresh
+- Finding Class: Contract governance, domain vocabulary, cross-repository discovery metadata
+- Summary: GitHub issue #486 identified missing `proposal_id` and `version_no` route identifiers in
+  `AdvisoryProposalLifecycleRecord:v1`. The bounded slice extended the same explicit metadata rule
+  across all eight Advise product declarations, added the missing stable identifiers to the platform
+  vocabulary prerequisite, and preserved all route, DTO, OpenAPI, persistence, and runtime behavior.
+- Evidence:
+  - `contracts/domain-data-products/lotus-advise-products.v1.json` declares every route placeholder
+    as an identifier reference, including the previously uncovered proposal, memo, policy, action,
+    copilot, and version identifiers.
+  - `tests/unit/scripts/test_validate_domain_data_product_declarations.py` computes route placeholders
+    from every Advise declaration and fails if any product has an uncovered identifier.
+  - Focused declaration validation passes, and the full `make ci` gate passed through unit, integration,
+    E2E, coverage, image, and runtime smoke lanes on signed commit `00d63c35`.
+  - Platform vocabulary prerequisite is implemented by signed commit `59b6bd3` in lotus-platform PR
+    #716; generated discovery artifacts remain intentionally deferred until this producer is merged.
+- Consequence:
+  - Cross-repository discovery can resolve proposal route identity without inferring placeholders,
+    while existing API and persistence compatibility is unchanged. Final closure requires the
+    producer merge followed by platform generated-catalog regeneration from exact Advise main.
+- Documentation decision: No wiki change; this is internal contract/discovery metadata with no new
+  operator workflow or supported product behavior.
+
 ## LA-REV-933
 
 - Scope: Advisory workspace application boundary
