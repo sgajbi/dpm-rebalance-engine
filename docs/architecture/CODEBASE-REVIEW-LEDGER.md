@@ -5,8 +5,8 @@
 - Scope: PR coverage quality beyond the aggregate coverage floor
 - Pattern: A high aggregate coverage percentage can conceal an uncovered changed source path;
   changed-source coverage needs a versioned threshold and machine-readable evidence.
-- Status: Hardened on `main` at `4763a09abf43a8db9b94196b3d16f7c34503e22d`; exact-mainline
-  validation passed
+- Status: Hardened on `main` at merge commit
+  `6bcb19639f65db888c8343cee004dff145f8f63a`; exact-mainline validation passed
 - Finding Class: CI quality gate, regression prevention, measurable maintainability
 - Summary: GitHub issue #495 identified that aggregate coverage alone did not prevent a new or
   changed Python source path from entering `main` with weak behavioral regression protection.
@@ -33,6 +33,10 @@
     hunks: one full diff is parsed, new-line counts are validated, and parse failures produce
     failed evidence before the no-op success path. The focused parser/gate suite is now `34 passed`,
     including literal `+++ b/` added-content and non-Python-before-Python hunk cases.
+  - PR #499 merged the parser-integrity fixes at `6bcb19639f65db888c8343cee004dff145f8f63a`.
+    Exact-mainline validation on that merge commit passed the focused 34-test suite, Ruff check and
+    format checks, monetary-float guard, documentation-source reference gate, quality-baseline
+    freshness check, changed-source no-op, `git diff --check`, and strict wiki parity.
 - Consequence:
   - A deliberately uncovered changed source line fails the required PR coverage context even when
     aggregate coverage remains above 97%; docs-only and test-only changes produce explicit no-op
