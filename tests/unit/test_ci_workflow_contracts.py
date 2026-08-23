@@ -85,6 +85,13 @@ def test_coverage_gate_enforces_changed_source_floor_with_versioned_policy() -> 
     assert "Record changed coverage skip outside pull request" in coverage_section
     assert "quality/quality-policy.v1.json" in coverage_section
     assert "Upload changed coverage evidence" in coverage_section
+    assert "fetch-depth: 0" in coverage_section
+
+
+def test_docker_local_ci_image_supports_changed_coverage_git_diff() -> None:
+    dockerfile = Path("Dockerfile.ci-local").read_text(encoding="utf-8")
+
+    assert "apt-get install -y --no-install-recommends git make" in dockerfile
 
 
 def test_local_ci_targets_enforce_trust_telemetry_freshness() -> None:
