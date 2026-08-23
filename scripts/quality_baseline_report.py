@@ -1281,7 +1281,7 @@ def render_refactor_health_report(context: QualityContext) -> str:
         "- CI workflow jobs now declare explicit timeouts so feature, PR, main releasability,",
         "  quality-baseline, and auto-merge automation fail closed instead of hanging",
         "  indefinitely.",
-        "- Development requirements pin the report-only quality tools used by committed baseline",
+        "- Development requirements pin the quality tools used by committed baseline",
         "  evidence so GitHub CI and local developer runs measure the same quality surface.",
         "- Bandit security scanning now fails earlier through `make check` and Remote Feature",
         "  Lane for high findings plus new, stale, expired, or worsened medium/low findings.",
@@ -1298,8 +1298,8 @@ def render_refactor_health_report(context: QualityContext) -> str:
         "  classifying current B-ranked blocks.",
         "- Reduce the governed Bandit medium/low baseline before expiry after classifying current",
         "  SQL-construction findings and resolving true positives.",
-        "- Convert the deptry dependency inventory into a fail-on-new-regression gate after",
-        "  classifying current dependency findings.",
+        "- Maintain the deptry no-new-regression baseline with owner, reason, and expiry review",
+        "  as dependency closure and runtime launcher requirements evolve.",
         "- Convert baseline reports into fail-on-new-regression gates before enforcing absolute",
         "  thresholds.",
         "- Continue moving oversized proposal/advisory service modules into focused use-case and",
@@ -1354,8 +1354,8 @@ def render_quality_scorecard(context: QualityContext) -> str:
         ),
         (
             "Dependencies",
-            "Enforced plus deptry inventory",
-            "dependency health check + pip-audit posture + deptry issue count",
+            "Hard no-new-regression deptry gate plus dependency/security checks",
+            "make unused-dependency-gate + dependency health + pip-audit + lock/license gates",
         ),
         (
             "Security",
@@ -1478,9 +1478,10 @@ def render_quality_scorecard(context: QualityContext) -> str:
         ),
         (
             "CI measurement",
-            "Quality-baseline freshness was enforced locally, with GitHub CI carrying the "
-            "report-only quality artifact lane.",
-            "`make quality-baseline-check`, `make dead-code-gate`, and `make duplicate-code-gate` "
+            "Quality-baseline freshness and calibrated dependency/code regression gates are "
+            "enforced in local and GitHub governance lanes.",
+            "`make quality-baseline-check`, `make dead-code-gate`, `make duplicate-code-gate`, "
+            "and `make unused-dependency-gate` "
             "now run in `make check`, "
             "`make ci`, `make ci-local`, Feature Lane, PR Merge Gate, and Main Releasability "
             "static governance jobs; workflow contract tests protect local CI target "
@@ -1488,9 +1489,9 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "permissions, concurrency, coverage artifact handling, refactored-complexity "
             "enforcement, pull-request-target auto-merge guards, protected-main verification, "
             "and the baseline freshness step.",
-            "Quality evidence freshness, dead-code regression prevention, and duplicate-code "
+            "Quality evidence freshness plus dead-code, duplicate-code, and unused-dependency "
             "regression prevention are now enforced before merge and after merge, not only "
-            "during local `make check`.",
+            "during local `make check`; dependency evidence is uploaded by each governance lane.",
         ),
         (
             "Security",
@@ -1506,10 +1507,11 @@ def render_quality_scorecard(context: QualityContext) -> str:
         ),
         (
             "Dependency hygiene",
-            "Dependency audit configured; deptry inventory absent from the scorecard.",
-            f"Deptry config executable with current inventory `{deptry_issue_count}`; "
-            "dependency/security tools inventory recorded.",
-            "Dependency hygiene moved from broad audit posture to measurable inventory.",
+            "Dependency audit and deptry inventory were measured without a regression gate.",
+            f"Deptry `0.25.1` no-new-regression gate passes with current inventory `"
+            f"{deptry_issue_count}`; 13 reviewed baseline entries carry owner/reason/expiry "
+            "provenance and local/CI evidence is emitted.",
+            "New, resolved, malformed, expired, or tool-drifted dependency findings are blocked.",
         ),
         (
             "Observability",
@@ -1526,7 +1528,7 @@ def render_quality_scorecard(context: QualityContext) -> str:
             f"`{interrogate_coverage_percent}`; "
             "scorecard, baseline, and refactor-health reports are generated; wiki validation "
             "guidance now maps local, Feature Lane, PR Merge Gate, Main Releasability, "
-            "report-only, demo-assurance, live-certification, async polling, and "
+            "remaining report-only, demo-assurance, live-certification, async polling, and "
             "wiki-publication controls.",
             "Documentation gaps are explicitly inventoried and tied to generated quality reports, "
             "and agent-facing CI guidance is pinned by a deterministic wiki contract test.",
@@ -1557,8 +1559,8 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "- This scorecard proves measurable engineering improvement; it does not claim bank",
             "  certification, regulatory approval, client-ready publication, or production",
             "  deployment approval.",
-            "- Xenon strict thresholds, Deptry fail-on-new-regression, oversized module/function",
-            "  thresholds, Bandit baseline reduction, and public API docstring",
+            "- Xenon strict thresholds, oversized module/function thresholds, Bandit baseline",
+            "  reduction, and public API docstring",
             "  thresholds remain governed follow-up work.",
             "",
         ]

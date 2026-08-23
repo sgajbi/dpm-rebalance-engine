@@ -1,12 +1,12 @@
 # Lotus Advise Engineering Health Baseline
 
-- Generated At: `2026-08-23T13:27:44.796156+00:00`
+- Generated At: `2026-08-23T21:08:14.339329+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
-- Python Files: `1058`
+- Python Files: `1064`
 - Packages: `41`
-- Modules: `1017`
-- Total Python Lines: `190118`
+- Modules: `1023`
+- Total Python Lines: `192093`
 
 ## Largest Files
 
@@ -21,8 +21,8 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
-| 10 | `tests/unit/advisory/api/test_lotus_ai_advisory_copilot.py` | 1615 |
-| 11 | `scripts/quality_baseline_report.py` | 1614 |
+| 10 | `scripts/quality_baseline_report.py` | 1636 |
+| 11 | `tests/unit/advisory/api/test_lotus_ai_advisory_copilot.py` | 1615 |
 | 12 | `tests/unit/advisory/engine/test_engine_policy_pack_persistence.py` | 1511 |
 | 13 | `tests/unit/advisory/engine/test_engine_advisory_copilot_foundation.py` | 1337 |
 | 14 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1191 |
@@ -38,14 +38,14 @@
 | Rank | Function | File | Line | Lines |
 | ---: | --- | --- | ---: | ---: |
 | 1 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 63 | 508 |
-| 2 | `render_refactor_health_report` | `scripts/quality_baseline_report.py` | 804 | 494 |
+| 2 | `render_refactor_health_report` | `scripts/quality_baseline_report.py` | 817 | 494 |
 | 3 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 398 |
-| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 306 |
+| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 308 |
 | 5 | `validate_live_cross_service_parity` | `scripts/validate_cross_service_parity_live.py` | 3695 | 274 |
 | 6 | `_assert_persisted_read_surfaces` | `scripts/validate_cross_service_parity_live.py` | 3422 | 271 |
-| 7 | `_assert_live_policy_evaluation_flow` | `scripts/validate_cross_service_parity_live.py` | 2491 | 252 |
-| 8 | `_assert_lifecycle_and_delivery_flow` | `scripts/validate_cross_service_parity_live.py` | 1788 | 249 |
-| 9 | `render_quality_scorecard` | `scripts/quality_baseline_report.py` | 1300 | 247 |
+| 7 | `render_quality_scorecard` | `scripts/quality_baseline_report.py` | 1313 | 256 |
+| 8 | `_assert_live_policy_evaluation_flow` | `scripts/validate_cross_service_parity_live.py` | 2491 | 252 |
+| 9 | `_assert_lifecycle_and_delivery_flow` | `scripts/validate_cross_service_parity_live.py` | 1788 | 249 |
 | 10 | `_validate_live_proposal_alternatives_paths` | `scripts/validate_cross_service_parity_live.py` | 608 | 230 |
 | 11 | `_assert_live_proposal_memo_flow` | `scripts/validate_cross_service_parity_live.py` | 2261 | 228 |
 | 12 | `test_resolve_stateful_context_with_lotus_core_builds_simulation_request` | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 1331 | 225 |
@@ -124,6 +124,6 @@
   to render structural metric deltas in later refactoring phases.
 - External scanner inventories should move from measurement to repo-native gates in
   calibrated slices; coverage, import-linter, Spectral, Bandit severity regression,
-  Radon C/D/E/F-ranked complexity, and Vulture no-new-regression checks now have
-  enforced paths while deptry, interrogate, and stricter complexity thresholds remain
-  measured backlog.
+  Radon C/D/E/F-ranked complexity, Vulture no-new-regression, and deptry
+  no-new-regression checks now have enforced paths while interrogate and stricter
+  complexity thresholds remain measured backlog.

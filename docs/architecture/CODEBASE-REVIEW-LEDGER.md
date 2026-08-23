@@ -1,5 +1,47 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-CI-UNUSED-DEPENDENCY
+
+- Scope: deterministic unused-dependency regression enforcement for the pinned Python install
+  manifest
+- Pattern: the executable deptry inventory was report-only, so a new direct requirement or a
+  stale reviewed finding could enter `main` without a measured, owner-accountable regression
+  decision.
+- Status: Implemented on the feature branch; exact-mainline closure pending review and merge
+- Finding Class: CI quality gate, dependency hygiene, reproducible evidence
+- Summary: The bounded #495 slice promotes deptry `0.25.1` to a fail-closed no-new-regression
+  gate. The known `ci_local_compose_project` local-module false positive is corrected through
+  `known_first_party`; the remaining 13 findings are explicitly classified as pinned install
+  closure or runtime-launcher constraints rather than removed from the governed requirements.
+- Evidence:
+  - `quality/dependency-hygiene-policy.v1.json` pins deptry, the JSON report contract, zero new
+    and zero resolved findings, a content fingerprint, baseline SHA-256 provenance, and disabled
+    unreviewed exceptions.
+  - `quality/dependency-hygiene-baseline.v1.json` records 13 current fingerprints with
+    classification, owner, reason, and `2027-08-24` expiry metadata. Requirements, lock, and
+    license evidence remain unchanged.
+  - `scripts/dependency_hygiene_gate.py` validates tool version, policy/baseline integrity,
+    normalized paths and identities, malformed output, duplicate findings, new/resolved findings,
+    and expiry; it emits `output/dependency-hygiene-gate.json` with policy, measured counts,
+    current findings, baseline findings, and provenance.
+  - Focused regression tests cover path normalization, malformed/unsafe reports, tool-version
+    drift, reviewed pass evidence, new finding failure, resolved baseline failure, expired
+    baseline failure, unavailable tooling, and duplicate identities (`11 passed`). Workflow
+    contract tests protect all three GitHub governance lanes.
+  - `make unused-dependency-gate` is wired into `make check`, `make check-all`, `make ci`, and
+    `make ci-local`; Feature Lane, PR Merge Gate, and Main Releasability run it as a named
+    governance step and upload its machine-readable evidence.
+- Compatibility: CI/developer/evidence behavior only. No runtime, API/OpenAPI, persistence,
+  migration, data-model, dependency-version, or lock/license contract change is intended.
+- Documentation decision: dependency hygiene standard, repository context, generated quality
+  reports, wiki validation guidance, and this ledger change because the blocking developer/operator
+  validation surface changed. No OpenAPI, migration, or platform-wide context change is needed.
+- Follow-Up: Complete signed implementation/review commits, exact-mainline validation, post-merge
+  Main Releasability evidence, wiki publication/parity, issue evidence, and branch reconciliation.
+  Oversized module/function and trend-comparison gates remain separate #495 slices.
+- Issue evidence: GitHub issue #495 records the bounded objective, measured 14-to-13
+  classification, compatibility boundary, and remaining follow-up scope.
+
 ## LA-REV-512-PROPOSAL-PRINCIPAL-OWNER
 
 - Scope: trusted principal resolution across the four proposal API surface modules

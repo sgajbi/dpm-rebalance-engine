@@ -511,6 +511,10 @@ Important validation expectations:
 7. Dependency-lock posture is enforced through `make dependency-lock-gate`: `uv.lock` is the
    generated lock mirror for the current requirements install strategy and must match
    requirement-file hashes plus the license/IP dependency inventory hash,
+   and the deptry no-new-regression posture is enforced through `make unused-dependency-gate`
+   with `quality/dependency-hygiene-policy.v1.json` and its owner/reason/expiry baseline. New or
+   resolved normalized dependency fingerprints, expired entries, tool-version drift, malformed
+   reports, and policy/baseline hash drift are blocking in local and GitHub governance lanes,
 8. Trust telemetry freshness is enforced through `make trust-telemetry-freshness-gate`: committed
    snapshots under `contracts/trust-telemetry/` must derive age, freshness state, and blocking
    posture from observed implementation evidence instead of carrying static `current`/zero-age
