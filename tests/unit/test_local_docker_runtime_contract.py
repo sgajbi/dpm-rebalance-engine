@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from scripts.ci_local_compose_project import compose_project_name
+
 
 def test_local_docker_compose_uses_canonical_upstream_urls() -> None:
     compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
@@ -16,6 +18,37 @@ def test_local_docker_compose_uses_canonical_upstream_urls() -> None:
     assert '"core-control.dev.lotus:host-gateway"' in compose_text
     assert '"core-query.dev.lotus:host-gateway"' in compose_text
     assert '"risk.dev.lotus:host-gateway"' in compose_text
+
+
+def test_ci_local_compose_uses_symmetric_checkout_specific_project_identity() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+
+    assert (
+        "CI_LOCAL_COMPOSE_PROJECT ?= $(shell python scripts/ci_local_compose_project.py)"
+        in makefile
+    )
+    assert (
+        'docker compose --project-name "$(CI_LOCAL_COMPOSE_PROJECT)" '
+        "-f docker-compose.ci-local.yml up --build --abort-on-container-exit "
+        "--exit-code-from ci-local ci-local"
+    ) in makefile
+    assert (
+        'docker compose --project-name "$(CI_LOCAL_COMPOSE_PROJECT)" '
+        "-f docker-compose.ci-local.yml down -v --remove-orphans"
+    ) in makefile
+    assert "docker compose -f docker-compose.ci-local.yml down" not in makefile
+
+
+def test_ci_local_compose_project_name_is_stable_and_checkout_specific(tmp_path: Path) -> None:
+    first_checkout = tmp_path / "first" / "lotus-advise"
+    second_checkout = tmp_path / "second" / "lotus-advise"
+
+    first_name = compose_project_name(first_checkout)
+
+    assert first_name == compose_project_name(first_checkout)
+    assert first_name != compose_project_name(second_checkout)
+    assert first_name.startswith("lotus-advise-ci-local-lotus-advise-")
+    assert first_name.replace("-", "").isalnum()
 
 
 def test_runtime_dockerfile_carries_release_metadata_labels_and_readiness_healthcheck() -> None:

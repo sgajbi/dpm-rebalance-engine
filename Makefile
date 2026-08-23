@@ -61,11 +61,13 @@ test-all-parallel:
 # Local execution flow aligned with the Pull Request Merge Gate
 ci-local: verify-dependencies lint typecheck openapi-gate no-alias-gate api-vocabulary-gate domain-data-products-gate trust-telemetry-freshness-gate advisory-data-lifecycle-gate durable-state-recovery-gate docs-source-reference-gate slo-capacity-gate migration-rollout-contract-gate quality-baseline-check migration-smoke security-audit dependency-lock-gate license-ip-gate release-image-provenance-gate coverage-combined changed-coverage-gate
 
+CI_LOCAL_COMPOSE_PROJECT ?= $(shell python scripts/ci_local_compose_project.py)
+
 ci-local-docker:
-	docker compose -f docker-compose.ci-local.yml up --build --abort-on-container-exit --exit-code-from ci-local ci-local
+	docker compose --project-name "$(CI_LOCAL_COMPOSE_PROJECT)" -f docker-compose.ci-local.yml up --build --abort-on-container-exit --exit-code-from ci-local ci-local
 
 ci-local-docker-down:
-	docker compose -f docker-compose.ci-local.yml down -v --remove-orphans
+	docker compose --project-name "$(CI_LOCAL_COMPOSE_PROJECT)" -f docker-compose.ci-local.yml down -v --remove-orphans
 
 check-all: lint typecheck test-all
 
