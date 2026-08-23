@@ -34,6 +34,15 @@ def _completed_diff(diff: str) -> object:
             "diff --git a/src/sample.py b/src/sample.py\n"
             "--- a/src/sample.py\n"
             "+++ b/src/sample.py\n"
+            "@@ -1 +1 @@\n"
+            "-old\n"
+            "+++ b/literal-content\n",
+            {"src/sample.py": {1}},
+        ),
+        (
+            "diff --git a/src/sample.py b/src/sample.py\n"
+            "--- a/src/sample.py\n"
+            "+++ b/src/sample.py\n"
             "@@ -10,2 +10,0 @@\n"
             "-removed\n"
             "-removed again\n",
