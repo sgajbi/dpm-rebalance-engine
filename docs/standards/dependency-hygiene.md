@@ -25,12 +25,19 @@ This repository adopts the platform-wide standard defined in:
   - `make dependency-lock-gate`
   - `make license-ip-inventory`
   - `make license-ip-gate`
-- Report-only dependency inventory:
-  - `python -m deptry . --config pyproject.toml --json-output output/deptry-report.json`
+- Unused-dependency regression gate:
+  - `make unused-dependency-gate`
+  - `python scripts/dependency_hygiene_gate.py --policy quality/dependency-hygiene-policy.v1.json --output output/dependency-hygiene-gate.json`
 
-Deptry is calibrated as report-only. Current quality reports record whether the deptry
-configuration is executable and the current issue count. Findings must be classified before deptry
-becomes a fail-on-new-regression or blocking CI gate.
+Deptry `0.25.1` is now a fail-closed, no-new-regression gate. The policy and baseline are
+content-hashed and the gate rejects tool-version drift, malformed output, new findings, resolved
+baseline findings, duplicate normalized fingerprints, expired owner/reason entries, and stale
+policy/baseline hashes. The current inventory has 13 explicitly classified entries: twelve pinned
+runtime-closure constraints and the command-invoked `uvicorn` launcher. The local
+`ci_local_compose_project` import is configured as first-party and therefore is not an exception.
+The gate emits policy, tool, current/baseline counts, new/resolved findings, and provenance in
+`output/dependency-hygiene-gate.json` and runs in local `check`/`ci` targets plus Feature Lane, PR
+Merge Gate, and Main Releasability.
 
 `make license-ip-gate` is blocking. It validates
 `docs/standards/license-ip-inventory.v1.json` against

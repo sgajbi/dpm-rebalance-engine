@@ -1,16 +1,16 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-23T19:55:54.606339+00:00`
+- Generated At: `2026-08-23T21:09:41.064787+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `baseline/report-only`
 
 ## Code Size
 
-- Python files: `1062`
+- Python files: `1064`
 - Packages: `41`
-- Modules: `1021`
-- Total Python lines: `191385`
+- Modules: `1023`
+- Total Python lines: `192093`
 
 ## Largest Files
 
@@ -25,7 +25,7 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
-| 10 | `scripts/quality_baseline_report.py` | 1634 |
+| 10 | `scripts/quality_baseline_report.py` | 1636 |
 
 ## Largest Functions And Maintainability Hotspots
 
@@ -37,7 +37,7 @@
 | 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 308 |
 | 5 | `validate_live_cross_service_parity` | `scripts/validate_cross_service_parity_live.py` | 3695 | 274 |
 | 6 | `_assert_persisted_read_surfaces` | `scripts/validate_cross_service_parity_live.py` | 3422 | 271 |
-| 7 | `render_quality_scorecard` | `scripts/quality_baseline_report.py` | 1313 | 254 |
+| 7 | `render_quality_scorecard` | `scripts/quality_baseline_report.py` | 1313 | 256 |
 | 8 | `_assert_live_policy_evaluation_flow` | `scripts/validate_cross_service_parity_live.py` | 2491 | 252 |
 | 9 | `_assert_lifecycle_and_delivery_flow` | `scripts/validate_cross_service_parity_live.py` | 1788 | 249 |
 | 10 | `_validate_live_proposal_alternatives_paths` | `scripts/validate_cross_service_parity_live.py` | 608 | 230 |
@@ -88,7 +88,7 @@
 - Available dependency/security tools: `ruff, mypy, pytest, coverage.py, pip-audit, radon, xenon, vulture, deptry, bandit, interrogate`
 - Pending optional tools: ``
 - Deptry config executable: `True`
-- Deptry current issue inventory: `14`
+- Deptry current issue inventory: `13`
 - Bandit config executable: `True`
 - Bandit current issue inventory: `30`
 - Bandit severity inventory: `high=0, medium=30, low=0`
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5581, missing=5523, covered=58, coverage=1.0%`
+- Interrogate docstring inventory: `total=5601, missing=5542, covered=59, coverage=1.1%`
 - Interrogate remains report-only until public API and module ownership thresholds
   are classified.
 

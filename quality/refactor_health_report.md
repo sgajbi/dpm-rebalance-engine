@@ -463,7 +463,7 @@
 - CI workflow jobs now declare explicit timeouts so feature, PR, main releasability,
   quality-baseline, and auto-merge automation fail closed instead of hanging
   indefinitely.
-- Development requirements pin the report-only quality tools used by committed baseline
+- Development requirements pin the quality tools used by committed baseline
   evidence so GitHub CI and local developer runs measure the same quality surface.
 - Bandit security scanning now fails earlier through `make check` and Remote Feature
   Lane for high findings plus new, stale, expired, or worsened medium/low findings.
@@ -480,8 +480,8 @@
   classifying current B-ranked blocks.
 - Reduce the governed Bandit medium/low baseline before expiry after classifying current
   SQL-construction findings and resolving true positives.
-- Convert the deptry dependency inventory into a fail-on-new-regression gate after
-  classifying current dependency findings.
+- Maintain the deptry no-new-regression baseline with owner, reason, and expiry review
+  as dependency closure and runtime launcher requirements evolve.
 - Convert baseline reports into fail-on-new-regression gates before enforcing absolute
   thresholds.
 - Continue moving oversized proposal/advisory service modules into focused use-case and

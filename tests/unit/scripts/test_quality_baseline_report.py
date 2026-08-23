@@ -174,7 +174,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Hard no-new-regression Vulture gate" in scorecard
     assert "Hard no-new-regression jscpd gate" in scorecard
     assert "make duplicate-code-gate" in baseline
-    assert "Enforced plus deptry inventory" in scorecard
+    assert "Hard no-new-regression deptry gate" in scorecard
     assert "severity-regression gate enforced" in scorecard
     assert "quality/bandit_security_baseline.v1.json" in scorecard
     assert "make check + Feature Lane + security-audit" in scorecard
@@ -352,7 +352,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     )
     assert "preserving local proof-artifact path normalization" in refactor_health
     assert "CI workflow jobs now declare explicit timeouts" in refactor_health
-    assert "Development requirements pin the report-only quality tools" in refactor_health
+    assert "Development requirements pin the quality tools" in refactor_health
     assert "Bandit security scanning now fails earlier" in refactor_health
     assert "Remaining Enterprise-Readiness Work" in refactor_health
     assert "Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate" in (
@@ -362,7 +362,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Interrogate docstring inventory" in refactor_health
     assert "Reduce the governed Bandit medium/low baseline before expiry" in refactor_health
     assert "Spectral OpenAPI enforcement" in refactor_health
-    assert "deptry dependency inventory" in refactor_health
+    assert "deptry no-new-regression baseline" in refactor_health
     assert "advisory trade-intent construction" in scorecard
     assert "advisory cash-flow intent planning" in scorecard
     assert "advisory security-trade intent planning" in scorecard
@@ -391,7 +391,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Proposal idempotency replay delegates event and approval replay matching" in (
         refactor_health
     )
-    assert "Quality evidence freshness, dead-code regression prevention, and duplicate-code" in (
+    assert "Quality evidence freshness plus dead-code, duplicate-code, and unused-dependency" in (
         scorecard
     )
     assert "wiki validation guidance now maps local, Feature Lane, PR Merge Gate" in scorecard
