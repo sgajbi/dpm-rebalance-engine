@@ -1,12 +1,12 @@
 # Lotus Advise Engineering Health Baseline
 
-- Generated At: `2026-08-23T21:23:42.996186+00:00`
+- Generated At: `2026-08-23T23:58:24.502988+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
-- Python Files: `1066`
+- Python Files: `1070`
 - Packages: `42`
-- Modules: `1024`
-- Total Python Lines: `192110`
+- Modules: `1028`
+- Total Python Lines: `193168`
 
 ## Largest Files
 
@@ -21,7 +21,7 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
-| 10 | `scripts/quality_baseline_report.py` | 1636 |
+| 10 | `scripts/quality_baseline_report.py` | 1635 |
 | 11 | `tests/unit/advisory/api/test_lotus_ai_advisory_copilot.py` | 1615 |
 | 12 | `tests/unit/advisory/engine/test_engine_policy_pack_persistence.py` | 1511 |
 | 13 | `tests/unit/advisory/engine/test_engine_advisory_copilot_foundation.py` | 1337 |
@@ -40,10 +40,10 @@
 | 1 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 63 | 508 |
 | 2 | `render_refactor_health_report` | `scripts/quality_baseline_report.py` | 817 | 494 |
 | 3 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 398 |
-| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 308 |
+| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 309 |
 | 5 | `validate_live_cross_service_parity` | `scripts/validate_cross_service_parity_live.py` | 3695 | 274 |
 | 6 | `_assert_persisted_read_surfaces` | `scripts/validate_cross_service_parity_live.py` | 3422 | 271 |
-| 7 | `render_quality_scorecard` | `scripts/quality_baseline_report.py` | 1313 | 256 |
+| 7 | `render_quality_scorecard` | `scripts/quality_baseline_report.py` | 1313 | 255 |
 | 8 | `_assert_live_policy_evaluation_flow` | `scripts/validate_cross_service_parity_live.py` | 2491 | 252 |
 | 9 | `_assert_lifecycle_and_delivery_flow` | `scripts/validate_cross_service_parity_live.py` | 1788 | 249 |
 | 10 | `_validate_live_proposal_alternatives_paths` | `scripts/validate_cross_service_parity_live.py` | 608 | 230 |
@@ -97,6 +97,7 @@
 | `no-alias-gate` | `python scripts/no_alias_contract_guard.py` |
 | `api-vocabulary-gate` | `python scripts/api_vocabulary_inventory.py` |
 | `api-vocabulary-gate` | `python scripts/api_vocabulary_inventory.py --validate-only` |
+| `proposal-decision-vocabulary-gate` | `python scripts/proposal_decision_vocabulary.py --validate-only` |
 | `domain-data-products-gate` | `python scripts/validate_domain_data_product_declarations.py` |
 | `quality-baseline` | `python scripts/quality_baseline_report.py --output-dir quality` |
 | `lint` | `python -m ruff check .` |

@@ -165,6 +165,7 @@ def _gate_inventory(repo_root: Path) -> list[GateInventory]:
         "openapi-gate",
         "no-alias-gate",
         "api-vocabulary-gate",
+        "proposal-decision-vocabulary-gate",
         "domain-data-products-gate",
         "observability-diagnostics",
         "advisory-domain-golden-regressions",
