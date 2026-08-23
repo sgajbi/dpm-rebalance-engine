@@ -222,7 +222,8 @@
 - Scope: deterministic duplicate-code regression enforcement for `src` and `scripts`
 - Pattern: aggregate quality and coverage gates did not prevent new copy/paste fragments from
   entering the repository when the existing duplicate inventory remained below a broad threshold.
-- Status: Hardened on `main` at `66f7135c`; exact-mainline closure validated
+- Status: Hardened on `main` at `66f7135c`; exact-mainline closure validated against the
+  post-#513 releasability evidence on `864854c3`
 - Finding Class: CI quality gate, maintainability regression prevention, baseline governance
 - Summary: The bounded #495 slice adds a pinned strict jscpd gate with stable normalized clone
   fingerprints. Existing findings are retained only in a reviewed, content-hashed baseline;
@@ -265,6 +266,9 @@
   network ID remained `8c57aff70e7f3ac35a7af189cf9dd458d768ae7d455459be329b8749e86ea981`.
 - Wiki publication completed in commit `7bfa42d`; strict source/publication parity returned
   `DiffCount 0`.
+- The unrelated mainline license/IP drift that caused run `32655256799` on `66f7135c` was fixed
+  by #513/#515; Main Releasability runs `32658629295` and `32659304494` both passed on the
+  unchanged merged main commit `864854c3`.
 - Consequence: new duplicate-code findings cannot hide behind aggregate coverage or the reviewed
   inventory; no runtime, API/OpenAPI, persistence, migration, or data-model behavior changes.
 - Documentation decision: repository context, generated quality report, wiki CI guidance, and
@@ -629,7 +633,7 @@
 - Pattern: the isolated license/IP gate installed floor-ranged development requirements without
   consuming the authoritative `uv.lock` transitive versions. An upstream `filelock` release could
   therefore make an unchanged main commit red even though its reviewed license posture was stable.
-- Status: Implemented on the feature branch; exact-mainline closure pending
+- Status: Hardened on `main` at `864854c3`; exact-mainline closure validated
 - Finding Class: CI determinism, dependency governance, release evidence
 - Summary: The bounded #513 slice projects exact package constraints from the repository's
   authoritative `uv.lock` into the temporary license/IP environment. Transitive version-only drift
@@ -645,18 +649,40 @@
     package failures include expected version and license; governance drift includes current and
     expected version/license-related evidence and the refresh command.
   - Focused tests cover lock projection ordering, constrained isolated installation, accepted
-    version-only drift, new-package blocking, license drift, group drift, and exception drift.
+    version-only drift, new-package blocking, license drift, group drift, exception drift, and
+    fail-closed malformed/incomplete/conflicting/empty-lock behavior, including the no-install
+    exit-2 path.
   - Repository-native `make license-ip-gate` passes with `filelock==3.32.3` projected from `uv.lock`;
     the prior unconstrained `filelock==3.32.4` failure is no longer reproducible on the unchanged
     lock state.
+- Mainline implementation commits are `6256cdb6` (`fix(ci): make license evidence deterministic`),
+  `b0b6d93a` (`docs: refresh quality baseline evidence`), `62e3e083`
+  (`test(ci): prove fail-closed license lock behavior`), and `864854c3`
+  (`docs(ci): refresh quality baseline after lock tests`); the signed feature-head commits were
+  `d2c20e42`, `8daa6c12`, `653093f1`, and `c55ba3ae`.
+- PR #515 was merged only after the review lead posted `VERDICT: mergeable` on exact head
+  `c55ba3ae`; the PR's Feature Lane, PR Merge Gate, coverage, Docker, migration/startup,
+  dead/duplicate-code, dependency/security, and baseline checks were all green.
+- Exact-mainline `make check` passed `2658` tests. Two consecutive unchanged
+  `make license-ip-gate` runs passed on `864854c3`, and both installed the lock-pinned
+  `filelock==3.32.3`.
+- Main Releasability runs `32658629295` and `32659304494` both passed on exact SHA `864854c3`,
+  including exact-revision assertion, lint/typecheck governance, license/IP and dependency-lock
+  gates, unit/integration/E2E tests, combined coverage, migration/startup/guardrail lanes, Docker
+  build, and image release evidence.
+- Canonical runtime preservation was verified after merge and both mainline validations: product
+  container `f88bf8657604` remained healthy, `/health` and `/health/ready` returned `200`, and
+  network ID remained `8c57aff70e7f3ac35a7af189cf9dd458d768ae7d455459be329b8749e86ea981`.
+- Wiki publication completed in commit `87a6758`; strict source/publication parity returned
+  `DiffCount 0`.
 - Consequence: unchanged commits no longer become unreleasable solely because an upstream
   transitive version moves; dependency or license governance changes remain visible and blocking.
 - Documentation decision: dependency hygiene, operations runbook, repository context, wiki CI
   guidance, and this ledger update because the release-evidence control changed. No OpenAPI,
   migration, runtime, data-model, or platform-wide context change is needed.
-- Follow-Up: Exact-mainline commit, two-run determinism evidence, Docker-lane isolation,
-  canonical-runtime preservation, wiki publication/parity, and issue-closure evidence must be
-  added after merge.
+- Follow-Up: The #513 implementation is closed on exact mainline. The remaining bounded #495
+  unused-dependency, oversized module/function, and trend-comparison work remains separate; the
+  principal consolidation is tracked in #512.
 
 ## LA-REV-927
 
