@@ -28,8 +28,8 @@ dead/unused-code regressions only.
 The same fast static lanes also run `make duplicate-code-gate`. It scans `src` and `scripts` with
 pinned jscpd `5.0.16` in strict mode, requiring at least 100 tokens and 10 lines per clone. The
 reviewed 43-finding inventory is committed as stable content fingerprints with owner, reason,
-expiry, and policy/baseline hash provenance; any new fingerprint or scanner, parser, policy, or
-baseline-integrity failure blocks the lane. This gate is CI/developer evidence only and does not
+expiry, and policy/baseline hash provenance; any new or resolved fingerprint or scanner, parser,
+policy, or baseline-integrity failure blocks the lane. This gate is CI/developer evidence only and does not
 change runtime, API, persistence, migration, or data-model behavior. Unused-dependency,
 oversized module/function, and trend-comparison gates remain separately bounded quality work.
 
@@ -154,8 +154,9 @@ The current blocking posture is intentionally high-signal:
    blocks stale committed quality report and scorecard truth.
 11. `make duplicate-code-gate`
    runs strict jscpd against `src` and `scripts`, compares normalized clone fingerprints with
-   the reviewed baseline, and fails on new findings or any tool/parser/policy/baseline-integrity
-   failure. Baseline changes require a policy hash/version update and remain reviewable in Git.
+   the reviewed baseline, and fails on new or resolved findings or any tool/parser/policy/baseline-
+   integrity failure. Baseline changes require a policy hash/version update and remain reviewable
+   in Git.
 12. `make migration-rollout-contract-gate`
    validates every checked-in Postgres migration has explicit namespace coverage, rollout phase,
    old/new application compatibility, lock and online behavior, backfill checkpoint/resume/quarantine
