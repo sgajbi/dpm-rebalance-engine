@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "7529dedbee71ff4e555d1d3c63670d2a1bad5f245e57c8552a11cb911c9ba3f3"
+license-inventory-sha256 = "50dc4f5b6f1389bce878d5346ce3519329b1197e58f09d4fca0b1d6baf78456f"
 
 [[requirement-files]]
 group = "development"
@@ -14,7 +14,7 @@ sha256 = "a4b9261df0cfc48ac05a61ff43573d5f3eac57ed617ff03a1f35b6a7190f0086"
 [[requirement-files]]
 group = "install"
 path = "requirements.txt"
-sha256 = "9e575f0909ee25e47f060a363172a2528d84bd22078a53fd5a2a2b33ffb3815d"
+sha256 = "516d5472fa883bf0868c3d31e8bbe9f395c0b38b94489cb24e4cf69b0a9941fc"
 
 [[requirement-files]]
 group = "runtime"
@@ -667,7 +667,7 @@ direct = true
 groups = ["development", "install"]
 requirement-files = ["requirements-dev.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["c003f5b436bc09d7b6d2243971b7606c28dc06537434adc7d3db89cb684176ed", "ef8151dc0bc84dee275bee796aa83c13ec10c04e5df152efce42ae344056a9fb"]
+requirement-hashes = ["ef8151dc0bc84dee275bee796aa83c13ec10c04e5df152efce42ae344056a9fb"]
 
 [[package]]
 name = "scipy"
