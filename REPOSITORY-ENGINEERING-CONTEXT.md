@@ -551,7 +551,9 @@ Important validation expectations:
     `quality/quality-policy.v1.json` changed-source threshold through
     `scripts/changed_coverage_gate.py`. The gate compares the pull request base/head, reports every
     changed executable source lines under `src/` with measured and threshold percentages, and emits
-    `output/changed-coverage-gate.json`; it has no exceptions in this initial slice.
+    `output/changed-coverage-gate.json`; it has no exceptions in this initial slice. Diff parsing is
+    fail-closed: supported hunk shapes are validated for new-line counts, and malformed Python
+    hunks produce failed machine-readable evidence rather than an empty 100% measurement.
 
 ## Standards And RFCs That Govern This Repository
 
