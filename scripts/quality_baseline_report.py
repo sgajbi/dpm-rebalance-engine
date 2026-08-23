@@ -579,7 +579,7 @@ def _baseline_header(context: QualityContext) -> list[str]:
         f"- Generated At: `{context.report.generated_at}`",
         "- Git Identity: omitted from committed Markdown; use Git history and GitHub Actions",
         "  run metadata for exact branch/head evidence.",
-        "- CI Phase: `baseline/report-only`",
+        "- CI Phase: `calibrated-regression`",
         "",
     ]
 
@@ -1292,8 +1292,8 @@ def render_refactor_health_report(context: QualityContext) -> str:
         "- Keep Spectral OpenAPI enforcement green while route and schema contracts evolve.",
         "- Convert the Interrogate docstring inventory into a targeted documentation-quality gate",
         "  after classifying public API and module ownership thresholds.",
-        "- Extend CI quality enforcement with oversized-module/function and",
-        "  machine-readable trend/regression slices; keep reviewed Vulture exceptions expiring.",
+        "- Extend CI quality enforcement with machine-readable trend/regression slices;",
+        "  keep reviewed Vulture exceptions expiring after the oversized-code gate.",
         "- Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate after",
         "  classifying current B-ranked blocks.",
         "- Reduce the governed Bandit medium/low baseline before expiry after classifying current",
@@ -1326,7 +1326,7 @@ def render_quality_scorecard(context: QualityContext) -> str:
         str(context.deptry_issue_count) if context.deptry_issue_count is not None else "not run"
     )
     rows = [
-        ("Code size and hotspots", "Baseline active", "engineering-health + quality baseline"),
+        ("Code size and hotspots", "Calibrated regression gate", "make oversized-code-gate"),
         (
             "Complexity",
             "No-C/D/E/F gate plus Radon inventory",
@@ -1394,7 +1394,7 @@ def render_quality_scorecard(context: QualityContext) -> str:
         "",
         "- Git Identity: omitted from committed Markdown; use Git history and GitHub Actions",
         "  run metadata for exact branch/head evidence.",
-        "- Progressive Gate Phase: `1 - baseline/report-only`",
+        "- Progressive Gate Phase: `2 - calibrated regression gates`",
         "",
         "| Area | Status | Evidence |",
         "| --- | --- | --- |",
@@ -1481,7 +1481,7 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "Quality-baseline freshness and calibrated dependency/code regression gates are "
             "enforced in local and GitHub governance lanes.",
             "`make quality-baseline-check`, `make dead-code-gate`, `make duplicate-code-gate`, "
-            "and `make unused-dependency-gate` "
+            "`make unused-dependency-gate`, and `make oversized-code-gate` "
             "now run in `make check`, "
             "`make ci`, `make ci-local`, Feature Lane, PR Merge Gate, and Main Releasability "
             "static governance jobs; workflow contract tests protect local CI target "
@@ -1489,9 +1489,9 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "permissions, concurrency, coverage artifact handling, refactored-complexity "
             "enforcement, pull-request-target auto-merge guards, protected-main verification, "
             "and the baseline freshness step.",
-            "Quality evidence freshness plus dead-code, duplicate-code, and unused-dependency "
-            "regression prevention are now enforced before merge and after merge, not only "
-            "during local `make check`; dependency evidence is uploaded by each governance lane.",
+            "Quality evidence freshness plus dead-code, duplicate-code, unused-dependency, and "
+            "oversized-code regression prevention are enforced before and after merge; "
+            "dependency evidence is uploaded by each governance lane.",
         ),
         (
             "Security",
@@ -1559,9 +1559,8 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "- This scorecard proves measurable engineering improvement; it does not claim bank",
             "  certification, regulatory approval, client-ready publication, or production",
             "  deployment approval.",
-            "- Xenon strict thresholds, oversized module/function thresholds, Bandit baseline",
-            "  reduction, and public API docstring",
-            "  thresholds remain governed follow-up work.",
+            "- Xenon strict thresholds, machine-readable trend policy, Bandit baseline",
+            "  reduction, and public API docstring thresholds remain governed follow-up work.",
             "",
         ]
     )

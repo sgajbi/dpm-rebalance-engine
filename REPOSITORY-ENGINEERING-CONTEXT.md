@@ -448,9 +448,13 @@ Use these commands as the primary local contract:
    findings, and permits only fingerprinted compatibility exceptions with owner, reason, and
    expiry metadata in `quality/dead-code-policy.v1.json`. The policy version ends with a
    content fingerprint; changing policy content without updating that version fails closed.
-   Duplicate-code, unused-dependency,
-   oversized-module/function, and trend gates remain separate bounded work.
-11. live demo certification evidence
+11. oversized module/function regression gate
+   `make oversized-code-gate` scans `src` and `scripts` against the 1,000-line module and
+   200-line function thresholds, compares stable fingerprints with
+   `quality/oversized-code-baseline.v1.json`, and fails on new, grown, resolved, expired, or
+   malformed findings. Baseline entries require owner, reason, expiry, and policy/baseline hash
+   provenance; this is CI/developer evidence only and does not change product contracts.
+12. live demo certification evidence
    `make demo-certification-live`
 
 ## Validation And CI Expectations
@@ -514,7 +518,9 @@ Important validation expectations:
    and the deptry no-new-regression posture is enforced through `make unused-dependency-gate`
    with `quality/dependency-hygiene-policy.v1.json` and its owner/reason/expiry baseline. New or
    resolved normalized dependency fingerprints, expired entries, tool-version drift, malformed
-   reports, and policy/baseline hash drift are blocking in local and GitHub governance lanes,
+   reports, and policy/baseline hash drift are blocking in local and GitHub governance lanes;
+   oversized-code regression is enforced through `make oversized-code-gate` with the versioned
+   threshold/baseline contract described above,
 8. Trust telemetry freshness is enforced through `make trust-telemetry-freshness-gate`: committed
    snapshots under `contracts/trust-telemetry/` must derive age, freshness state, and blocking
    posture from observed implementation evidence instead of carrying static `current`/zero-age

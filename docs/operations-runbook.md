@@ -3,7 +3,8 @@
 ## Local Validation
 
 - `make check`: local Feature Lane parity for lint, typecheck, OpenAPI, vocabulary, data-product,
-  trust-telemetry freshness, and unit-test gates.
+  trust-telemetry freshness, dead/duplicate/unused-dependency/oversized-code regression, and
+  unit-test gates.
 - `make ci-local`: local PR Merge Gate subset without Docker, including quality-baseline
   freshness.
 - `make quality-baseline`: regenerate report-only quality artifacts in `quality/`.

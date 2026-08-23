@@ -68,10 +68,10 @@ Quick command guide:
 
 | Command | When to use | Includes |
 |---|---|---|
-| `make check` | Fast iteration while coding | `lint` + `typecheck` + dead-code regression gate + unit tests |
-| `make check-all` | Broad local gate before opening PR | `lint` + `typecheck` + dead-code regression gate + full suite with coverage gate |
-| `make ci` | Full local PR-grade gate | Dependency health + lint + mypy + governance gates + quality-baseline freshness + dead-code regression gate + combined coverage(97%) + Docker build + Postgres and production-profile runtime checks |
-| `make ci-local` | CI-shape validation on host machine | Dependency health + lint + mypy + governance gates + quality-baseline freshness + dead-code regression gate + combined coverage(97%) |
+| `make check` | Fast iteration while coding | `lint` + `typecheck` + dead/duplicate/unused-dependency/oversized-code regression gates + unit tests |
+| `make check-all` | Broad local gate before opening PR | `lint` + `typecheck` + dead/duplicate/unused-dependency/oversized-code regression gates + full suite with coverage gate |
+| `make ci` | Full local PR-grade gate | Dependency health + lint + mypy + governance gates + quality-baseline freshness + dead/duplicate/unused-dependency/oversized-code regression gates + combined coverage(97%) + Docker build + Postgres and production-profile runtime checks |
+| `make ci-local` | CI-shape validation on host machine | Dependency health + lint + mypy + governance gates + quality-baseline freshness + dead/duplicate/unused-dependency/oversized-code regression gates + combined coverage(97%) |
 | `make ci-local-docker` | Most stable local CI parity | Same as `ci-local` in Linux Python 3.11 container with Postgres service |
 
 ## Anti-Conflict Protocol (Required)
