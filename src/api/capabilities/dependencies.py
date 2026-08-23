@@ -18,6 +18,7 @@ class CapabilityDependencyStatus:
     lotus_risk_ready: bool
     lotus_ai_ready: bool
     lotus_report_ready: bool
+    lotus_performance_ready: bool
     bank_demo_operational_ready: bool
     bank_demo_degraded_reason: str | None
 
@@ -117,6 +118,7 @@ def resolve_capability_dependency_status(
         lotus_risk_ready=dependency_ready(dependencies, "lotus_risk"),
         lotus_ai_ready=dependency_ready(dependencies, "lotus_ai"),
         lotus_report_ready=dependency_ready(dependencies, "lotus_report"),
+        lotus_performance_ready=dependency_ready(dependencies, "lotus_performance"),
         bank_demo_operational_ready=bank_demo_operational_ready,
         bank_demo_degraded_reason=bank_demo_degraded_reason,
     )

@@ -21,6 +21,7 @@ class DependencyReadiness(BaseModel):
                 "base_url_env": "LOTUS_CORE_BASE_URL",
                 "configured": True,
                 "operational_ready": True,
+                "required_by_enabled_capability": True,
                 "runtime_probe_enabled": True,
                 "readiness_basis": "probe_succeeded",
                 "degraded_reason": None,
@@ -50,7 +51,19 @@ class DependencyReadiness(BaseModel):
         examples=[True],
     )
     operational_ready: bool = Field(
-        description="Whether the dependency boundary is currently ready for use by lotus-advise.",
+        description=(
+            "Whether the dependency boundary is currently ready for use by lotus-advise. "
+            "An optional, unconfigured dependency may be false without degrading the runtime "
+            "when no enabled feature or workflow requires it."
+        ),
+        examples=[True],
+    )
+    required_by_enabled_capability: bool = Field(
+        description=(
+            "Whether at least one enabled feature or workflow currently requires this "
+            "dependency. Optional unconfigured dependencies are published for transparency "
+            "but do not degrade overall readiness or supportability."
+        ),
         examples=[True],
     )
     runtime_probe_enabled: bool = Field(
@@ -100,6 +113,7 @@ class OperationalReadiness(BaseModel):
                         "base_url_env": "LOTUS_CORE_BASE_URL",
                         "configured": False,
                         "operational_ready": False,
+                        "required_by_enabled_capability": True,
                         "runtime_probe_enabled": False,
                         "readiness_basis": "not_configured",
                         "degraded_reason": "LOTUS_CORE_DEPENDENCY_UNAVAILABLE",
@@ -112,8 +126,8 @@ class OperationalReadiness(BaseModel):
 
     operational_ready: bool = Field(
         description=(
-            "Whether the current lotus-advise runtime has all configured integration boundaries "
-            "ready."
+            "Whether all integration boundaries required by enabled lotus-advise features and "
+            "workflows are ready. Optional unconfigured dependencies do not make this false."
         ),
         examples=[False],
     )

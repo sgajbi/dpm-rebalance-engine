@@ -44,12 +44,18 @@ class AdvisorySupportability(BaseModel):
     )
     ready_dependency_count: int = Field(
         ge=0,
-        description="Number of advisory dependency boundaries currently operationally ready.",
+        description=(
+            "Number of advisory dependency boundaries currently operationally ready; this may "
+            "be lower than dependency_count when an optional dependency is unconfigured."
+        ),
         examples=[5],
     )
     degraded_dependency_count: int = Field(
         ge=0,
-        description="Number of advisory dependency boundaries currently degraded.",
+        description=(
+            "Number of required advisory dependency boundaries currently degraded. Optional "
+            "unconfigured dependencies are excluded from this count."
+        ),
         examples=[0],
     )
     enabled_feature_count: int = Field(

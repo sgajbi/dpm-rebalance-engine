@@ -56,20 +56,31 @@ def _supportability_counts(
     readiness: dict[str, object],
     features: list[FeatureCapability],
 ) -> _SupportabilityCounts:
-    dependency_count, ready_dependency_count = _dependency_counts(readiness)
+    dependency_count, ready_dependency_count, degraded_dependency_count = _dependency_counts(
+        readiness
+    )
     enabled_feature_count, ready_feature_count = _feature_counts(features)
     return _SupportabilityCounts(
         dependency_count=dependency_count,
         ready_dependency_count=ready_dependency_count,
-        degraded_dependency_count=dependency_count - ready_dependency_count,
+        degraded_dependency_count=degraded_dependency_count,
         enabled_feature_count=enabled_feature_count,
         ready_feature_count=ready_feature_count,
     )
 
 
-def _dependency_counts(readiness: dict[str, object]) -> tuple[int, int]:
+def _dependency_counts(readiness: dict[str, object]) -> tuple[int, int, int]:
     rows = dependency_rows(readiness)
-    return len(rows), sum(1 for dependency in rows if bool(dependency.get("operational_ready")))
+    ready_dependency_count = sum(
+        1 for dependency in rows if bool(dependency.get("operational_ready"))
+    )
+    degraded_dependency_count = sum(
+        1
+        for dependency in rows
+        if bool(dependency.get("required_by_enabled_capability", True))
+        and not bool(dependency.get("operational_ready"))
+    )
+    return len(rows), ready_dependency_count, degraded_dependency_count
 
 
 def _feature_counts(features: list[FeatureCapability]) -> tuple[int, int]:

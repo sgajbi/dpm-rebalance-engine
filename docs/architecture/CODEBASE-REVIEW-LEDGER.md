@@ -1,5 +1,35 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-492
+
+- Scope: `/platform/capabilities` dependency readiness and supportability classification
+- Pattern: Deployment-wide degradation must be derived from dependencies declared by enabled
+  feature and workflow boundaries; optional integration adapters must remain observable without
+  falsely reporting the whole advisory surface as degraded.
+- Status: Hardened on feature branch; merge and exact-mainline validation pending
+- Finding Class: Supportability, capability contract, dependency ownership, downstream truthfulness
+- Summary: GitHub issue #492 identified that unconfigured `lotus-performance` was counted as a
+  deployment-wide degraded dependency even though no enabled Advise feature or workflow consumed
+  it. The bounded slice preserves the dependency row and its `not_configured` evidence, adds
+  explicit `required_by_enabled_capability` metadata, and derives readiness/supportability from
+  enabled capability declarations.
+- Evidence:
+  - `src/api/capabilities/readiness.py` performs the shared classification pass after feature and
+    workflow catalogs are built, including fail-closed handling for a future required dependency.
+  - `src/api/capabilities/supportability.py` counts required unavailable dependencies as degraded,
+    while preserving ready and total dependency counts for observability.
+  - `tests/unit/advisory/api/test_api_integration_capabilities.py` proves optional unconfigured
+    Performance is ready/non-degrading and that an enabled capability declaration makes it
+    required/degrading.
+  - RFC-0082, advisory engineering context, and capability know-how document the ownership rule.
+- Consequence:
+  - Gateway and Workbench consumers receive truthful deployment-wide supportability while retaining
+    transparent dependency inventory. Adding a Performance-backed capability requires an explicit
+    dependency declaration and automatically changes the readiness posture.
+- Documentation decision: No wiki change; this updates internal capability classification and
+  repository/operator documentation, but introduces no new operator workflow or supported product
+  behavior.
+
 ## LA-REV-486
 
 - Scope: RFC-0086 domain-data-product declarations and governed route identity metadata
