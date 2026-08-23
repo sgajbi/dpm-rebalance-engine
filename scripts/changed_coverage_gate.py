@@ -42,16 +42,21 @@ def _changed_source_lines(*, base_ref: str, head_ref: str, source_root: str) -> 
     new_line: int | None = None
     expected_new_lines = 0
     parsed_new_lines = 0
+    hunk_started = False
 
     def finish_hunk() -> None:
+        nonlocal hunk_started
         if current_file is not None and expected_new_lines != parsed_new_lines:
             raise ValueError(
                 f"Unable to parse changed Python diff for {current_file}: expected "
                 f"{expected_new_lines} new line(s), parsed {parsed_new_lines}."
             )
+        hunk_started = False
 
     for line in diff_result.stdout.splitlines():
-        if line.startswith("+++ b/"):
+        if line.startswith("+++ b/") and (
+            not hunk_started or expected_new_lines == parsed_new_lines
+        ):
             finish_hunk()
             candidate = line.removeprefix("+++ b/").replace("\\", "/")
             current_file = candidate if candidate.endswith(".py") else None
@@ -67,6 +72,7 @@ def _changed_source_lines(*, base_ref: str, head_ref: str, source_root: str) -> 
             new_line = int(hunk.group(1))
             expected_new_lines = int(hunk.group(2) or "1")
             parsed_new_lines = 0
+            hunk_started = True
             continue
         if line.startswith("@@") and current_file is not None:
             raise ValueError(f"Unable to parse changed Python diff hunk: {line}")
