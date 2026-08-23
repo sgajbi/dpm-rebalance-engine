@@ -1,0 +1,82 @@
+{
+  "schema_version": "lotus.advise.dead-code-policy.v1",
+  "policy_version": "lotus-advise-dead-code.v1",
+  "tool": "vulture",
+  "min_confidence": 80,
+  "scan_paths": [
+    "src",
+    "scripts"
+  ],
+  "max_new_findings": 0,
+  "exceptions": {
+    "allowed": true,
+    "entries": [
+      {
+        "fingerprint": "vulture.v1|src/core/advisory/alternatives_projection.py|unused import|_allocation_bucket_weight",
+        "path": "src/core/advisory/alternatives_projection.py",
+        "line": 3,
+        "kind": "unused import",
+        "symbol": "_allocation_bucket_weight",
+        "confidence": 90,
+        "owner": "advisory-domain",
+        "reason": "Intentional compatibility re-export; existing downstream and contract tests import this helper from the projection facade.",
+        "expires_on": "2026-12-31"
+      },
+      {
+        "fingerprint": "vulture.v1|src/core/advisory/alternatives_projection.py|unused import|_build_comparison_summary",
+        "path": "src/core/advisory/alternatives_projection.py",
+        "line": 6,
+        "kind": "unused import",
+        "symbol": "_build_comparison_summary",
+        "confidence": 90,
+        "owner": "advisory-domain",
+        "reason": "Intentional compatibility re-export; existing downstream and contract tests import this helper from the projection facade.",
+        "expires_on": "2026-12-31"
+      },
+      {
+        "fingerprint": "vulture.v1|src/core/advisory/alternatives_projection.py|unused import|_cash_balance_amount",
+        "path": "src/core/advisory/alternatives_projection.py",
+        "line": 9,
+        "kind": "unused import",
+        "symbol": "_cash_balance_amount",
+        "confidence": 90,
+        "owner": "advisory-domain",
+        "reason": "Intentional compatibility re-export; existing downstream and contract tests import this helper from the projection facade.",
+        "expires_on": "2026-12-31"
+      },
+      {
+        "fingerprint": "vulture.v1|src/core/advisory/alternatives_projection.py|unused import|_primary_tradeoff",
+        "path": "src/core/advisory/alternatives_projection.py",
+        "line": 12,
+        "kind": "unused import",
+        "symbol": "_primary_tradeoff",
+        "confidence": 90,
+        "owner": "advisory-domain",
+        "reason": "Intentional compatibility re-export; existing downstream and contract tests import this helper from the projection facade.",
+        "expires_on": "2026-12-31"
+      },
+      {
+        "fingerprint": "vulture.v1|src/core/advisory/alternatives_projection.py|unused import|_top_position_weight",
+        "path": "src/core/advisory/alternatives_projection.py",
+        "line": 15,
+        "kind": "unused import",
+        "symbol": "_top_position_weight",
+        "confidence": 90,
+        "owner": "advisory-domain",
+        "reason": "Intentional compatibility re-export; existing downstream and contract tests import this helper from the projection facade.",
+        "expires_on": "2026-12-31"
+      },
+      {
+        "fingerprint": "vulture.v1|src/core/advisory/alternatives_projection.py|unused import|_comparator_inputs",
+        "path": "src/core/advisory/alternatives_projection.py",
+        "line": 30,
+        "kind": "unused import",
+        "symbol": "_comparator_inputs",
+        "confidence": 90,
+        "owner": "advisory-domain",
+        "reason": "Intentional compatibility re-export; existing downstream and contract tests import this helper from the projection facade.",
+        "expires_on": "2026-12-31"
+      }
+    ]
+  }
+}

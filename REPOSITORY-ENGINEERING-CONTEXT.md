@@ -437,7 +437,13 @@ Use these commands as the primary local contract:
    rewrite historical committed observations.
 9. quality evidence freshness gate
    `make quality-baseline-check`
-10. live demo certification evidence
+10. dead-code regression gate
+   `make dead-code-gate`
+   This runs the pinned Vulture scanner against `src` and `scripts`, fails on new or malformed
+   findings, and permits only fingerprinted compatibility exceptions with owner, reason, and
+   expiry metadata in `quality/dead-code-policy.v1.json`. Duplicate-code, unused-dependency,
+   oversized-module/function, and trend gates remain separate bounded work.
+11. live demo certification evidence
    `make demo-certification-live`
 
 ## Validation And CI Expectations

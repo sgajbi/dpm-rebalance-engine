@@ -152,10 +152,42 @@
   - A deliberately uncovered changed source line fails the required PR coverage context even when
     aggregate coverage remains above 97%; docs-only and test-only changes produce explicit no-op
     evidence, and manual non-PR runs record a skip reason. Small files use the same threshold with
-    no grace. The remaining #495 follow-up slices are duplicate/dead-code/unused-dependency scans,
+    no grace. The remaining #495 follow-up slices are duplicate-code/unused-dependency scans,
     size thresholds, and trend policy; they are not implied by this coverage slice.
 - Documentation decision: No wiki change; this is developer CI policy and local evidence wiring,
   not an operator workflow or supported product behavior.
+
+## LA-REV-495-CI-DEAD-CODE
+
+- Scope: deterministic dead/unused-code regression enforcement for `src` and `scripts`
+- Pattern: Vulture produced a real inventory, but report-only evidence allowed a new unused-code
+  finding to enter `main` without an objective review gate.
+- Status: Implemented on the feature branch; exact-mainline closure pending
+- Finding Class: CI quality gate, dead-code prevention, compatibility exception governance
+- Summary: The bounded #495 slice promotes the pinned Vulture inventory to a fail-closed
+  no-new-regression gate. Existing compatibility-facade findings are fingerprinted and retained
+  only with explicit owner, reason, and expiry metadata.
+- Evidence:
+  - `quality/dead-code-policy.v1.json` defines policy `lotus-advise-dead-code.v1`, Vulture
+    confidence 80, scan roots, zero permitted new findings, and six reviewed compatibility
+    exceptions expiring on `2026-12-31`.
+  - `scripts/dead_code_gate.py` normalizes Vulture findings into stable fingerprints, rejects
+    malformed output and unavailable-tool exits, fails expired or resolved exceptions, and emits
+    `output/dead-code-gate.json` with policy, measurements, and exception provenance.
+  - `make dead-code-gate` is hard-wired into `make check`, `make ci`, and `make ci-local`, and
+    Feature Lane, PR Merge Gate, and Main Releasability run it as a named governance step.
+  - Focused tests cover stable identity, no-symbol unreachable-code output, reviewed findings,
+    new findings, malformed output, unavailable tooling, and expired exceptions; workflow
+    contract tests protect all required CI lanes.
+  - The six current findings are intentional helper re-exports consumed by existing advisory
+    contract tests/downstream compatibility surfaces, so no product code was deleted.
+- Consequence: New dead/unused-code findings cannot hide behind aggregate coverage or unrelated
+  green checks; current API, persistence, migration, and runtime behavior are unchanged.
+- Documentation decision: repo-native CI guidance, repository context, generated quality reports,
+  and wiki source updated because the developer/operator validation surface changed; no OpenAPI,
+  migration, or platform-wide context change is needed.
+- Follow-Up: Duplicate-code, unused-dependency, oversized module/function, and trend-comparison
+  gates remain separate bounded #495 slices.
 
 ## LA-REV-492-SUPPORTABILITY
 

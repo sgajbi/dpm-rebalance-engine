@@ -474,8 +474,8 @@
 - Keep Spectral OpenAPI enforcement green while route and schema contracts evolve.
 - Convert the Interrogate docstring inventory into a targeted documentation-quality gate
   after classifying public API and module ownership thresholds.
-- Convert the Vulture dead-code inventory into a fail-on-new-regression gate after
-  classifying validator and compatibility-facade findings.
+- Extend CI quality enforcement with duplicate-code, oversized-module/function, and
+  machine-readable trend/regression slices; keep reviewed Vulture exceptions expiring.
 - Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate after
   classifying current B-ranked blocks.
 - Reduce the governed Bandit medium/low baseline before expiry after classifying current

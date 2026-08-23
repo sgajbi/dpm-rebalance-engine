@@ -668,9 +668,8 @@ def _dead_code_section(context: QualityContext) -> list[str]:
         f"- Vulture current issue inventory: `{_optional_count(context.vulture_issue_count)}`",
         "- Vulture confidence inventory: "
         f"`{_counter_inventory(context.vulture_confidence_counts, suffix='%')}`",
-        "- Vulture remains report-only until validator false positives and compatibility",
-        "  facade imports are classified.",
-        "- Current dead-code cleanup remains code-led through review-ledger slices.",
+        "- Vulture findings are hard-gated by `make dead-code-gate`; reviewed compatibility-facade",
+        "  exceptions are fingerprinted and carry owner, reason, and expiry metadata.",
         "",
     ]
 
@@ -1280,8 +1279,8 @@ def render_refactor_health_report(context: QualityContext) -> str:
         "- Keep Spectral OpenAPI enforcement green while route and schema contracts evolve.",
         "- Convert the Interrogate docstring inventory into a targeted documentation-quality gate",
         "  after classifying public API and module ownership thresholds.",
-        "- Convert the Vulture dead-code inventory into a fail-on-new-regression gate after",
-        "  classifying validator and compatibility-facade findings.",
+        "- Extend CI quality enforcement with duplicate-code, oversized-module/function, and",
+        "  machine-readable trend/regression slices; keep reviewed Vulture exceptions expiring.",
         "- Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate after",
         "  classifying current B-ranked blocks.",
         "- Reduce the governed Bandit medium/low baseline before expiry after classifying current",
@@ -1332,8 +1331,8 @@ def render_quality_scorecard(context: QualityContext) -> str:
         ),
         (
             "Dead code",
-            "Executable Vulture inventory",
-            "vulture issue and confidence counts",
+            "Hard no-new-regression Vulture gate",
+            "make dead-code-gate + fingerprinted exception evidence",
         ),
         (
             "Dependencies",
@@ -1463,15 +1462,15 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "CI measurement",
             "Quality-baseline freshness was enforced locally, with GitHub CI carrying the "
             "report-only quality artifact lane.",
-            "`make quality-baseline-check` now runs in `make check`, `make ci`, "
-            "`make ci-local`, Feature Lane, PR Merge Gate, and Main Releasability "
+            "`make quality-baseline-check` and `make dead-code-gate` now run in `make check`, "
+            "`make ci`, `make ci-local`, Feature Lane, PR Merge Gate, and Main Releasability "
             "static governance jobs; workflow contract tests protect local CI target "
             "freshness, demo-assurance checks, parallel runtime jobs, least-privilege "
             "permissions, concurrency, coverage artifact handling, refactored-complexity "
             "enforcement, pull-request-target auto-merge guards, protected-main verification, "
             "and the baseline freshness step.",
-            "Quality evidence freshness is now enforced before merge and after merge, not only "
-            "during local `make check`.",
+            "Quality evidence freshness and dead-code regression prevention are now enforced "
+            "before merge and after merge, not only during local `make check`.",
         ),
         (
             "Security",
@@ -1538,8 +1537,8 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "- This scorecard proves measurable engineering improvement; it does not claim bank",
             "  certification, regulatory approval, client-ready publication, or production",
             "  deployment approval.",
-            "- Xenon strict thresholds, Vulture fail-on-new-regression, Deptry",
-            "  fail-on-new-regression, Bandit baseline reduction, and public API docstring",
+            "- Xenon strict thresholds, Deptry fail-on-new-regression, duplicate-code/size",
+            "  thresholds, Bandit baseline reduction, and public API docstring",
             "  thresholds remain governed follow-up work.",
             "",
         ]

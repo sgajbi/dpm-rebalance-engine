@@ -332,8 +332,9 @@ def render_markdown(
             "  to render structural metric deltas in later refactoring phases.",
             "- External scanner inventories should move from measurement to repo-native gates in",
             "  calibrated slices; coverage, import-linter, Spectral, Bandit severity regression,",
-            "  and Radon C/D/E/F-ranked complexity now have enforced paths while vulture, deptry,",
-            "  interrogate, and stricter complexity thresholds remain measured backlog.",
+            "  Radon C/D/E/F-ranked complexity, and Vulture no-new-regression checks now have",
+            "  enforced paths while deptry, interrogate, and stricter complexity thresholds remain",
+            "  measured backlog.",
         ]
     )
     return "\n".join(lines) + "\n"

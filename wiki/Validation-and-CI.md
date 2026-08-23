@@ -17,6 +17,13 @@ platform host path defaults to `../lotus-platform` and can be overridden with
 for Spectral; if Spectral cannot execute, the gate fails rather than treating a report-only `127`
 result as evidence.
 
+The fast static lanes also run `make dead-code-gate`. It scans `src` and `scripts` with the pinned
+Vulture version and fails on any finding outside the versioned
+`quality/dead-code-policy.v1.json` exception set. Each reviewed compatibility exception carries a
+stable fingerprint, owner, reason, and expiry date; scanner or parser failures fail closed. This
+gate covers new dead/unused-code regressions only. Duplicate-code, unused-dependency, oversized
+module/function, and trend-comparison gates remain separately bounded quality work.
+
 ## Reader Map
 
 | Reader | Start here |
@@ -29,11 +36,11 @@ result as evidence.
 
 | Lane | Primary proof | What it protects |
 | --- | --- | --- |
-| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
-| Local PR-grade gate | `make ci` | Dependency health, static governance, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
-| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, dependency governance, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
-| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
-| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same static, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
+| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, dead-code regression gate, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
+| Local PR-grade gate | `make ci` | Dependency health, static governance including the dead-code regression gate, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
+| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, dependency governance including dead-code regression, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
+| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck/dead-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
+| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same static dead-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
 | Report-only quality evidence | `Quality Baseline / Report Only` and `make quality-baseline` | Trend evidence for code health and refactoring scorecards. Report-only signals should not be promoted until deterministic, low-noise, locally runnable, and policy-backed. |
 
 ```mermaid
@@ -58,6 +65,7 @@ make ci
 make ci-local
 make ci-local-docker
 make quality-baseline-check
+make dead-code-gate
 make demo-assurance-gate
 make demo-certification-live
 make security-audit
