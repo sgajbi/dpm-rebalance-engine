@@ -162,7 +162,8 @@
 - Scope: deterministic dead/unused-code regression enforcement for `src` and `scripts`
 - Pattern: Vulture produced a real inventory, but report-only evidence allowed a new unused-code
   finding to enter `main` without an objective review gate.
-- Status: Extended on the feature branch; exact-mainline closure pending
+- Status: Hardened on `main` at merge commit
+  `33dd0e19b9de36bc57cb70488db22fac285a721c`; exact-mainline closure validated
 - Finding Class: CI quality gate, dead-code prevention, compatibility exception governance
 - Summary: The bounded #495 slice promotes the pinned Vulture inventory to a fail-closed
   no-new-regression gate. Existing compatibility-facade findings are fingerprinted and retained
@@ -198,6 +199,15 @@
     resources without changing the canonical Advise runtime or its health/readiness responses.
   - Wiki source publication completed at `d237f07` with strict source/published parity
     (`DiffCount 0`).
+  - PR #509 merged the two review follow-ups at `33dd0e19b9de36bc57cb70488db22fac285a721c`:
+    the resolved-exception failure path now asserts `counts.resolved == 1`, and policy content
+    changes fail closed unless the `policy_version` content fingerprint is explicitly updated.
+    The exact-mainline 42-test suite, docs-source-reference gate, quality-baseline freshness,
+    dead-code gate, and `git diff --check` all passed.
+  - The isolated Docker lane for PR #509 passed 2,643 unit, 66 integration, and 12 E2E tests
+    (3 environment-gated skips) with 97% combined coverage, removed its checkout-scoped
+    resources, and preserved the canonical Advise runtime. Wiki publication completed at
+    `f8c2600` with strict source/published parity (`DiffCount 0`).
 - Consequence: New dead/unused-code findings cannot hide behind aggregate coverage or unrelated
   green checks; current API, persistence, migration, and runtime behavior are unchanged.
 - Documentation decision: repo-native CI guidance, repository context, generated quality reports,
