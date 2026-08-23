@@ -441,7 +441,9 @@ Use these commands as the primary local contract:
    `make dead-code-gate`
    This runs the pinned Vulture scanner against `src` and `scripts`, fails on new or malformed
    findings, and permits only fingerprinted compatibility exceptions with owner, reason, and
-   expiry metadata in `quality/dead-code-policy.v1.json`. Duplicate-code, unused-dependency,
+   expiry metadata in `quality/dead-code-policy.v1.json`. The policy version ends with a
+   content fingerprint; changing policy content without updating that version fails closed.
+   Duplicate-code, unused-dependency,
    oversized-module/function, and trend gates remain separate bounded work.
 11. live demo certification evidence
    `make demo-certification-live`

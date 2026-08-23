@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -21,6 +22,7 @@ _FINDING = re.compile(
 )
 _MESSAGE = re.compile(r"^(?P<kind>.+?) '(?P<symbol>[^']+)'$")
 _NO_SYMBOL_KINDS = frozenset({"unreachable code"})
+_POLICY_VERSION = re.compile(r"^(?P<prefix>.+)\+(?P<fingerprint>[0-9a-f]{12})$")
 
 
 @dataclass(frozen=True)
@@ -70,6 +72,19 @@ def _non_empty_string(value: object, *, field: str) -> str:
     return value
 
 
+def policy_content_fingerprint(policy: dict[str, Any]) -> str:
+    content = {key: value for key, value in policy.items() if key != "policy_version"}
+    canonical = json.dumps(content, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def expected_policy_version(policy: dict[str, Any]) -> str:
+    prefix = _non_empty_string(policy.get("policy_version"), field="policy_version")
+    if "+" in prefix:
+        prefix = prefix.rsplit("+", 1)[0]
+    return f"{prefix}+{policy_content_fingerprint(policy)[:12]}"
+
+
 def load_policy(path: Path) -> dict[str, Any]:
     try:
         policy = json.loads(path.read_text(encoding="utf-8"))
@@ -79,7 +94,19 @@ def load_policy(path: Path) -> dict[str, Any]:
         raise ValueError("Dead-code policy must be a JSON object.")
     if policy.get("schema_version") != "lotus.advise.dead-code-policy.v1":
         raise ValueError("Dead-code policy has an unsupported schema_version.")
-    _non_empty_string(policy.get("policy_version"), field="policy_version")
+    policy_version = _non_empty_string(policy.get("policy_version"), field="policy_version")
+    version_match = _POLICY_VERSION.fullmatch(policy_version)
+    if version_match is None:
+        raise ValueError(
+            "Dead-code policy policy_version must end with '+' and the 12-character "
+            "content fingerprint."
+        )
+    expected_version = expected_policy_version(policy)
+    if policy_version != expected_version:
+        raise ValueError(
+            "Dead-code policy policy_version does not match its content fingerprint; "
+            f"expected {expected_version}. Bump policy_version when policy content changes."
+        )
     if policy.get("tool") != "vulture":
         raise ValueError("Dead-code policy tool must be vulture.")
     minimum_confidence = policy.get("min_confidence")
@@ -190,6 +217,7 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         report.update(
             {
                 "policy_version": policy["policy_version"],
+                "policy_content_fingerprint": policy_content_fingerprint(policy),
                 "tool": policy["tool"],
                 "min_confidence": policy["min_confidence"],
                 "scan_paths": policy["scan_paths"],
