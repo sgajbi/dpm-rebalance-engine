@@ -98,6 +98,7 @@ def test_docker_local_ci_image_and_workflows_share_pinned_spectral_node_runtime(
     dockerfile = Path("Dockerfile.ci-local").read_text(encoding="utf-8")
 
     assert "FROM node:22.14.0-bookworm-slim AS node-runtime" in dockerfile
+    assert "FROM python:3.11-slim-bookworm" in dockerfile
     assert "COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node" in dockerfile
     assert "ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx" in dockerfile
     assert "node --version" in dockerfile

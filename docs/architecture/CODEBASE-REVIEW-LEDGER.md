@@ -11,7 +11,8 @@
   pinned Node runtime so OpenAPI governance is actually exercised in the Docker lane.
 - Evidence:
   - `Dockerfile.ci-local` supplies Node `22.14.0` and validates `node`, `npm`, and `npx` during
-    image construction.
+    image construction; its Python stage is pinned to the matching Debian Bookworm family so
+    the staged Node runtime cannot silently drift into a base-image ABI mismatch.
   - Feature, PR merge, quality-baseline, and main-releasability workflows share
     `NODE_VERSION=22.14.0` for `actions/setup-node`.
   - The Spectral report command already returns non-zero when the executable cannot run; regression
