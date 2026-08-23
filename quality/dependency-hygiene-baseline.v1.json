@@ -1,0 +1,136 @@
+{
+  "schema_version": "lotus.advise.dependency-hygiene-baseline.v1",
+  "baseline_version": "lotus-advise-dependency-hygiene-baseline.v1",
+  "findings": [
+    {
+      "code": "DEP002",
+      "module": "annotated-types",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|annotated-types",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "anyio",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|anyio",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "certifi",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|certifi",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "click",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|click",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "colorama",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|colorama",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "cvxpy",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|cvxpy",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "h11",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|h11",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "httpcore",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|httpcore",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "idna",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|idna",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "numpy",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|numpy",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "sniffio",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|sniffio",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "typing_extensions",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|typing_extensions",
+      "classification": "pinned-install-closure",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The fully pinned install manifest intentionally carries the runtime closure and launcher constraints required for reproducible local, CI, and release installs; this exact constraint is reviewed with the dependency lock and license evidence.",
+      "expires_on": "2027-08-24"
+    },
+    {
+      "code": "DEP002",
+      "module": "uvicorn",
+      "path": "requirements.txt",
+      "fingerprint": "deptry.v1|DEP002|requirements.txt|uvicorn",
+      "classification": "runtime-launcher",
+      "owner": "lotus-advise-dependency-governance",
+      "reason": "The service launcher is invoked as a command by runtime smoke and local execution flows rather than imported by application Python; the exact pin remains required for reproducible runtime startup and is reviewed with dependency-lock evidence.",
+      "expires_on": "2027-08-24"
+    }
+  ]
+}
