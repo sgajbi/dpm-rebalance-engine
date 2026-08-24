@@ -101,6 +101,7 @@ def test_gate_passes_reviewed_baseline_and_reports_exact_inventory(tmp_path: Pat
         "modules": 1,
         "new": 0,
         "resolved": 0,
+        "shrunken": 0,
     }
 
 
@@ -133,6 +134,25 @@ def test_gate_rejects_growth_of_existing_finding(tmp_path: Path) -> None:
     assert "baseline_max=4" in report["failures"][0]
 
 
+def test_gate_rejects_shrink_without_baseline_ratchet(tmp_path: Path) -> None:
+    finding = _finding(kind="module", path="src/legacy.py", symbol="__module__", max_lines=5)
+    repo_root, policy_path, output_path = _fixture(
+        tmp_path,
+        findings=[finding],
+        module_max_lines=3,
+    )
+    _write_source(repo_root, "src/legacy.py", ["a = 1", "b = 2", "c = 3", "d = 4"])
+
+    report = _run(repo_root, policy_path, output_path)
+
+    assert report["exit_code"] == 1
+    assert report["counts"]["shrunken"] == 1
+    assert report["shrunken_findings"][0]["lines"] == 4
+    assert "src/legacy.py:__module__ has 4 lines" in report["failures"][0]
+    assert "baseline_max=5" in report["failures"][0]
+    assert "bump the baseline/policy fingerprints" in report["failures"][0]
+
+
 def test_gate_rejects_stale_baseline_after_hotspot_is_removed(tmp_path: Path) -> None:
     finding = _finding(kind="module", path="src/legacy.py", symbol="__module__", max_lines=4)
     repo_root, policy_path, output_path = _fixture(
@@ -153,7 +173,7 @@ def test_gate_collects_qualified_nested_function_names(tmp_path: Path) -> None:
         kind="function",
         path="src/service.py",
         symbol="Service.execute",
-        max_lines=5,
+        max_lines=4,
     )
     repo_root, policy_path, output_path = _fixture(
         tmp_path,
