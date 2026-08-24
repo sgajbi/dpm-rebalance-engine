@@ -24,6 +24,12 @@ def evaluate_simulation_result(
             correlation_id=resolved_correlation_id,
             resolved_as_of=resolved_request.resolved_context.as_of,
             input_mode=resolved_request.input_mode,
+            requested_as_of_date=getattr(
+                resolved_request.resolved_context, "requested_as_of", None
+            ),
+            requested_reporting_currency=getattr(
+                resolved_request.resolved_context, "requested_reporting_currency", None
+            ),
             policy_context=context_resolution["advisory_policy_context"],
         )
     except AlternativesRequestNormalizationError as exc:

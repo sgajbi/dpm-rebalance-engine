@@ -63,3 +63,20 @@ Persisted proposal surfaces expose backend-owned:
 - `proposal_alternatives`
 
 These are part of the lifecycle evidence story and should remain tied to canonical upstream simulation and enrichment.
+
+## Valuation-Context Evidence
+
+Lifecycle create, version, simulation, and workspace-evaluation responses carry an additive
+`valuation_context` contract inside the proposal result. It publishes separate typed evidence for
+the current and simulated states:
+
+- requested and effective as-of date or timestamp
+- requested and effective reporting currency
+- `READY`, `PARTIAL`, `RESTRICTED`, `UNAVAILABLE`, or `NOT_SUPPORTED` supportability
+- stable reason codes when source dates disagree, a request is not honoured, or evidence is absent
+
+The contract also carries the authoritative source service and stable source snapshot references.
+Missing provenance is represented as unavailable or partial evidence; the service never substitutes
+today's date, zero, pass, approval, or an inferred valuation. `lotus-core` remains the source-data
+and simulation authority, while `lotus-advise` owns the lifecycle projection and does not recalculate
+valuation, benchmark, limit, risk, suitability, or reporting methodology.

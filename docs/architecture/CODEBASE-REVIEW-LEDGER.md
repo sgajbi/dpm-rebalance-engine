@@ -28379,3 +28379,43 @@
   - If tenant-specific capability publication is later required, add an explicit entitlement port,
     trusted caller identity, authorization behavior, and contract tests before reintroducing a
     tenant-scoped capability claim.
+
+## LA-REV-927
+
+- Scope: Proposal lifecycle valuation-context evidence for current and simulated states
+- Pattern: Downstream proposal review must receive typed requested/effective as-of and reporting-
+  currency evidence from source authority; it must not infer a current date, zero value, pass, or
+  approval posture when source evidence is absent.
+- Status: Hardened
+- Finding Class: Contract completeness, source authority, compatibility, and duplicate-code control
+- Summary: GitHub issue #491 identified that proposal lifecycle results exposed allocation, risk,
+  decision, workflow, and lineage evidence but did not expose the requested/effective valuation
+  date or reporting currency needed for downstream proposal review. The bounded slice adds an
+  additive typed contract while preserving calculation and decision ownership in Advise/Core.
+- Evidence:
+  - `src/core/advisory/valuation_context_models.py` defines the versioned
+    `lotus.proposal-valuation-context.v1` contract with current and simulated states, explicit
+    supportability, stable reason codes, and source references.
+  - `src/core/advisory/valuation_context.py` derives effective as-of evidence only from complete,
+    matching source provenance and emits explicit partial, restricted, or unavailable posture.
+    It never substitutes the current date or infers valuation support from a missing source.
+  - Proposal create, version, direct simulation, workspace evaluation, and workspace handoff paths
+    preserve requested stateful dimensions through shared advisory context models and a single
+    workspace-to-proposal projection owner.
+  - Contract tests cover ready source evidence, missing-source non-inference, source-date
+    mismatch, requested-date/currency mismatch, OpenAPI publication, stateful resolution, and
+    direct/workspace calculation parity.
+  - The duplicate-code gate remains strict with zero new findings; the two historical overlapping
+    state-context fingerprints were removed from the reviewed baseline after consolidation.
+- Consequence:
+  - Proposal consumers can distinguish source-backed valuation context from partial, restricted,
+    or unavailable evidence without treating Advise as a valuation calculator or approval owner.
+  - Existing proposal fields and calculations remain compatible; the new evidence is additive.
+- Documentation:
+  - Updated supported-features, RFC-0082 source-effects mapping, Proposal-Lifecycle wiki source,
+    API vocabulary inventory, quality baseline, and this ledger. Wiki source changed, so repo-wiki
+    parity must be checked before merge and publication is required after merge.
+- Follow-Up:
+  - Continue #491 with separately bounded benchmark/limit context and named scenario-analysis
+    evidence slices. Those slices must reuse this typed source/effective-state vocabulary and must
+    not introduce a second valuation or source-authority contract.

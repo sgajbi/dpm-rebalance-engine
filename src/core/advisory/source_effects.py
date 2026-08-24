@@ -31,6 +31,7 @@ _CORE_DECISION_PAYLOAD_FIELDS = (
     "proposal_alternatives",
     "drift_analysis",
 )
+_ADVISE_DERIVED_PAYLOAD_FIELDS = ("valuation_context",)
 
 
 class CoreDecisionCompatibilitySnapshot(BaseModel):
@@ -84,7 +85,7 @@ def map_core_payload_to_projected_transaction_effects(
     source_effect_payload = {
         key: deepcopy(value)
         for key, value in payload.items()
-        if key not in (*_CORE_DECISION_PAYLOAD_FIELDS, "status")
+        if key not in (*_CORE_DECISION_PAYLOAD_FIELDS, *_ADVISE_DERIVED_PAYLOAD_FIELDS, "status")
     }
     source_effect_payload["core_reported_status"] = payload.get("status")
     return cast(

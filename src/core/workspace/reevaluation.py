@@ -6,7 +6,7 @@ from src.core.proposal_request_models import ProposalSimulateRequest
 from src.core.proposals.context_evidence import build_context_resolution_evidence
 from src.core.proposals.context_hashing import build_simulation_request_hash
 from src.core.proposals.context_resolution import ResolvedSimulationContext
-from src.core.proposals.models import ProposalResolvedContext
+from src.core.workspace.context_resolution import build_workspace_proposal_context
 from src.core.workspace.session_models import WorkspaceSession
 
 
@@ -28,8 +28,10 @@ def build_workspace_evaluation_context(
 ) -> WorkspaceEvaluationContext:
     if session.resolved_context is None:
         raise WorkspaceReevaluationContextError("WORKSPACE_RESOLVED_CONTEXT_MISSING")
-    proposal_resolved_context = ProposalResolvedContext.model_validate(
-        session.resolved_context.model_dump(mode="json")
+    proposal_resolved_context = build_workspace_proposal_context(
+        resolved_context=session.resolved_context,
+        stateful_input=session.stateful_input,
+        simulate_request=simulate_request,
     )
     resolved_request = ResolvedSimulationContext(
         input_mode=session.input_mode,

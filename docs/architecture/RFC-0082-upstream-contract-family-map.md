@@ -45,7 +45,7 @@ match versus mismatch for migration review without treating Core as decision aut
 
 | Field family | Authority | Advise handling |
 | --- | --- | --- |
-| before-state, after-state, intents, reconciliation, rule results, allocation lens, source lineage | `lotus-core` source-effects authority | Accepted through `CoreProjectedTransactionEffects` after contract-version validation. |
+| before-state, after-state, intents, reconciliation, rule results, allocation lens, typed requested/effective valuation context, source lineage | `lotus-core` source-effects authority | Accepted through `CoreProjectedTransactionEffects` after contract-version validation; Advise preserves source dates/currencies as typed evidence and never infers missing valuation facts. |
 | suitability issues, recommended suitability gate, workflow gate, proposal decision summary, proposal alternatives, advisory next step, consent posture | `lotus-advise` advisory-decision authority | Recomputed by Advise policy modules; any Core-returned values are retained only under `non_authoritative_core_decisions` and classified under `core_decision_parity` for migration review. |
 | risk-lens enrichment and concentration methodology | `lotus-risk` risk authority | Attached by the risk adapter; missing risk authority remains degraded evidence, not a local risk calculation. |
 
@@ -88,11 +88,13 @@ performance conclusions from `lotus-core` operational reads.
    concentration, benchmark methodology, or reporting methodology.
 3. Local fallback or derivation behavior must be bounded, explicitly supportability-oriented, and never
    presented as an authoritative replacement for core or risk output.
-4. Proposal alternatives must remain anchored to canonical `lotus-core` simulation and `lotus-risk`
+4. Typed proposal valuation context must distinguish requested values from effective source values;
+   missing or mismatched dates/currencies remain partial, restricted, or unavailable evidence.
+5. Proposal alternatives must remain anchored to canonical `lotus-core` simulation and `lotus-risk`
    enrichment.
-5. New upstream source-data consumption must be classified into an RFC-0082 family before becoming a
+6. New upstream source-data consumption must be classified into an RFC-0082 family before becoming a
    stable advisory contract.
-6. Transport optimization discussions start with retrieval shape, payload size, caching, and upstream
+7. Transport optimization discussions start with retrieval shape, payload size, caching, and upstream
    contract design. gRPC is not a default answer for advisory integration.
 
 ## Current Evidence
