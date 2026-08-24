@@ -1292,7 +1292,7 @@ def render_refactor_health_report(context: QualityContext) -> str:
         "- Keep Spectral OpenAPI enforcement green while route and schema contracts evolve.",
         "- Convert the Interrogate docstring inventory into a targeted documentation-quality gate",
         "  after classifying public API and module ownership thresholds.",
-        "- Extend CI quality enforcement with machine-readable trend/regression slices;",
+        "- Maintain the machine-readable quality trend/regression gate and review its ratchets;",
         "  keep reviewed Vulture exceptions expiring after the oversized-code gate.",
         "- Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate after",
         "  classifying current B-ranked blocks.",
@@ -1339,8 +1339,8 @@ def render_quality_scorecard(context: QualityContext) -> str:
         (
             "Quality baseline freshness",
             "Enforced in local and GitHub gates",
-            "make quality-baseline-check in make check, make ci, make ci-local, "
-            "Feature Lane, PR Merge Gate, and Main Releasability",
+            "make quality-baseline-check + quality-trend-gate in make check, make ci, "
+            "make ci-local, Feature Lane, PR Merge Gate, and Main Releasability",
         ),
         (
             "Dead code",
@@ -1480,8 +1480,8 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "CI measurement",
             "Quality-baseline freshness and calibrated dependency/code regression gates are "
             "enforced in local and GitHub governance lanes.",
-            "`make quality-baseline-check`, `make dead-code-gate`, `make duplicate-code-gate`, "
-            "`make unused-dependency-gate`, and `make oversized-code-gate` "
+            "`make quality-baseline-check`, `make quality-trend-gate`, `make dead-code-gate`, "
+            "`make duplicate-code-gate`, `make unused-dependency-gate`, `make oversized-code-gate` "
             "now run in `make check`, "
             "`make ci`, `make ci-local`, Feature Lane, PR Merge Gate, and Main Releasability "
             "static governance jobs; workflow contract tests protect local CI target "
@@ -1559,8 +1559,8 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "- This scorecard proves measurable engineering improvement; it does not claim bank",
             "  certification, regulatory approval, client-ready publication, or production",
             "  deployment approval.",
-            "- Xenon strict thresholds, machine-readable trend policy, Bandit baseline",
-            "  reduction, and public API docstring thresholds remain governed follow-up work.",
+            "- Xenon strict thresholds, Bandit baseline reduction, and public API docstring",
+            "  thresholds remain governed follow-up work; trend ratchets remain policy-owned.",
             "",
         ]
     )

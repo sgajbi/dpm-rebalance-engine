@@ -80,6 +80,42 @@ def test_local_ci_targets_enforce_quality_baseline_freshness() -> None:
         )
 
 
+def test_quality_trend_gate_is_hard_versioned_and_present_across_ci_lanes() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    policy = Path("quality/quality-trend-policy.v1.json").read_text(encoding="utf-8")
+
+    assert all(
+        "quality-trend-gate" in _makefile_target_dependencies(makefile, target)
+        for target in ("check", "check-all", "ci", "ci-local")
+    )
+    assert "python -m scripts.quality_trend_gate" in makefile
+    assert '"schema_version": "lotus.advise.quality-trend-policy.v1"' in policy
+    assert '"allowed_delta": 500' in policy
+    assert policy.count('"allowed_delta": 0') == 3
+    assert '"exceptions"' in policy
+    for workflow_name, governance_job in (
+        ("feature-lane.yml", "lint-dependency-governance"),
+        ("pr-merge-gate.yml", "lint-typecheck-governance"),
+        ("main-releasability.yml", "lint-typecheck-governance"),
+    ):
+        section = _workflow_job_section(_workflow_text(workflow_name), governance_job)
+        assert all(
+            marker in section
+            for marker in (
+                "Quality Trend Regression Gate",
+                "run: make quality-trend-gate",
+                "path: output/quality-trend-gate.json",
+                "fetch-depth: 0",
+            )
+        )
+    for workflow_name, base_ref in (
+        ("feature-lane.yml", "origin/main"),
+        ("pr-merge-gate.yml", "${{ github.event.pull_request.base.sha }}"),
+        ("main-releasability.yml", "HEAD^"),
+    ):
+        assert f"QUALITY_BASE_REF: {base_ref}" in _workflow_text(workflow_name)
+
+
 def test_dead_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> None:
     makefile = Path("Makefile").read_text(encoding="utf-8")
     policy = Path("quality/dead-code-policy.v1.json").read_text(encoding="utf-8")

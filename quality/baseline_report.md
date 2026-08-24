@@ -1,16 +1,16 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-24T02:00:20.030804+00:00`
+- Generated At: `2026-08-24T03:01:16.955336+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
 
 ## Code Size
 
-- Python files: `1071`
+- Python files: `1073`
 - Packages: `42`
-- Modules: `1029`
-- Total Python lines: `193299`
+- Modules: `1031`
+- Total Python lines: `193798`
 
 ## Largest Files
 
@@ -34,7 +34,7 @@
 | 1 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 63 | 508 |
 | 2 | `render_refactor_health_report` | `scripts/quality_baseline_report.py` | 817 | 494 |
 | 3 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 398 |
-| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 309 |
+| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 310 |
 | 5 | `validate_live_cross_service_parity` | `scripts/validate_cross_service_parity_live.py` | 3695 | 274 |
 | 6 | `_assert_persisted_read_surfaces` | `scripts/validate_cross_service_parity_live.py` | 3422 | 271 |
 | 7 | `render_quality_scorecard` | `scripts/quality_baseline_report.py` | 1313 | 255 |
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5630, missing=5564, covered=66, coverage=1.2%`
+- Interrogate docstring inventory: `total=5640, missing=5573, covered=67, coverage=1.2%`
 - Interrogate remains report-only until public API and module ownership thresholds
   are classified.
 

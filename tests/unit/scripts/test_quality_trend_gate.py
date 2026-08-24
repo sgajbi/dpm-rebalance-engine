@@ -1,0 +1,172 @@
+from __future__ import annotations
+
+import json
+import subprocess
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from scripts import quality_trend_gate
+from scripts.quality_gate_common import expected_policy_version
+
+
+def _report(
+    *,
+    total_lines: int = 100,
+    b_ranked_blocks: int = 4,
+    worst_complexity: int = 10,
+    documentation_coverage: float = 1.2,
+) -> str:
+    return "\n".join(
+        [
+            f"- Total Python lines: `{total_lines}`",
+            f"- Radon complexity rank inventory: `A=20, B={b_ranked_blocks}`",
+            f"- Radon worst complexity: `rank=B, complexity={worst_complexity}`",
+            "- Interrogate docstring inventory: "
+            f"`total=100, missing=90, covered=10, coverage={documentation_coverage}%`",
+        ]
+    )
+
+
+def _policy() -> dict[str, Any]:
+    return quality_trend_gate.load_policy(Path("quality/quality-trend-policy.v1.json"))
+
+
+def test_parse_report_reads_the_committed_quality_metrics() -> None:
+    assert quality_trend_gate.parse_report(_report()) == {
+        "total_python_lines": 100.0,
+        "radon_b_ranked_blocks": 4.0,
+        "radon_worst_complexity": 10.0,
+        "interrogate_coverage_percent": 1.2,
+    }
+
+
+def test_compare_metrics_passes_within_thresholds_and_reports_deltas() -> None:
+    policy = _policy()
+    policy["metrics"][0]["allowed_delta"] = 5
+    results, failures = quality_trend_gate.compare_metrics(
+        quality_trend_gate.parse_report(_report()),
+        quality_trend_gate.parse_report(
+            _report(
+                total_lines=105, b_ranked_blocks=4, worst_complexity=10, documentation_coverage=1.2
+            )
+        ),
+        policy,
+    )
+
+    assert failures == []
+    assert results[0].delta == 5
+    assert results[0].status == "passed"
+
+
+def test_compare_metrics_rejects_complexity_and_documentation_regressions() -> None:
+    policy = _policy()
+    policy["metrics"][0]["allowed_delta"] = 5
+    results, failures = quality_trend_gate.compare_metrics(
+        quality_trend_gate.parse_report(_report()),
+        quality_trend_gate.parse_report(
+            _report(
+                total_lines=106, b_ranked_blocks=5, worst_complexity=11, documentation_coverage=1.1
+            )
+        ),
+        policy,
+    )
+
+    assert len(failures) == 4
+    assert all(result.status == "failed" for result in results)
+    assert "radon_b_ranked_blocks" in failures[1]
+    assert "interrogate_coverage_percent" in failures[3]
+
+
+def test_reviewed_exception_is_visible_and_applies_its_expiring_limit() -> None:
+    policy = _policy()
+    policy["exceptions"]["entries"] = [
+        {
+            "metric": "radon_b_ranked_blocks",
+            "allowed_delta": 2,
+            "reason": "Reviewed decomposition is scheduled.",
+            "approver": "review-lead",
+            "expires_on": "2099-01-01",
+        }
+    ]
+    results, failures = quality_trend_gate.compare_metrics(
+        quality_trend_gate.parse_report(_report()),
+        quality_trend_gate.parse_report(_report(b_ranked_blocks=6)),
+        policy,
+    )
+
+    assert failures == []
+    assert results[1].exception is not None
+    assert results[1].policy_allowed_delta == 0
+    assert results[1].allowed_delta == 2
+
+
+def test_load_policy_rejects_content_without_a_matching_fingerprint(tmp_path: Path) -> None:
+    policy = json.loads(Path("quality/quality-trend-policy.v1.json").read_text(encoding="utf-8"))
+    policy["policy_version"] = "lotus-advise-quality-trend.v1+000000000000"
+    policy_path = tmp_path / "quality-trend-policy.json"
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="content fingerprint"):
+        quality_trend_gate.load_policy(policy_path)
+
+
+def test_load_policy_rejects_expired_reviewed_exception(tmp_path: Path) -> None:
+    policy = json.loads(Path("quality/quality-trend-policy.v1.json").read_text(encoding="utf-8"))
+    policy["exceptions"]["entries"] = [
+        {
+            "metric": "total_python_lines",
+            "allowed_delta": 501,
+            "reason": "Expired test exception.",
+            "approver": "review-lead",
+            "expires_on": "2000-01-01",
+        }
+    ]
+    policy["policy_version"] = expected_policy_version(policy)
+    policy_path = tmp_path / "quality-trend-policy.json"
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Expired quality-trend exception"):
+        quality_trend_gate.load_policy(policy_path)
+
+
+def test_run_gate_compares_quality_reports_at_committed_revisions(tmp_path: Path) -> None:
+    quality_dir = tmp_path / "quality"
+    quality_dir.mkdir()
+    policy_path = quality_dir / "quality-trend-policy.v1.json"
+    policy_path.write_text(
+        json.dumps(
+            json.loads(Path("quality/quality-trend-policy.v1.json").read_text(encoding="utf-8"))
+        ),
+        encoding="utf-8",
+    )
+    report_path = quality_dir / "baseline_report.md"
+    report_path.write_text(_report(), encoding="utf-8")
+
+    def git(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True, text=True)
+
+    git("init")
+    git("config", "user.name", "Quality Trend Test")
+    git("config", "user.email", "quality-trend-test@example.invalid")
+    git("add", ".")
+    git("commit", "-m", "test: establish quality baseline")
+    report_path.write_text(_report(total_lines=104), encoding="utf-8")
+    git("add", ".")
+    git("commit", "-m", "test: advance quality baseline")
+
+    output_path = tmp_path / "output" / "quality-trend-gate.json"
+    result = quality_trend_gate.run_gate(
+        repo_root=tmp_path,
+        policy_path=policy_path,
+        output_path=output_path,
+        base_ref="HEAD^",
+        head_ref="HEAD",
+    )
+    evidence = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert result == 0
+    assert evidence["status"] == "passed"
+    assert evidence["counts"]["findings"] == 4
+    assert evidence["base_sha"] != evidence["head_sha"]
