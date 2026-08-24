@@ -55,6 +55,9 @@
     floor passed for the one changed Python module at `90%+`; quality baseline, dependency,
     dead-code, duplicate-code, oversized-code, security, OpenAPI/Spectral, architecture, type,
     format, and documentation gates passed.
+  - Signed quality evidence commit `285fb47e` refreshed the baseline after the final gate-name
+    regression test added `11` measured Python lines; the resulting `193,299`-line baseline is
+    the CI-comparable artifact used by the next remote run.
   - The workflow-gate next-step half remains derived from live `_GATE_OUTCOME_RULES` and is
     verified against conflicting-outcome and expected-map drift failures. Decision-status
     workflow-gate pairings are additionally cross-checked against the runtime inverse in
