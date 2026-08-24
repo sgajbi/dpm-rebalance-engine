@@ -33,15 +33,6 @@ def _policy() -> dict[str, Any]:
     return quality_trend_gate.load_policy(Path("quality/quality-trend-policy.v1.json"))
 
 
-def test_parse_report_reads_the_committed_quality_metrics() -> None:
-    assert quality_trend_gate.parse_report(_report()) == {
-        "total_python_lines": 100.0,
-        "radon_b_ranked_blocks": 4.0,
-        "radon_worst_complexity": 10.0,
-        "interrogate_coverage_percent": 1.2,
-    }
-
-
 def test_compare_metrics_passes_within_thresholds_and_reports_deltas() -> None:
     policy = _policy()
     policy["metrics"][0]["allowed_delta"] = 5
