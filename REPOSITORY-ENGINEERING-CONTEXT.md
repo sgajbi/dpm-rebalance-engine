@@ -416,6 +416,11 @@ Boundary rules:
     `WORKSPACE_STORE_BACKEND=POSTGRES`; the process-local adapter remains a non-release/test
     adapter, while broader idempotency controls and live multi-instance recovery drills remain
     separately governed hardening work.
+31. direct/stateless proposal and workspace contexts must preserve an explicit reference-model or
+    source-owned lifecycle date and otherwise publish `as_of: null`; no current-date fallback may
+    appear beside unavailable typed valuation evidence. Stateful Lotus Core context remains required
+    to provide a resolved source date, and consumers must use nested valuation-context effective
+    dates for valuation evidence.
 
 ## Repo-Native Commands
 
