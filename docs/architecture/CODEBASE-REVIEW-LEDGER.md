@@ -28438,10 +28438,12 @@
 - Status: Hardened
 - Finding Class: Source-authority truth, contract compatibility, workspace/proposal boundary
 - Summary: `ProposalResolvedContext.as_of` and `WorkspaceResolvedContext.as_of` are now optional
-  lifecycle values. Direct/stateless requests preserve a supplied reference-model date and otherwise
-  publish null; stateful Core context still requires a resolved source date and fails explicitly if
-  the adapter violates that contract. The evaluation and risk-enrichment ports accept the truthful
-  absent value instead of receiving a fabricated current date.
+  lifecycle values on response/internal projections, not request input models. Direct/stateless
+  requests preserve a supplied reference-model date and otherwise publish null; stateful Core
+  context still requires a resolved source date and fails explicitly if the adapter violates that
+  contract. The evaluation and risk-enrichment ports accept the truthful absent value instead of
+  receiving a fabricated current date. The nullable `default=None` therefore does not loosen
+  request validation.
 - Evidence:
   - Removed `_current_business_date_iso` from proposal context resolution and the workspace
     application service; removed the unused `fallback_as_of` parameter from the workspace source
@@ -28458,7 +28460,7 @@
   - Regression tests cover no-date direct resolution, reference-model preservation, API evaluation
     propagation of null, workspace projection, replay preservation, OpenAPI optionality, and
     existing stateful behavior.
-  - Focused validation passed `38` tests; full `make check` passed `2722` unit tests, Ruff
+  - Focused validation passed `38` tests; full `make check` passed `2723` unit tests, Ruff
     check/format, mypy across `658` source files, OpenAPI/Spectral, security, dependency, migration,
     architecture, and quality gates; repository `git diff --check` passed.
 - Compatibility:
