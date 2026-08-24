@@ -14,27 +14,24 @@
 - Summary: Certification responsibilities now have domain-named helpers. Policy-pack activation,
   evidence-bundle construction, and report success/degraded handling belong to the dedicated
   policy-evaluation support module; the validator retains workflow orchestration and snapshot
-  assembly. The refactored validator module is 3,992 lines, and the resolved function fingerprint
-  is removed from the versioned oversized-code inventory without relaxing thresholds. The
-  refactor also resolves one stale jscpd clone fingerprint within the validator, which is removed
-  from the duplicate-code inventory without changing the no-new-findings gate.
+  assembly. The resolved function fingerprint is removed from the versioned oversized-code
+  inventory without relaxing thresholds, and the module baseline is ratcheted to the current
+  generated measurement. The refactor also resolves one stale jscpd clone fingerprint within the
+  validator, which is removed from the duplicate-code inventory without changing the no-new-findings
+  gate.
 - Evidence:
   - `tests/unit/advisory/api/test_live_cross_service_parity.py` proves the extracted report helper
     preserves both the 200/READY and 503/degraded outcomes.
-  - The nine extracted helpers plus their new support module and protocol carry domain-specific
-    docstrings; generated Interrogate evidence therefore improves from 73 to 84 documented items
-    and from 1.3% to 1.5% coverage rather than
-    regressing the hard-gated quality trend.
-  - The final branch-vs-main Python-line delta is +250, exactly at the active quality-trend
-    allowance; no exception or threshold relaxation was added.
+  - The extracted helpers plus their new support module and protocol carry domain-specific
+    docstrings; generated Interrogate evidence remains non-regressing under the hard-gated quality
+    trend.
   - `make typecheck`, `make refactored-complexity-gate`, `make oversized-code-gate`, and the
-    focused live-parity/runtime-suite tests pass. The oversized-code gate reports 8 findings, 0
-    new, and 0 resolved under the refreshed baseline and policy fingerprints.
-  - `make duplicate-code-gate` reports 34 findings and 0 new under policy
-    `lotus-advise-duplicate-code.v2+5fa076933c75`; the resolved clone fingerprint is removed and
-    the baseline hash is refreshed.
-  - `quality/baseline_report.md` records the reduced validator module size and updated generated
-    inventory.
+    focused live-parity/runtime-suite tests pass. The oversized-code gate consumes the ratcheted
+    baseline and refreshed policy fingerprint.
+  - `make duplicate-code-gate` passes under policy `lotus-advise-duplicate-code.v2+5fa076933c75`;
+    the resolved clone fingerprint is removed and the baseline hash is refreshed.
+  - `quality/baseline_report.md` and the machine-readable quality gates are authoritative for
+    current generated measurements; this ledger intentionally does not duplicate derived counts.
 - Compatibility: Internal live-validation tooling only. No runtime/API/OpenAPI, persistence,
   migration, calculation, dependency, or downstream contract change is intended.
 - Documentation decision: Updated this review ledger and generated quality evidence because the
