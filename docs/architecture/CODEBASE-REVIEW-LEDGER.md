@@ -8,11 +8,11 @@
   top-level-status, recommended-action, workflow-gate, and gate-next-step pairings were not
   published. Gateway therefore carried a duplicated matrix that could drift into a production
   502/Workbench outage after an Advise rule change.
-- Status: Initial contract publication is merged to `main`; this bounded derivation follow-up is
-  implemented on the feature branch and remains pending merge/review before issue #508 closes.
-  Workflow-gate and insufficient-evidence action pairings now fail closed against their runtime
-  rule sources. The legacy top-level status projection is explicitly a reviewed compatibility
-  declaration by design, not an untracked derivation gap.
+- Status: The initial contract publication and bounded derivation follow-up are implemented and
+  merged to `main`; no technical follow-up remains for issue #508. Workflow-gate and
+  insufficient-evidence action pairings now fail closed against their runtime rule sources. The
+  legacy top-level status projection is explicitly a reviewed compatibility declaration by design,
+  not an untracked derivation gap.
 - Finding Class: producer-owned contract governance, downstream compatibility, CI regression
   prevention.
 - Summary: The bounded #508 slice publishes `docs/standards/proposal-decision-vocabulary.v1.json`
@@ -76,6 +76,15 @@
     stack and then recorded product container `c9c8e86cd163eb9b246768844f10b78fd57990f98db4cd87e190124003e292cf`,
     network `c1620f1288a26cdef81cfd7512fd430afd19a1d50c46d0363851c495407e65d4`, healthy state,
     and `/health=200`, `/health/ready=200`.
+  - PR #524 merged the bounded decision-status derivation follow-up by approved rebase/non-squash
+    method at mainline commit `f41cca1ca8c2c53b62b11d61d3959233f37475f5`; the exact-head
+    review-lead verdict was `VERDICT: mergeable` on `291cb4b82d22f58e22ff24e390e32eaa504d57ba`,
+    and PR Merge Gate run `32681700914` was green after the baseline freshness correction.
+  - Exact-mainline Main Releasability run `32682113783` passed its exact revision assertion,
+    coverage, unit/integration/e2e, migration/startup/guardrail, Docker, governance,
+    security/dependency/license, and signed image evidence lanes. Repo-authored wiki source was
+    then published at `cc2bee3`; strict parity verification returned `DiffCount 0`, and the
+    canonical runtime remained healthy with `/health=200` and `/health/ready=200`.
 - Compatibility: additive repository contract and CI validation only. Current decision and gate
   pairings are preserved; no runtime behavior, API schema, persistence, migration, calculation,
   or dependency-version contract change is intended.
@@ -85,8 +94,9 @@
 - Downstream handoff: `lotus-gateway#599` consumes this producer-owned artifact to detect matrix
   drift while retaining its anti-corruption runtime validation.
 - Issue evidence: GitHub issue #508 records the bounded objective, CI coverage correction,
-  downstream handoff, merge, exact-mainline, wiki, and runtime evidence; the issue remains open
-  for the explicitly named decision-status derivation follow-up.
+  downstream handoff, both implementation merges, exact-mainline validation, wiki publication and
+  parity, runtime health, and final closure evidence. The final bookkeeping action is issue
+  verification and closure after this ledger evidence is on `main`.
 
 ## LA-REV-495-CI-OVERSIZED-CODE
 
