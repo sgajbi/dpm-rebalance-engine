@@ -141,18 +141,25 @@ def test_run_gate_compares_quality_reports_at_committed_revisions(tmp_path: Path
     git("init")
     git("config", "user.name", "Quality Trend Test")
     git("config", "user.email", "quality-trend-test@example.invalid")
+    git("branch", "-M", "main")
     git("add", ".")
     git("commit", "-m", "test: establish quality baseline")
+    git("switch", "-c", "feature")
     report_path.write_text(_report(total_lines=104), encoding="utf-8")
     git("add", ".")
-    git("commit", "-m", "test: advance quality baseline")
+    git("commit", "-m", "test: advance feature quality baseline")
+    git("switch", "main")
+    report_path.write_text(_report(total_lines=103), encoding="utf-8")
+    git("add", ".")
+    git("commit", "-m", "test: advance unrelated main baseline")
+    git("switch", "feature")
 
     output_path = tmp_path / "output" / "quality-trend-gate.json"
     result = quality_trend_gate.run_gate(
         repo_root=tmp_path,
         policy_path=policy_path,
         output_path=output_path,
-        base_ref="HEAD^",
+        base_ref="main",
         head_ref="HEAD",
     )
     evidence = json.loads(output_path.read_text(encoding="utf-8"))
@@ -160,4 +167,7 @@ def test_run_gate_compares_quality_reports_at_committed_revisions(tmp_path: Path
     assert result == 0
     assert evidence["status"] == "passed"
     assert evidence["counts"]["findings"] == 4
-    assert evidence["base_sha"] != evidence["head_sha"]
+    assert evidence["base_sha"] != evidence["merge_base_sha"]
+    assert evidence["metrics"][0]["base"] == 100.0
+    assert evidence["metrics"][0]["head"] == 104.0
+    assert evidence["metrics"][0]["delta"] == 4.0
