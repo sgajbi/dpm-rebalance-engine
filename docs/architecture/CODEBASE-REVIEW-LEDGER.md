@@ -12,17 +12,18 @@
 - Finding Class: Quality-evidence maintainability, hotspot decomposition, and report-contract
   regression prevention.
 - Summary: Dynamic before/after evidence now belongs to `_scorecard_before_after_rows`, while
-  `render_quality_scorecard` remains a small orchestration function. The renderer is 109 lines,
-  the extracted helper is 145 lines, the module is 1,636 lines, and the oversized-code inventory
-  fell from 10 to 9 findings with no new findings.
+  `render_quality_scorecard` remains a small orchestration function. The generated baseline
+  report and oversized-code gate own the exact function/module measurements; the resolved
+  renderer fingerprint is removed from the versioned inventory, which fell from 10 to 9 findings
+  with no new findings.
 - Evidence:
-  - `tests/unit/scripts/test_quality_baseline_report.py` preserves the scorecard section
-    assertions and verifies that the public renderer delegates the before/after evidence while
-    remaining below the 200-line function threshold.
+  - `tests/unit/scripts/test_quality_baseline_report.py` preserves the scorecard section and
+    generated-report behavior assertions.
   - `quality/oversized-code-baseline.v1.json` removes the resolved renderer finding; the refreshed
     policy fingerprint and baseline hash are validated by `make oversized-code-gate`.
-  - Generated report freshness and focused report tests verify that the scorecard content remains
-    unchanged apart from governed generated metadata.
+  - `quality/baseline_report.md` and `make oversized-code-gate` are the authoritative evidence for
+    current function/module sizes; generated report freshness and focused report tests verify that
+    scorecard content remains unchanged apart from governed generated metadata.
 - Compatibility: Quality-evidence generation only. No CLI, public import, runtime, API/OpenAPI,
   persistence, migration, calculation, data-model, dependency, or downstream contract change is
   intended.

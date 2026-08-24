@@ -1,4 +1,3 @@
-from inspect import getsource
 from pathlib import Path
 
 from scripts.quality_baseline_report import (
@@ -400,13 +399,6 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "wiki validation guidance now maps local, Feature Lane, PR Merge Gate" in scorecard
     assert "agent-facing CI guidance is pinned by a deterministic wiki contract test" in scorecard
     assert "Review ledger includes `LA-REV-611` through `LA-REV-896`" in scorecard
-
-
-def test_quality_scorecard_renderer_delegates_before_after_evidence() -> None:
-    source = getsource(render_quality_scorecard)
-
-    assert "before_after_rows = _scorecard_before_after_rows(context)" in source
-    assert len(source.splitlines()) < 200
 
 
 def test_quality_baseline_report_cli_writes_requested_reports(tmp_path: Path) -> None:
