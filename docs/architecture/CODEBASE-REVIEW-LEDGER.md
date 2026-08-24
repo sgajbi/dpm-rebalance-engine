@@ -12,16 +12,16 @@
   operator/developer evidence truth.
 - Summary: `quality/quality-trend-policy.v1.json` now rejects more than 250 added Python lines
   without an exact, reviewed exception. The boundary is explicit: +250 passes the active policy
-  and +251 fails. Review-lead evidence for recent merged PRs #526-#535 reports ordinary
-  merge-base-to-head deltas from -1 to +45 lines; 250 is more than five times that observed
-  maximum while removing the unreviewed half-kiloline admission window.
+  and +251 fails. Review-lead evidence for recent merged PRs #526-#535 reports the ordinary
+  merge-base-to-head run at +12 to +166 lines, with two large batches at +435 and +511; 250
+  admits the ordinary run while requiring exact reviewed exceptions for those larger changes.
 - Evidence:
   - `tests/unit/scripts/test_quality_trend_gate.py` proves the active policy's +250/+251 boundary
     through the comparator and checks the actionable failure evidence.
   - `tests/unit/test_ci_workflow_contracts.py` prevents the workflow contract from silently
     restoring the former 500-line allowance.
   - Repository context and `wiki/Validation-and-CI.md` publish the current threshold and its
-    calibration basis; the issue/PR review record identifies the recent PR range and maximum.
+    calibration basis; the issue/PR review record identifies the recent PR range and deltas.
 - Compatibility: CI/evidence policy and developer/operator guidance only. No runtime, API/OpenAPI,
   persistence, migration, calculation, data-model, dependency, or downstream contract changes
   are intended.
