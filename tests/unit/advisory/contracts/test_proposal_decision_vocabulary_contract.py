@@ -101,6 +101,28 @@ def test_decision_vocabulary_fails_when_runtime_gate_inverse_drifts(monkeypatch)
         decision_summary_status_rules.proposal_decision_vocabulary()
 
 
+def test_decision_vocabulary_fails_when_published_gate_name_is_unknown(monkeypatch) -> None:
+    monkeypatch.setitem(
+        decision_summary_status_rules._DECISION_STATUS_WORKFLOW_GATES,
+        "READY_FOR_CLIENT_REVIEW",
+        ("EXECUTION_REDY", "NONE"),
+    )
+
+    with pytest.raises(RuntimeError, match="unknown workflow gates: EXECUTION_REDY"):
+        decision_summary_status_rules.proposal_decision_vocabulary()
+
+
+def test_decision_vocabulary_fails_when_insufficient_gate_set_drifts(monkeypatch) -> None:
+    monkeypatch.setitem(
+        decision_summary_status_rules._DECISION_STATUS_WORKFLOW_GATES,
+        "INSUFFICIENT_EVIDENCE",
+        ("RISK_REVIEW_REQUIRED",),
+    )
+
+    with pytest.raises(RuntimeError, match="INSUFFICIENT_EVIDENCE workflow gates drifted"):
+        decision_summary_status_rules.proposal_decision_vocabulary()
+
+
 def test_workflow_vocabulary_fails_on_conflicting_rule_outcomes(monkeypatch) -> None:
     conflicting_rule = GateOutcomeRule(lambda _context: False, ("BLOCKED", "EXECUTE"))
     monkeypatch.setattr(
