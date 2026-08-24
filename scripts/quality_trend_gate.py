@@ -25,7 +25,9 @@ _REPORT_PATTERNS: dict[str, re.Pattern[str]] = {
         r"^- Radon worst complexity: `rank=[A-F], complexity=(?P<reading>\d+)`$", re.MULTILINE
     ),
     "interrogate_coverage_percent": re.compile(
-        r"^- Interrogate docstring inventory: `.*coverage=(?P<reading>\d+(?:\.\d+)?)%`$",
+        r"^- Interrogate docstring inventory: `.*total=(?P<total>\d+), "
+        r"missing=(?P<missing>\d+), covered=(?P<covered>\d+), "
+        r"coverage=(?P<rendered_coverage>\d+(?:\.\d+)?)%`$",
         re.MULTILINE,
     ),
 }
@@ -131,13 +133,29 @@ def load_policy(path: Path) -> dict[str, Any]:
     return {**policy, "metrics": raw_metrics, "exceptions": {**exceptions, "entries": entries}}
 
 
+def _measurement(name: str, match: re.Match[str]) -> float:
+    if name != "interrogate_coverage_percent":
+        measurement = float(match.group("reading"))
+    else:
+        total = int(match.group("total"))
+        missing = int(match.group("missing"))
+        covered = int(match.group("covered"))
+        if total <= 0 or missing + covered != total:
+            raise ValueError(
+                "Interrogate report counts must have a positive total and satisfy "
+                "missing + covered = total."
+            )
+        measurement = covered / total * 100
+    return measurement
+
+
 def parse_report(content: str) -> dict[str, float]:
     measurements: dict[str, float] = {}
     for name, pattern in _REPORT_PATTERNS.items():
         match = pattern.search(content)
         if match is None:
             raise ValueError(f"Quality baseline report is missing metric: {name}")
-        measurements[name] = float(match.group("reading"))
+        measurements[name] = _measurement(name, match)
     return measurements
 
 
