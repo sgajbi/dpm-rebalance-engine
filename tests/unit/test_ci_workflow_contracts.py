@@ -89,8 +89,11 @@ def test_quality_trend_gate_is_hard_versioned_and_present_across_ci_lanes() -> N
         for target in ("check", "check-all", "ci", "ci-local")
     )
     assert "python -m scripts.quality_trend_gate" in makefile
+    assert '"schema_version": "lotus.advise.quality-trend-policy.v1"' in policy
     assert '"allowed_delta": 500' in policy
     assert policy.count('"allowed_delta": 0') == 3
+    assert '"exceptions"' in policy
+    assert '"expires_on"' in policy
     for workflow_name, governance_job in (
         ("feature-lane.yml", "lint-dependency-governance"),
         ("pr-merge-gate.yml", "lint-typecheck-governance"),
@@ -105,6 +108,13 @@ def test_quality_trend_gate_is_hard_versioned_and_present_across_ci_lanes() -> N
                 "fetch-depth: 0",
             )
         )
+        assert "Quality Trend Regression Gate" in section
+        base_ref = {
+            "feature-lane.yml": "origin/main",
+            "pr-merge-gate.yml": "${{ github.event.pull_request.base.sha }}",
+            "main-releasability.yml": "HEAD^",
+        }[workflow_name]
+        assert f"QUALITY_BASE_REF: {base_ref}" in section
 
 
 def test_dead_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> None:

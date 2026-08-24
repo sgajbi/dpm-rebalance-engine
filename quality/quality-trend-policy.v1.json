@@ -1,13 +1,13 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+d342d0d7d8b0",
+  "policy_version": "lotus-advise-quality-trend.v1+6141c014c496",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
       "name": "total_python_lines",
       "direction": "increase",
       "allowed_delta": 500,
-      "reason": "Set the steady-state change budget at 500 Python lines so unreviewed AI-generated or low-value growth cannot hide behind aggregate gates."
+      "reason": "Keep src, scripts, and tests in one visible Python-growth budget so generated production code and shallow regression-test bulk cannot hide from review; the 500-line steady-state limit is the default, with only explicit expiring exceptions for mandatory control restoration."
     },
     {
       "name": "radon_b_ranked_blocks",
@@ -37,6 +37,14 @@
       "approver": "GitHub identity",
       "expires_on": "YYYY-MM-DD"
     },
-    "entries": []
+    "entries": [
+      {
+        "metric": "total_python_lines",
+        "allowed_delta": 525,
+        "reason": "Restore the mandatory per-lane base-ref and quality-trend wiring assertions requested in review while retaining the merge-base implementation and its discriminating regression test; expire this one-slice allowance after review completes.",
+        "approver": "sgajbi",
+        "expires_on": "2026-09-30"
+      }
+    ]
   }
 }
