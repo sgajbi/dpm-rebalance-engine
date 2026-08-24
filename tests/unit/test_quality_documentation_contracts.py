@@ -25,7 +25,9 @@ def _active_make_commands(recipe: str) -> tuple[str, ...]:
 def _active_python_commands(recipe: str) -> tuple[str, ...]:
     commands = []
     for command in _active_make_commands(recipe):
-        normalized = re.sub(r"^[+@-]\s*", "", command)
+        normalized = command
+        while normalized[:1] in {"+", "@"}:
+            normalized = normalized[1:].lstrip()
         if re.match(r"^python(?:\.exe)?(?:\s|$)", normalized, re.IGNORECASE):
             commands.append(normalized)
     return tuple(commands)
@@ -77,6 +79,8 @@ def test_quality_control_command_parser_rejects_comments_and_echoes() -> None:
             "\t# python scripts/radon_complexity_gate.py --fail-rank C",
             "\t@echo python scripts/radon_complexity_gate.py --fail-rank C",
             "\t@python scripts/radon_complexity_gate.py --fail-rank C",
+            "\t-python scripts/radon_complexity_gate.py --fail-rank C",
+            "\t@-python scripts/radon_complexity_gate.py --fail-rank C",
         )
     )
 
