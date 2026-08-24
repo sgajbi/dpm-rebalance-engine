@@ -48,6 +48,13 @@ or policy/baseline hash drift fail closed. Evidence is emitted at
 `output/oversized-code-gate.json` and uploaded from each governance lane. This is CI/developer
 evidence only and does not change runtime, API, persistence, migration, or data-model behavior.
 
+The fast static lanes also run `make proposal-decision-vocabulary-gate`. It validates the
+versioned `docs/standards/proposal-decision-vocabulary.v1.json` artifact directly against the
+Advise-owned decision-status and workflow-gate rule modules. A changed decision pairing or gate
+next-step mapping fails with the affected vocabulary name, so Gateway consumers can compare a
+producer-owned contract rather than silently carrying a local snapshot. The artifact publishes
+pairings only; approval requirements and gate reasons remain separate runtime evidence fields.
+
 ## Reader Map
 
 | Reader | Start here |
@@ -60,11 +67,11 @@ evidence only and does not change runtime, API, persistence, migration, or data-
 
 | Lane | Primary proof | What it protects |
 | --- | --- | --- |
-| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, dead-code/duplicate-code/unused-dependency/oversized-code regression gates, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
-| Local PR-grade gate | `make ci` | Dependency health, static governance including dead-code/duplicate-code/unused-dependency/oversized-code regression gates, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
-| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, dependency governance including dead-code/duplicate-code/unused-dependency/oversized-code regression gates, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
-| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck/dead-code/duplicate-code/unused-dependency/oversized-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
-| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same static dead-code/duplicate-code/unused-dependency/oversized-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
+| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, producer-owned proposal decision vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, dead-code/duplicate-code/unused-dependency/oversized-code regression gates, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
+| Local PR-grade gate | `make ci` | Dependency health, static governance including proposal decision vocabulary and dead-code/duplicate-code/unused-dependency/oversized-code regression gates, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
+| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, producer-owned proposal decision vocabulary, dependency governance including dead-code/duplicate-code/unused-dependency/oversized-code regression gates, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
+| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck, producer-owned proposal decision vocabulary, dead-code/duplicate-code/unused-dependency/oversized-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
+| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same proposal decision vocabulary, static dead-code/duplicate-code/unused-dependency/oversized-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
 | Report-only quality evidence | `Quality Baseline / Report Only` and `make quality-baseline` | Trend evidence for code health and refactoring scorecards. Report-only signals should not be promoted until deterministic, low-noise, locally runnable, and policy-backed. |
 
 ```mermaid
@@ -93,6 +100,7 @@ make dead-code-gate
 make duplicate-code-gate
 make unused-dependency-gate
 make oversized-code-gate
+make proposal-decision-vocabulary-gate
 make demo-assurance-gate
 make demo-certification-live
 make security-audit

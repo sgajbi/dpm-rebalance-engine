@@ -3,8 +3,8 @@
 ## Local Validation
 
 - `make check`: local Feature Lane parity for lint, typecheck, OpenAPI, vocabulary, data-product,
-  trust-telemetry freshness, dead/duplicate/unused-dependency/oversized-code regression, and
-  unit-test gates.
+  producer-owned proposal-decision vocabulary, trust-telemetry freshness,
+  dead/duplicate/unused-dependency/oversized-code regression, and unit-test gates.
 - `make ci-local`: local PR Merge Gate subset without Docker, including quality-baseline
   freshness.
 - `make quality-baseline`: regenerate report-only quality artifacts in `quality/`.
@@ -52,6 +52,9 @@
 - `make trust-telemetry-freshness-gate`: derives committed trust-telemetry age and blocking posture
   from observed implementation evidence so stale snapshots cannot claim current data-product
   promotion evidence.
+- `make proposal-decision-vocabulary-gate`: validates the checked-in versioned proposal decision
+  vocabulary against `decision_summary_status_rules.py` and `workflow_gates.py`; pairing drift
+  fails with the affected decision status or workflow gate.
 
 ## Required Runtime Identity
 
