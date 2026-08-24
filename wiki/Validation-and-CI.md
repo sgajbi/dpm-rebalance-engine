@@ -59,6 +59,16 @@ is explicitly a reviewed compatibility declaration because it has no separate ru
 The artifact publishes pairings only; approval requirements and gate reasons remain separate
 runtime evidence fields.
 
+The same fast static lanes also run `make quality-trend-gate`. This gate compares the committed
+`quality/baseline_report.md` metrics at a base revision and the exact head revision, then writes
+`output/quality-trend-gate.json`. The versioned policy allows at most 500 additional Python lines,
+no increase in Radon B-ranked blocks, no increase in the worst Radon complexity, and no decrease
+in Interrogate coverage. Any reviewed exception must name the metric, justification, approver,
+and expiry date; policy content changes require a matching content-fingerprint version. Feature
+Lane compares against `origin/main`, PR Merge Gate uses the pull request base/head SHAs, and Main
+Releasability compares `HEAD^` with `HEAD`. The gate is CI/developer evidence only and does not
+change runtime, API, persistence, migration, or data-model behavior.
+
 ## Reader Map
 
 | Reader | Start here |
@@ -71,12 +81,12 @@ runtime evidence fields.
 
 | Lane | Primary proof | What it protects |
 | --- | --- | --- |
-| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, producer-owned proposal decision vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, dead-code/duplicate-code/unused-dependency/oversized-code regression gates, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
-| Local PR-grade gate | `make ci` | Dependency health, static governance including proposal decision vocabulary and dead-code/duplicate-code/unused-dependency/oversized-code regression gates, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
-| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, producer-owned proposal decision vocabulary, dependency governance including dead-code/duplicate-code/unused-dependency/oversized-code regression gates, dependency-lock evidence, license/IP evidence, Bandit severity regression, demo-assurance checks, and quality-baseline freshness. |
-| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck, producer-owned proposal decision vocabulary, dead-code/duplicate-code/unused-dependency/oversized-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
-| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same proposal decision vocabulary, static dead-code/duplicate-code/unused-dependency/oversized-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
-| Report-only quality evidence | `Quality Baseline / Report Only` and `make quality-baseline` | Trend evidence for code health and refactoring scorecards. Report-only signals should not be promoted until deterministic, low-noise, locally runnable, and policy-backed. |
+| Local fast gate | `make check` | Lint, typecheck, OpenAPI, no-alias, API vocabulary, producer-owned proposal decision vocabulary, domain data products, trust telemetry freshness, advisory data-lifecycle inventory, quality-baseline freshness, quality trend comparison, dead-code/duplicate-code/unused-dependency/oversized-code regression gates, high-severity security, dependency-lock evidence, license/IP evidence, and unit behavior. |
+| Local PR-grade gate | `make ci` | Dependency health, static governance including proposal decision vocabulary, quality trend comparison, and dead-code/duplicate-code/unused-dependency/oversized-code regression gates, migrations, security audit, dependency-lock evidence, license/IP evidence, release-image provenance, coverage, Docker build, Postgres runtime contracts, and production-profile guardrail negatives. |
+| Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, producer-owned proposal decision vocabulary, quality trend comparison, dependency governance including dead-code/duplicate-code/unused-dependency/oversized-code regression gates, dependency-lock evidence, license/IP evidence, Bandit severity regression, and demo-assurance checks. |
+| PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck, producer-owned proposal decision vocabulary, quality trend comparison, dead-code/duplicate-code/unused-dependency/oversized-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
+| Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same proposal decision vocabulary and quality trend comparison, static dead-code/duplicate-code/unused-dependency/oversized-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
+| Report-only quality evidence | `Quality Baseline / Report Only` and `make quality-baseline` | Detailed code-health and refactoring scorecards remain report-only; the versioned quality trend comparison is separately enforced by local and governance lanes. |
 
 ```mermaid
 flowchart LR
@@ -100,6 +110,7 @@ make ci
 make ci-local
 make ci-local-docker
 make quality-baseline-check
+make quality-trend-gate
 make dead-code-gate
 make duplicate-code-gate
 make unused-dependency-gate
@@ -181,6 +192,11 @@ The current blocking posture is intentionally high-signal:
    evidence to reference real regression tests.
 10. `make quality-baseline-check`
    blocks stale committed quality report and scorecard truth.
+   `make quality-trend-gate` compares committed base/head metrics and blocks policy-defined
+   regressions in Python-line growth, Radon B-ranked blocks, worst Radon complexity, or
+   Interrogate coverage. It emits `output/quality-trend-gate.json` with both revision SHAs,
+   metric deltas, thresholds, policy fingerprint, and any exception provenance. This is a
+   CI/developer quality gate and does not alter product behavior or contracts.
 11. `make duplicate-code-gate`
    runs strict jscpd against `src` and `scripts`, compares normalized clone fingerprints with
    the reviewed baseline, and fails on new or resolved findings or any tool/parser/policy/baseline-

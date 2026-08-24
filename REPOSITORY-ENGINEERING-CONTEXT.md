@@ -442,19 +442,25 @@ Use these commands as the primary local contract:
    rewrite historical committed observations.
 9. quality evidence freshness gate
    `make quality-baseline-check`
-10. dead-code regression gate
+10. quality trend regression gate
+   `make quality-trend-gate` compares the committed baseline report at the governed base and
+   exact head revisions. The versioned policy blocks more than 500 added Python lines, any new
+   Radon B-ranked block, any increase in worst Radon complexity, or any Interrogate coverage
+   decrease; reviewed exceptions require an approver, reason, and expiry. Evidence is emitted
+   to `output/quality-trend-gate.json` with revision SHAs and metric deltas.
+11. dead-code regression gate
    `make dead-code-gate`
    This runs the pinned Vulture scanner against `src` and `scripts`, fails on new or malformed
    findings, and permits only fingerprinted compatibility exceptions with owner, reason, and
    expiry metadata in `quality/dead-code-policy.v1.json`. The policy version ends with a
    content fingerprint; changing policy content without updating that version fails closed.
-11. oversized module/function regression gate
+12. oversized module/function regression gate
    `make oversized-code-gate` scans `src` and `scripts` against the 1,000-line module and
    200-line function thresholds, compares stable fingerprints with
    `quality/oversized-code-baseline.v1.json`, and fails on new, grown, resolved, expired, or
    malformed findings. Baseline entries require owner, reason, expiry, and policy/baseline hash
    provenance; this is CI/developer evidence only and does not change product contracts.
-12. proposal decision vocabulary contract
+13. proposal decision vocabulary contract
    `make proposal-decision-vocabulary-gate` validates
    `docs/standards/proposal-decision-vocabulary.v1.json` against the Advise-owned
    `src/core/advisory/decision_summary_status_rules.py` and `src/core/common/workflow_gates.py`
