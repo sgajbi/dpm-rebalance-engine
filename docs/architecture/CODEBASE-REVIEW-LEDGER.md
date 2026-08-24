@@ -1,5 +1,56 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-CI-QUALITY-TREND
+
+- Scope: machine-readable quality regression comparison across the Feature Lane, PR Merge Gate,
+  and Main Releasability governance lanes.
+- Pattern: aggregate coverage, complexity, and report-freshness gates can remain green while a
+  change introduces measurable source growth or weakens a quality trend; the comparison must be
+  deterministic, fail closed, and visible in CI evidence.
+- Status: Implemented and merged to `main`; this bounded trend-gate slice is complete. Issue #495
+  remains open for threshold/rate ratcheting, expiry follow-through, and hotspot decomposition.
+- Finding Class: CI quality gate, maintainability regression prevention, review evidence.
+- Summary: The slice adds a versioned policy and comparator that reports base ref, effective
+  merge-base SHA, head SHA, measured deltas, thresholds, and reviewed exception provenance. It
+  keeps `src`, `scripts`, and `tests` in one visible Python-growth budget so test-only bulk cannot
+  hide from review, while preserving the existing aggregate coverage and complexity controls.
+- Evidence:
+  - `quality/quality-trend-policy.v1.json` defines a default `500`-line growth allowance,
+    zero-growth Radon B/worst-complexity and interrogate-decrease limits, content-fingerprint
+    protection, and one explicitly approved `525`-line exception expiring `2026-09-30`.
+  - `scripts/quality_trend_gate.py` resolves `git merge-base` before reading the comparison
+    report, records supplied and effective provenance, validates policy/report fingerprints, and
+    fails closed on malformed, stale, expired, or unexplained evidence.
+  - Regression tests include a genuinely divergent fork where the feature changes from 100 to 104
+    while main independently changes to 103; the gate proves it compares from the fork point and
+    reports delta 4 rather than the wrong tip-based delta.
+  - Feature, PR, and main workflow contract tests pin the gate step, policy schema, evidence path,
+    fetch depth, and intended base refs (`origin/main`, the pull-request base SHA, and `HEAD^`).
+  - Full feature-head `make check` passed `2,711` tests in `81.85s`; focused regression tests
+    passed `37`; lint, type, architecture, OpenAPI/Spectral, migration, security, license,
+    dead-code, duplicate-code, dependency, oversized-code, and baseline gates passed.
+  - PR #526 was kept draft through two blocking review holds. After the latest exact-head review
+    lead correction, the authoritative verdict was `VERDICT: mergeable` on
+    `06f1c5b77146ecc7025c9ac8405fc599bd39b2b0`; PR Merge Gate run `32688319795` passed, and the
+    approved rebase/non-squash merge produced signed mainline commits through `8610bf3d`.
+  - Exact-mainline Main Releasability run `32688749475` passed on
+    `8610bf3d70197c081153b2efbf72072304103065`, including exact revision, governance, tests,
+    coverage, migration/startup, Docker, and image security/provenance lanes. Local baseline
+    freshness and the exact `HEAD^` to `HEAD` trend gate also passed.
+  - Repo-authored wiki source was published at wiki commit `1153c05`; strict parity returned
+    `DiffCount 0`. The preserved Advise runtime remained healthy with `/health=200` and
+    `/health/ready=200`.
+- Compatibility: CI/evidence behavior only. No runtime, API/OpenAPI, persistence, migration,
+  calculation, data-model, or dependency-version contract change is intended.
+- Documentation decision: repository engineering context, generated quality evidence, validation
+  guidance, wiki source, and this ledger changed because the blocking developer/operator quality
+  surface changed. No OpenAPI, migration, or platform-wide context change is needed.
+- Follow-Up: #495 owns the expiring-exception lapse, future wording/rate calibration, threshold
+  ratcheting, and hotspot decomposition. No follow-up is being left only in chat.
+- Issue evidence: GitHub issue #495 records the bounded objective, deliberate metric-root choice,
+  review holds and final verdict, merged commits, exact-mainline validation, wiki publication and
+  parity, runtime health, and the remaining follow-up scope.
+
 ## LA-REV-508-PROPOSAL-DECISION-VOCABULARY
 
 - Scope: Advise-owned versioned proposal decision and workflow-gate vocabulary publication for
