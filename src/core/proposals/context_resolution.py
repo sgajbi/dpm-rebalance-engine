@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import cast
@@ -214,7 +212,7 @@ def _build_resolved_context_from_simulate_request(
             if simulate_request.reference_model is not None
             else None
         ),
-        requested_reporting_currency=simulate_request.portfolio_snapshot.base_currency,
+        requested_reporting_currency=None,
         portfolio_snapshot_id=simulate_request.portfolio_snapshot.snapshot_id,
         market_data_snapshot_id=simulate_request.market_data_snapshot.snapshot_id,
     )

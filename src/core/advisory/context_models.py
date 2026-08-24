@@ -50,7 +50,11 @@ class AdvisoryResolvedContext(BaseModel):
         examples=["PB_SG_GLOBAL_BAL_001"],
     )
     as_of: str = Field(
-        description="Resolved business date or timestamp used during evaluation.",
+        description=(
+            "Resolved lifecycle date or timestamp used for evaluation, replay, or upstream "
+            "request routing. This is not authoritative valuation evidence; consumers must use "
+            "proposal_result.valuation_context.*.effective_as_of_date for valuation dates."
+        ),
         examples=["2026-03-25"],
     )
     requested_as_of: Optional[str] = Field(
@@ -97,6 +101,3 @@ class AdvisoryResolvedContext(BaseModel):
             "to reconcile stateful context hydration."
         ),
     )
-
-
-__all__ = ["AdvisoryResolvedContext", "AdvisoryStatefulInput"]

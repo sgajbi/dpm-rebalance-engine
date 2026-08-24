@@ -49,7 +49,6 @@ def build_workspace_handoff_context_resolution(
     resolved_context = build_workspace_proposal_context(
         resolved_context=session.resolved_context,
         stateful_input=session.stateful_input,
-        simulate_request=simulate_request,
     )
     resolved_request = ResolvedProposalContext(
         input_mode=session.input_mode,

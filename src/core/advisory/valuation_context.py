@@ -1,35 +1,37 @@
-from __future__ import annotations
-
 from src.core.advisory.valuation_context_models import (
     ProposalValuationContext,
     ProposalValuationContextState,
     ValuationContextReasonCode,
     ValuationContextSupportability,
 )
-from src.core.portfolio_models import PortfolioSnapshot
 from src.core.simulation_state_models import SimulatedState
 from src.core.source_provenance_models import SourceProvenanceEnvelope
 
 
 def build_proposal_valuation_context(
     *,
-    portfolio: PortfolioSnapshot,
     before: SimulatedState,
     simulated: SimulatedState,
     source_provenance: SourceProvenanceEnvelope | None,
     requested_as_of_date: str | None,
     requested_reporting_currency: str | None,
-    input_mode: str | None,
 ) -> ProposalValuationContext:
     effective_as_of_date, as_of_reason = _effective_as_of_date(
         source_provenance=source_provenance,
     )
-    if requested_reporting_currency is None:
-        requested_reporting_currency = _legacy_requested_currency(
-            portfolio=portfolio,
-            input_mode=input_mode,
+    source_service, source_references = (
+        (
+            source_provenance.source_system,
+            sorted(
+                {
+                    source_provenance.portfolio.source_id,
+                    source_provenance.market_data.source_id,
+                }
+            ),
         )
-    source_service, source_references = _source_identity(source_provenance)
+        if source_provenance is not None
+        else (None, [])
+    )
     return ProposalValuationContext(
         source_service=source_service,
         source_references=source_references,
@@ -64,24 +66,6 @@ def _effective_as_of_date(
     return values[0], None
 
 
-def _source_identity(
-    source_provenance: SourceProvenanceEnvelope | None,
-) -> tuple[str | None, list[str]]:
-    if source_provenance is None:
-        return None, []
-    return source_provenance.source_system, sorted(
-        {source_provenance.portfolio.source_id, source_provenance.market_data.source_id}
-    )
-
-
-def _legacy_requested_currency(
-    *, portfolio: PortfolioSnapshot, input_mode: str | None
-) -> str | None:
-    if input_mode == "stateful":
-        return None
-    return portfolio.base_currency
-
-
 def _build_state(
     *,
     requested_as_of_date: str | None,
@@ -91,7 +75,7 @@ def _build_state(
     as_of_reason: ValuationContextReasonCode | None,
 ) -> ProposalValuationContextState:
     reason_code = (
-        _requested_mismatch_reason(
+        _primary_requested_mismatch_reason(
             requested_as_of_date=requested_as_of_date,
             effective_as_of_date=effective_as_of_date,
             requested_reporting_currency=requested_reporting_currency,
@@ -113,7 +97,7 @@ def _build_state(
     )
 
 
-def _requested_mismatch_reason(
+def _primary_requested_mismatch_reason(
     *,
     requested_as_of_date: str | None,
     effective_as_of_date: str | None,

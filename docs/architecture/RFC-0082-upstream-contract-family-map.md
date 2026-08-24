@@ -90,11 +90,18 @@ performance conclusions from `lotus-core` operational reads.
    presented as an authoritative replacement for core or risk output.
 4. Typed proposal valuation context must distinguish requested values from effective source values;
    missing or mismatched dates/currencies remain partial, restricted, or unavailable evidence.
-5. Proposal alternatives must remain anchored to canonical `lotus-core` simulation and `lotus-risk`
+5. Requested valuation-context dimensions must be populated only from explicit caller input; a
+   portfolio base currency must not be relabeled as a requested reporting currency.
+6. `ProposalResolvedContext.as_of` is a lifecycle evaluation/replay/routing value, not authoritative
+   valuation evidence. Consumers must use the nested `valuation_context` effective date, which stays
+   null when trusted source provenance is unavailable. When both requested date and currency are not
+   honored, the single v1 `reason_code` is the primary date reason rather than a complete mismatch
+   list.
+7. Proposal alternatives must remain anchored to canonical `lotus-core` simulation and `lotus-risk`
    enrichment.
-6. New upstream source-data consumption must be classified into an RFC-0082 family before becoming a
+8. New upstream source-data consumption must be classified into an RFC-0082 family before becoming a
    stable advisory contract.
-7. Transport optimization discussions start with retrieval shape, payload size, caching, and upstream
+9. Transport optimization discussions start with retrieval shape, payload size, caching, and upstream
    contract design. gRPC is not a default answer for advisory integration.
 
 ## Current Evidence
