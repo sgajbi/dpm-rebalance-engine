@@ -15,11 +15,19 @@ def _make_invocations(recipe: str) -> set[str]:
 
 
 def _active_make_commands(recipe: str) -> tuple[str, ...]:
-    return tuple(
-        line.strip()
-        for line in recipe.splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
-    )
+    commands = []
+    continued = ""
+    for line in recipe.splitlines():
+        command = f"{continued}{line.strip()}"
+        if command.endswith("\\"):
+            continued = command[:-1].rstrip() + " "
+        else:
+            if command:
+                commands.append(command)
+            continued = ""
+    if continued:
+        commands.append(continued.rstrip())
+    return tuple(commands)
 
 
 def _contains_unquoted_shell_operator(command: str) -> bool:
@@ -75,7 +83,11 @@ def test_architecture_documentation_matches_enforced_quality_controls() -> None:
     architecture_commands = _active_python_commands(
         _make_recipe(makefile, "architecture-boundaries")
     )
-    assert any("importlinter" in command for command in architecture_commands)
+    assert (
+        'python -c "from importlinter.cli import lint_imports_command; '
+        "lint_imports_command(args=['--config','.importlinter'], standalone_mode=True)\""
+        in architecture_commands
+    )
     assert all(
         any(
             command.startswith("python scripts/radon_complexity_gate.py ")
@@ -97,6 +109,8 @@ def test_quality_control_command_parser_rejects_comments_and_echoes() -> None:
             "\t-python scripts/radon_complexity_gate.py --fail-rank C",
             "\t@-python scripts/radon_complexity_gate.py --fail-rank C",
             "\tpython scripts/radon_complexity_gate.py --fail-rank C || true",
+            "\tpython scripts/radon_complexity_gate.py --fail-rank C \\",
+            "\t  || true",
             "\tpython -c \"print('quoted; semicolon')\"",
         )
     )
