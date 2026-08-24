@@ -10,6 +10,14 @@ def _make_recipe(makefile: str, target: str) -> str:
     return match.group("recipe")
 
 
+def _make_invocations(recipe: str) -> set[str]:
+    return set(re.findall(r"^\t\$\(MAKE\) (?P<target>[a-z0-9-]+)\s*$", recipe, re.MULTILINE))
+
+
+def _documented_make_targets(document: str) -> set[str]:
+    return set(re.findall(r"`make (?P<target>[a-z0-9-]+)`", document))
+
+
 def test_architecture_documentation_matches_enforced_quality_controls() -> None:
     rules = (REPO_ROOT / "quality" / "architecture_rules.md").read_text(encoding="utf-8")
     architecture = (REPO_ROOT / "docs" / "architecture.md").read_text(encoding="utf-8")
@@ -23,6 +31,8 @@ def test_architecture_documentation_matches_enforced_quality_controls() -> None:
 
     assert "enforced by `make architecture-boundaries` through `make lint`" in architecture
     assert "report-only rollout" not in architecture
-    lint_recipe = _make_recipe(makefile, "lint")
-    assert "\t$(MAKE) architecture-boundaries\n" in lint_recipe
-    assert "\t$(MAKE) complexity-regression-gate\n" in lint_recipe
+    lint_targets = _make_invocations(_make_recipe(makefile, "lint"))
+    assert "architecture-boundaries" in lint_targets
+    complexity_targets = {target for target in lint_targets if target.endswith("complexity-gate")}
+    assert complexity_targets
+    assert complexity_targets <= _documented_make_targets(rules)
