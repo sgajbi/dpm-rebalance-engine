@@ -226,18 +226,23 @@ def run_gate(
         "schema_version": "lotus.advise.quality-trend-gate.v1",
         "status": "failed",
         "failures": [],
-        "base_ref": base_ref,
+        "supplied_base_ref": base_ref,
+        "base_ref": base_ref or "origin/main",
+        "base_ref_fallback": False,
         "head_ref": head_ref,
     }
     try:
         policy = load_policy(policy_path)
         head_sha = _git_sha(repo_root, head_ref)
-        base_ref = base_ref or "origin/main"
-        base_sha = _git_sha(repo_root, base_ref)
+        supplied_base_ref = base_ref
+        effective_base_ref = base_ref or "origin/main"
+        base_ref_fallback = False
+        base_sha = _git_sha(repo_root, effective_base_ref)
         if base_sha == head_sha:
-            base_ref = "HEAD^"
-            base_sha = _git_sha(repo_root, base_ref)
-        merge_base_sha = _git_merge_base(repo_root, base_ref, head_ref)
+            effective_base_ref = "HEAD^"
+            base_ref_fallback = True
+            base_sha = _git_sha(repo_root, effective_base_ref)
+        merge_base_sha = _git_merge_base(repo_root, effective_base_ref, head_ref)
         report_path = policy["report_path"]
         base_values = parse_report(_git_file(repo_root, merge_base_sha, report_path))
         head_values = parse_report(_git_file(repo_root, head_ref, report_path))
@@ -250,7 +255,9 @@ def run_gate(
                     policy
                 ),
                 "report_path": report_path,
-                "base_ref": base_ref,
+                "supplied_base_ref": supplied_base_ref,
+                "base_ref": effective_base_ref,
+                "base_ref_fallback": base_ref_fallback,
                 "base_sha": base_sha,
                 "merge_base_sha": merge_base_sha,
                 "head_sha": head_sha,

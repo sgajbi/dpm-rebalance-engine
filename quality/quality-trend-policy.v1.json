@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+6141c014c496",
+  "policy_version": "lotus-advise-quality-trend.v1+05d2e577184e",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -37,14 +37,6 @@
       "approver": "GitHub identity",
       "expires_on": "YYYY-MM-DD"
     },
-    "entries": [
-      {
-        "metric": "total_python_lines",
-        "allowed_delta": 525,
-        "reason": "Restore the mandatory per-lane base-ref and quality-trend wiring assertions requested in review while retaining the merge-base implementation and its discriminating regression test; expire this one-slice allowance after review completes.",
-        "approver": "sgajbi",
-        "expires_on": "2026-09-30"
-      }
-    ]
+    "entries": []
   }
 }
