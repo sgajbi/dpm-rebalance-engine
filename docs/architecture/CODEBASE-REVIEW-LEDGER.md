@@ -33,7 +33,7 @@
   - PR #526 was kept draft through two blocking review holds. After the latest exact-head review
     lead correction, the authoritative verdict was `VERDICT: mergeable` on
     `06f1c5b77146ecc7025c9ac8405fc599bd39b2b0`; PR Merge Gate run `32688319795` passed, and the
-    approved rebase/non-squash merge produced signed mainline commits through `8610bf3d`.
+    approved rebase/non-squash merge produced merged mainline commits through `8610bf3d`.
   - Exact-mainline Main Releasability run `32688749475` passed on
     `8610bf3d70197c081153b2efbf72072304103065`, including exact revision, governance, tests,
     coverage, migration/startup, Docker, and image security/provenance lanes. Local baseline
