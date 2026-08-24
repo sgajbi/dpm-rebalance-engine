@@ -8,7 +8,6 @@
     "jscpd.v1|python|scripts/live_runtime_policy_evaluation.py|scripts/live_runtime_proposal_memo.py|4b7265a1594525b8010544c238bfbc171ec53d14a7df1cd7b56ca1f62feb8f55|occurrence=1",
     "jscpd.v1|python|scripts/openapi_quality_gate.py|src/api/openapi_enrichment.py|53030b803a4107155ad6745c166a4316af2e5e915d28238df2af2334eaea9ef9|occurrence=1",
     "jscpd.v1|python|scripts/validate_cross_service_parity_live.py|scripts/validate_cross_service_parity_live.py|6582a69c91f80d688257fea9148be11f0bb99356cbb63cfd8711ea2ef5acdbd9|occurrence=1",
-    "jscpd.v1|python|scripts/validate_cross_service_parity_live.py|scripts/validate_cross_service_parity_live.py|6f77b27c6b5c3623e2503b2a9ab996f6bd85469eb30818448a96e800c1cb16ee|occurrence=1",
     "jscpd.v1|python|scripts/validate_cross_service_parity_live.py|scripts/validate_degraded_runtime_live.py|09f1ceabad0bc051945732d3eddff61f3d859469e690f13f6afc5d72d90f00ab|occurrence=1",
     "jscpd.v1|python|scripts/validate_cross_service_parity_live.py|scripts/validate_degraded_runtime_live.py|a5632bcc2395a93d9ad3a0a75e5f86465eab1536e8c04d2ebb4c2ccd7d699a39|occurrence=1",
     "jscpd.v1|python|src/api/proposals/advisor_cockpit_principal.py|src/api/proposals/advisor_cockpit_principal.py|03cd967c9ea6ec58a6e0b3d216543cc25d434ed79d853db4f743c738cc861a30|occurrence=1",

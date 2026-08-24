@@ -15,7 +15,9 @@
   evidence-bundle construction, and report success/degraded handling belong to the dedicated
   policy-evaluation support module; the validator retains workflow orchestration and snapshot
   assembly. The refactored validator module is 3,992 lines, and the resolved function fingerprint
-  is removed from the versioned oversized-code inventory without relaxing thresholds.
+  is removed from the versioned oversized-code inventory without relaxing thresholds. The
+  refactor also resolves one stale jscpd clone fingerprint within the validator, which is removed
+  from the duplicate-code inventory without changing the no-new-findings gate.
 - Evidence:
   - `tests/unit/advisory/api/test_live_cross_service_parity.py` proves the extracted report helper
     preserves both the 200/READY and 503/degraded outcomes.
@@ -28,6 +30,9 @@
   - `make typecheck`, `make refactored-complexity-gate`, `make oversized-code-gate`, and the
     focused live-parity/runtime-suite tests pass. The oversized-code gate reports 8 findings, 0
     new, and 0 resolved under the refreshed baseline and policy fingerprints.
+  - `make duplicate-code-gate` reports 34 findings and 0 new under policy
+    `lotus-advise-duplicate-code.v2+5fa076933c75`; the resolved clone fingerprint is removed and
+    the baseline hash is refreshed.
   - `quality/baseline_report.md` records the reduced validator module size and updated generated
     inventory.
 - Compatibility: Internal live-validation tooling only. No runtime/API/OpenAPI, persistence,
