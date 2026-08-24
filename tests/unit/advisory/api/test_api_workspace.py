@@ -35,7 +35,6 @@ workspace_router = importlib.import_module("src.api.workspaces.router")
 workspace_routes_assistant = importlib.import_module("src.api.workspaces.routes_assistant")
 workspace_evaluator_module = importlib.import_module("src.core.workspace.evaluator")
 workspace_service_module = importlib.import_module("src.api.services.workspace_service")
-workspace_reevaluations_module = importlib.import_module("src.api.services.workspace_reevaluations")
 
 
 @pytest.fixture(autouse=True)
@@ -805,7 +804,7 @@ def test_workspace_service_redacts_sensitive_evaluation_context_errors(
         ]
 
     def _raise_sensitive_context_error(**_kwargs: Any) -> None:
-        raise workspace_reevaluations_module.WorkspaceReevaluationContextError(
+        raise workspace_evaluator_module.WorkspaceReevaluationContextError(
             "raw payload includes Authorization Bearer token material"
         )
 
