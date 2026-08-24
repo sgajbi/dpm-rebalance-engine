@@ -28452,6 +28452,9 @@
   - Normalized proposal replay evidence preserves portfolio and snapshot identity with
     `resolved_context.as_of: null` instead of dropping the whole context when no lifecycle date
     exists; the replay DTO and OpenAPI contract are optional-date aware.
+  - The stateful date invariant is isolated in a named infrastructure helper so the adapter's
+    complexity remains below the governed threshold; the final quality baseline records `134`
+    B-ranked blocks versus `135` on the merge base.
   - Regression tests cover no-date direct resolution, reference-model preservation, API evaluation
     propagation of null, workspace projection, replay preservation, OpenAPI optionality, and
     existing stateful behavior.

@@ -5,6 +5,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from src.core.diagnostics_models import RuleResult
 from src.core.portfolio_models import Money
 from src.core.proposal_effect_models import Reconciliation
@@ -18,10 +20,14 @@ from src.core.workspace.draft_models import (
     WorkspaceEvaluationImpactSummary,
     WorkspaceEvaluationSummary,
 )
-from src.core.workspace.input_models import WorkspaceResolvedContext
+from src.core.workspace.errors import WorkspaceEvaluationUnavailableError
+from src.core.workspace.input_models import WorkspaceResolvedContext, WorkspaceStatefulInput
 from src.core.workspace.ports import WorkspaceEvaluationOutcome
 from src.core.workspace.session_models import WorkspaceSession, WorkspaceSessionCreateRequest
 from src.core.workspace.version_models import WorkspaceReplayEvidence
+from src.infrastructure.workspace import lotus_core_context
+from src.integrations.lotus_core.context_resolution import LotusCoreResolvedAdvisoryContext
+from tests.shared.stateful_context_builders import build_resolved_stateful_context
 
 
 class _FakeWorkspaceSessionRepository:
@@ -403,6 +409,44 @@ def test_workspace_application_and_routes_preserve_layering_boundary() -> None:
     assert "src.integrations." not in ports_source
 
     assert "from src.integrations.lotus_core" in context_adapter_source
+
+
+def test_lotus_core_workspace_resolver_fails_closed_when_source_date_is_missing(
+    monkeypatch,
+) -> None:
+    source_payload = build_resolved_stateful_context("pf_missing_as_of", "2026-07-11")
+    source_payload["resolved_context"]["as_of"] = None
+    monkeypatch.setattr(
+        lotus_core_context,
+        "resolve_lotus_core_advisory_context",
+        lambda _: LotusCoreResolvedAdvisoryContext(
+            simulate_request=ProposalSimulateRequest.model_validate(
+                source_payload["simulate_request"]
+            ),
+            resolved_context=WorkspaceResolvedContext.model_validate(
+                source_payload["resolved_context"]
+            ),
+        ),
+    )
+    session = WorkspaceSession(
+        workspace_id="aws_missing_as_of",
+        workspace_name="Missing source date",
+        lifecycle_state="ACTIVE",
+        input_mode="stateful",
+        created_by="advisor_123",
+        created_at="2026-07-11T10:00:00+00:00",
+        stateful_input=WorkspaceStatefulInput(
+            portfolio_id="pf_missing_as_of",
+            as_of="2026-07-11",
+        ),
+        draft_state=WorkspaceDraftState(),
+    )
+
+    with pytest.raises(
+        WorkspaceEvaluationUnavailableError,
+        match="WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING",
+    ):
+        lotus_core_context.LotusCoreWorkspaceSourceContextResolver().build_simulate_request(session)
 
 
 def _stateless_workspace_request(workspace_name: str) -> WorkspaceSessionCreateRequest:
