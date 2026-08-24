@@ -1,5 +1,38 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-541-OVERSIZED-CODE-SHRINK-RATCHET
+
+- Scope: `scripts/oversized_code_gate.py` baseline classification and focused regression tests.
+- Pattern: A baselined module or function that shrank while remaining above the hotspot threshold
+  was neither a new/grown nor resolved finding, so its old `max_lines` ceiling remained silently
+  spendable by later changes.
+- Status: Corrected in this bounded #541 CI-enforcement slice; new and resolved finding behavior
+  remains intact.
+- Finding Class: CI quality-gate precision, maintainability regression prevention, and baseline
+  governance.
+- Summary: The oversized-code gate now emits a hard, actionable failure for every observed
+  baselined finding whose measured line count is below its reviewed `max_lines` value. The
+  machine-readable report exposes the shrunken findings separately, allowing the required
+  reviewed baseline ratchet and provenance refresh to be evidenced rather than performed
+  silently.
+- Evidence:
+  - `tests/unit/scripts/test_oversized_code_gate.py` proves the stale-ceiling shrink case fails,
+    names the measured and baseline values, and preserves the existing inventory, growth, and
+    resolved-finding tests.
+  - The sibling dead-code and dependency-hygiene baselines have no comparable scalar measurement
+    to ratchet: they classify fingerprint presence/absence only. No duplicate follow-up issue is
+    warranted for those gates.
+  - `make oversized-code-gate` remains the authoritative repository-native enforcement command;
+    generated machine-readable evidence owns current counts and classifications.
+- Compatibility: CI enforcement only. Product runtime, APIs/OpenAPI, persistence, migrations,
+  dependencies, and downstream contracts are unchanged; stale oversized-code baselines now fail
+  until reviewed and ratcheted.
+- Documentation decision: Updated this review ledger because the enforced quality-gate behavior
+  changed. No operator workflow or wiki truth changed, so no wiki source update or publication is
+  needed for this slice.
+- Follow-Up: #495 continues to own threshold/rate calibration and unrelated live-validation
+  hotspots.
+
 ## LA-REV-495-LIVE-POLICY-FLOW-DECOMPOSITION
 
 - Scope: `scripts/validate_cross_service_parity_live.py::_assert_live_policy_evaluation_flow`
