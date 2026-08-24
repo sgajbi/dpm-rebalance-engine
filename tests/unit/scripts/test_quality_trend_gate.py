@@ -94,6 +94,16 @@ def test_reviewed_exception_is_visible_and_applies_its_expiring_limit() -> None:
     assert results[1].allowed_delta == 2
 
 
+def test_current_policy_has_no_global_python_growth_exception() -> None:
+    policy = _policy()
+
+    assert policy["exceptions"]["entries"] == []
+    total_lines = next(
+        metric for metric in policy["metrics"] if metric["name"] == "total_python_lines"
+    )
+    assert total_lines["allowed_delta"] == 500
+
+
 def test_load_policy_rejects_content_without_a_matching_fingerprint(tmp_path: Path) -> None:
     policy = json.loads(Path("quality/quality-trend-policy.v1.json").read_text(encoding="utf-8"))
     policy["policy_version"] = "lotus-advise-quality-trend.v1+000000000000"
@@ -169,6 +179,24 @@ def test_run_gate_compares_quality_reports_at_committed_revisions(tmp_path: Path
     assert evidence["status"] == "passed"
     assert evidence["counts"]["findings"] == 4
     assert evidence["base_sha"] != evidence["merge_base_sha"]
+    assert evidence["supplied_base_ref"] == "main"
+    assert evidence["base_ref"] == "main"
+    assert evidence["base_ref_fallback"] is False
     assert evidence["metrics"][0]["base"] == 100.0
     assert evidence["metrics"][0]["head"] == 104.0
     assert evidence["metrics"][0]["delta"] == 4.0
+
+    fallback_output_path = tmp_path / "output" / "quality-trend-gate-fallback.json"
+    fallback_result = quality_trend_gate.run_gate(
+        repo_root=tmp_path,
+        policy_path=policy_path,
+        output_path=fallback_output_path,
+        base_ref="feature",
+        head_ref="HEAD",
+    )
+    fallback_evidence = json.loads(fallback_output_path.read_text(encoding="utf-8"))
+
+    assert fallback_result == 0
+    assert fallback_evidence["supplied_base_ref"] == "feature"
+    assert fallback_evidence["base_ref"] == "HEAD^"
+    assert fallback_evidence["base_ref_fallback"] is True
