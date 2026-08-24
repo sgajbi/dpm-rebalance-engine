@@ -8,8 +8,9 @@
   top-level-status, recommended-action, workflow-gate, and gate-next-step pairings were not
   published. Gateway therefore carried a duplicated matrix that could drift into a production
   502/Workbench outage after an Advise rule change.
-- Status: Implementation complete on the feature branch; merge, exact-mainline validation, wiki
-  publication, and issue closure remain pending.
+- Status: Implemented and merged to `main`; bounded slice closure complete. Issue #508 remains
+  open until its final GitHub evidence comment and verified closure are recorded after this
+  ledger truth commit.
 - Finding Class: producer-owned contract governance, downstream compatibility, CI regression
   prevention.
 - Summary: The bounded #508 slice publishes `docs/standards/proposal-decision-vocabulary.v1.json`
@@ -31,16 +32,28 @@
     decision/gate drift messages.
   - The generated `docs/architecture/ENGINEERING-HEALTH-BASELINE.md` gate inventory includes the
     new target; its generator and fixture regression were corrected in signed commit `1c241ca6`.
-  - Quality-baseline reports were regenerated after the artifact and focused tests increased the
-    measured repository to `1,070` Python files, `1,028` modules, and `193,170` Python lines;
+  - Quality-baseline reports were regenerated after the artifact and measured contract module
+    increased the repository to `1,071` Python files, `1,029` modules, and `193,211` Python lines;
     Radon inventory is `A=4,857, B=134`, with no new C-or-worse complexity.
-  - Feature-head `make check` passed `2,697` unit tests in `106.66s`; Ruff, format, mypy,
+  - Final feature-head `make check` passed `2,700` unit tests in `52.95s`; Ruff, format, mypy,
     architecture, OpenAPI/Spectral, no-alias, API vocabulary, this contract gate, data products,
     lifecycle, security, dependency, license, dead-code, duplicate-code, oversized-code, and
     quality-baseline checks all passed.
-  - Signed implementation commit: `eedb16b4` (`feat(contract): publish proposal decision
-    vocabulary`). Focused contract/workflow tests passed `34`; decision/gate regression tests
-    passed `38`; focused mypy, Ruff, format, pre-commit, and `git diff --check` passed.
+  - Signed implementation commits: `eedb16b4`, `1c241ca6`, `1f76efa6`, `03488e6a`, `e7ebfb7a`,
+    and `027c91b6`; focused contract/CI tests passed `37`; the changed-source coverage floor
+    passed after the self-validation branches were covered; focused mypy, Ruff, format,
+    pre-commit, and `git diff --check` passed.
+  - PR #522 merged by approved rebase/non-squash method at mainline commit
+    `fff3bfbdef88c7357f31bcd2ed70051ebc5681a4` after the exact-head review-lead verdict
+    `VERDICT: mergeable` on `027c91b6` and green PR Merge Gate run `32677564834`.
+  - Exact-mainline Main Releasability run `32677926222` passed, including exact revision
+    assertion, workflow/lint/type governance, unit/integration/e2e tests, 97% aggregate and
+    changed-source coverage, migration/runtime, Docker, security, and image provenance lanes.
+  - Repo-authored wiki source was published at wiki commit `099ea14`; strict parity verification
+    returned `DiffCount 0`. Post-merge canonical runtime verification restored the absent local
+    stack and then recorded product container `c9c8e86cd163eb9b246768844f10b78fd57990f98db4cd87e190124003e292cf`,
+    network `c1620f1288a26cdef81cfd7512fd430afd19a1d50c46d0363851c495407e65d4`, healthy state,
+    and `/health=200`, `/health/ready=200`.
 - Compatibility: additive repository contract and CI validation only. Current decision and gate
   pairings are preserved; no runtime behavior, API schema, persistence, migration, calculation,
   or dependency-version contract change is intended.
@@ -49,8 +62,9 @@
   no OpenAPI route, migration, or platform-wide context change is needed.
 - Downstream handoff: `lotus-gateway#599` consumes this producer-owned artifact to detect matrix
   drift while retaining its anti-corruption runtime validation.
-- Issue evidence: GitHub issue #508 records the bounded objective and acceptance criteria; merge
-  and exact-mainline evidence will be appended before verified closure.
+- Issue evidence: GitHub issue #508 records the bounded objective, CI coverage correction,
+  downstream handoff, merge, exact-mainline, wiki, and runtime evidence; verified closure follows
+  this durable ledger update.
 
 ## LA-REV-495-CI-OVERSIZED-CODE
 
