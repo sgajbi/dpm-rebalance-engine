@@ -14,6 +14,14 @@ def _make_invocations(recipe: str) -> set[str]:
     return set(re.findall(r"^\t\$\(MAKE\) (?P<target>[a-z0-9-]+)\s*$", recipe, re.MULTILINE))
 
 
+def _active_make_commands(recipe: str) -> tuple[str, ...]:
+    return tuple(
+        line.strip()
+        for line in recipe.splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    )
+
+
 def _documented_make_targets(document: str) -> set[str]:
     return set(re.findall(r"`make (?P<target>[a-z0-9-]+)`", document))
 
@@ -38,9 +46,17 @@ def test_architecture_documentation_matches_enforced_quality_controls() -> None:
     }
     assert complexity_targets
     assert complexity_targets <= _documented_make_targets(rules)
-    assert "importlinter" in _make_recipe(makefile, "architecture-boundaries")
+    assert any(
+        "importlinter" in command
+        for command in _active_make_commands(_make_recipe(makefile, "architecture-boundaries"))
+    )
     assert all(
-        "radon_complexity_gate.py" in _make_recipe(makefile, target)
+        any(
+            "python scripts/radon_complexity_gate.py" in command
+            for command in _active_make_commands(_make_recipe(makefile, target))
+        )
         for target in complexity_targets
     )
-    assert "--fail-rank C" in _make_recipe(makefile, "complexity-regression-gate")
+    assert "python scripts/radon_complexity_gate.py --fail-rank C" in _active_make_commands(
+        _make_recipe(makefile, "complexity-regression-gate")
+    )
