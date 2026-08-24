@@ -476,7 +476,7 @@
   after classifying public API and module ownership thresholds.
 - Maintain the machine-readable quality trend/regression gate and review its ratchets;
   keep reviewed Vulture exceptions expiring after the oversized-code gate.
-- Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate after
+- Calibrate stricter Radon/Xenon thresholds beyond the current C/D/E/F gate after
   classifying current B-ranked blocks.
 - Reduce the governed Bandit medium/low baseline before expiry after classifying current
   SQL-construction findings and resolving true positives.

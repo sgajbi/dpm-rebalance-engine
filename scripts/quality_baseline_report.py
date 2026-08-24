@@ -750,7 +750,7 @@ def _architecture_section(context: QualityContext) -> list[str]:
         f"`total={_optional_count(context.importlinter_contract_count)}, "
         f"kept={_optional_count(context.importlinter_kept_count)}, "
         f"broken={_optional_count(context.importlinter_broken_count)}`",
-        "- Contracts remain report-only until the kept inventory is wired into a CI gate.",
+        "- Import-linter contracts enforced by `make architecture-boundaries` and `make lint`.",
         "",
     ]
 
@@ -1295,7 +1295,7 @@ def render_refactor_health_report(context: QualityContext) -> str:
         "  after classifying public API and module ownership thresholds.",
         "- Maintain the machine-readable quality trend/regression gate and review its ratchets;",
         "  keep reviewed Vulture exceptions expiring after the oversized-code gate.",
-        "- Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate after",
+        "- Calibrate stricter Radon/Xenon thresholds beyond the current C/D/E/F gate after",
         "  classifying current B-ranked blocks.",
         "- Reduce the governed Bandit medium/low baseline before expiry after classifying current",
         "  SQL-construction findings and resolving true positives.",
@@ -1327,7 +1327,7 @@ def _scorecard_before_after_rows(context: QualityContext) -> list[tuple[str, str
             "Complexity",
             "Radon and Xenon tracked as pending report-only tools.",
             f"Radon config executable; inventory `{radon_rank_inventory}`; "
-            f"worst block `{radon_worst}`; no C/D/E/F gate enforced through `make lint`.",
+            f"worst block `{radon_worst}`; C/D/E/F gate enforced through `make lint`.",
             "Complexity is now measured repeatably and regression-blocked for C-ranked "
             "and worse blocks.",
         ),
@@ -1462,7 +1462,7 @@ def render_quality_scorecard(context: QualityContext) -> str:
         ("Code size and hotspots", "Calibrated regression gate", "make oversized-code-gate"),
         (
             "Complexity",
-            "No-C/D/E/F gate plus Radon inventory",
+            "C/D/E/F Radon gate plus inventory",
             "complexity-regression-gate + radon rank and worst-complexity counts",
         ),
         ("Maintainability", "Improving", "modularity slices and review ledger"),

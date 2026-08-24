@@ -1,16 +1,16 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-24T18:23:06.517016+00:00`
+- Generated At: `2026-08-24T18:55:01.169003+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
 
 ## Code Size
 
-- Python files: `1078`
+- Python files: `1079`
 - Packages: `42`
-- Modules: `1036`
-- Total Python lines: `194765`
+- Modules: `1037`
+- Total Python lines: `194786`
 
 ## Largest Files
 
@@ -34,7 +34,7 @@
 | 1 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 63 | 508 |
 | 2 | `render_refactor_health_report` | `scripts/quality_baseline_report.py` | 818 | 494 |
 | 3 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 405 |
-| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 310 |
+| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 311 |
 | 5 | `validate_live_cross_service_parity` | `scripts/validate_cross_service_parity_live.py` | 3695 | 274 |
 | 6 | `_assert_persisted_read_surfaces` | `scripts/validate_cross_service_parity_live.py` | 3422 | 271 |
 | 7 | `_assert_live_policy_evaluation_flow` | `scripts/validate_cross_service_parity_live.py` | 2491 | 252 |
@@ -120,7 +120,7 @@
 - Import-linter contracts present: `True`
 - Import-linter config executable: `True`
 - Import-linter contract inventory: `total=4, kept=4, broken=0`
-- Contracts remain report-only until the kept inventory is wired into a CI gate.
+- Import-linter contracts enforced by `make architecture-boundaries` and `make lint`.
 
 ## Documentation Gaps
 

@@ -167,7 +167,8 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "- Branch:" not in scorecard
     assert "- Head:" not in scorecard
     assert "Git Identity: omitted from committed Markdown" in scorecard
-    assert "No-C/D/E/F gate plus Radon inventory" in scorecard
+    assert "C/D/E/F Radon gate plus inventory" in scorecard
+    assert "C/D/E/F gate enforced through `make lint`" in scorecard
     assert "Quality baseline freshness" in scorecard
     assert "make quality-trend-gate" in scorecard
     assert "make check, make ci, make ci-local" in scorecard
@@ -356,7 +357,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Development requirements pin the quality tools" in refactor_health
     assert "Bandit security scanning now fails earlier" in refactor_health
     assert "Remaining Enterprise-Readiness Work" in refactor_health
-    assert "Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate" in (
+    assert "Calibrate stricter Radon/Xenon thresholds beyond the current C/D/E/F gate" in (
         refactor_health
     )
     assert "machine-readable quality trend/regression gate" in refactor_health
