@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.duplicate-code-baseline.v1",
-  "baseline_version": "lotus-advise-duplicate-baseline.v2",
+  "baseline_version": "lotus-advise-duplicate-baseline.v3",
   "fingerprints": [
     "jscpd.v1|python|scripts/advisory_copilot_evaluation_gate.py|scripts/advisory_copilot_safety_gate.py|c1b2d044f385dd777121b5014f2c9eacec8896443be9e27f4fe37cf064ed3208|occurrence=1",
     "jscpd.v1|python|scripts/durable_state_recovery_contract.py|scripts/postgres_migration_rollout_contract.py|893623c4e5fc4adb1b1ec88b02d7c9c1b6757a31ae807d3b8e812a6177c82c25|occurrence=1",
@@ -23,8 +23,6 @@
     "jscpd.v1|python|src/api/proposals/advisor_cockpit_principal.py|src/api/proposals/policy_control_principal.py|f2a853f246de82ee4ad2f00d4c3c332ab85ad930d994786258b4d195685056b7|occurrence=1",
     "jscpd.v1|python|src/api/proposals/routes_policy_evaluation_packages.py|src/api/proposals/routes_policy_evaluation_packages.py|4620bfaf0febc3bf60fc82b6cff2671554bab7f7669b67cbabbc21e6332600cd|occurrence=1",
     "jscpd.v1|python|src/core/advisory_copilot/section_models.py|src/core/advisory_copilot/section_models.py|3b2c0aa335bb987d12c17b874f1211fcaefc41ba30ab90bcd411cd50ba8eb8fc|occurrence=1",
-    "jscpd.v1|python|src/core/proposals/input_context_models.py|src/core/workspace/input_models.py|50fdf00d54e028dcf0d9f03579b627af1552e163300d03b0366a2780bf197d55|occurrence=1",
-    "jscpd.v1|python|src/core/proposals/input_context_models.py|src/core/workspace/input_models.py|6975456b17d1c23e8298383cff3e64cf513e227e8c8726ff6010f05f3c7b5776|occurrence=1",
     "jscpd.v1|python|src/core/proposals/input_create_request_models.py|src/core/proposals/input_simulation_request_models.py|bd706e5d05d89ad02b3e877cd5a35ef52067066965dcbef254ccb1cb36338c72|occurrence=1",
     "jscpd.v1|python|src/core/proposals/input_create_request_models.py|src/core/proposals/input_version_request_models.py|bd706e5d05d89ad02b3e877cd5a35ef52067066965dcbef254ccb1cb36338c72|occurrence=1",
     "jscpd.v1|python|src/core/proposals/memo_builder.py|src/core/proposals/memo_policy_enrichment.py|ddbc1564e40a6d7388ba9b116a41e585f56e2efaef3b66a268aaadd62c03ae57|occurrence=1",

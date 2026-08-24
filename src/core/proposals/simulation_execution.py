@@ -11,6 +11,8 @@ def run_advisory_proposal_simulation(
     request: ProposalSimulateRequest,
     resolved_as_of: str,
     input_mode: str | None = None,
+    requested_as_of_date: str | None = None,
+    requested_reporting_currency: str | None = None,
     request_hash: str,
     idempotency_key: str | None,
     correlation_id: str | None,
@@ -23,5 +25,7 @@ def run_advisory_proposal_simulation(
         correlation_id=resolve_correlation_id(correlation_id),
         resolved_as_of=resolved_as_of,
         input_mode=input_mode,
+        requested_as_of_date=requested_as_of_date,
+        requested_reporting_currency=requested_reporting_currency,
         policy_context=policy_context,
     )

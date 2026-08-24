@@ -46,6 +46,16 @@ class CoreWorkspaceProposalEvaluator:
             correlation_id=correlation_id,
             resolved_as_of=evaluation_context.resolved_request.resolved_context.as_of,
             input_mode=evaluation_context.resolved_request.input_mode,
+            requested_as_of_date=getattr(
+                evaluation_context.resolved_request.resolved_context,
+                "requested_as_of",
+                None,
+            ),
+            requested_reporting_currency=getattr(
+                evaluation_context.resolved_request.resolved_context,
+                "requested_reporting_currency",
+                None,
+            ),
             policy_context=evaluation_context.context_resolution["advisory_policy_context"],
         )
         proposal_result.explanation["context_resolution"] = evaluation_context.context_resolution

@@ -100,6 +100,7 @@ def _normalize_business_result_for_cross_mode_parity(body: dict[str, Any]) -> di
     normalized.pop("proposal_run_id", None)
     normalized.pop("lineage", None)
     normalized.pop("explanation", None)
+    normalized.pop("valuation_context", None)
     return normalized
 
 
@@ -1176,6 +1177,17 @@ def test_stateful_workspace_evaluate_matches_direct_simulation_for_equivalent_in
     assert _normalize_business_result_for_cross_mode_parity(
         workspace_response.json()["latest_proposal_result"]
     ) == (_normalize_business_result_for_cross_mode_parity(direct_response.json()))
+
+    direct_valuation_context = direct_response.json()["valuation_context"]
+    workspace_valuation_context = workspace_response.json()["latest_proposal_result"][
+        "valuation_context"
+    ]
+    assert direct_valuation_context["current_state"]["requested_as_of_date"] is None
+    assert workspace_valuation_context["current_state"]["requested_as_of_date"] == "2026-03-25"
+    assert direct_valuation_context["current_state"]["requested_reporting_currency"] == "USD"
+    assert workspace_valuation_context["current_state"]["requested_reporting_currency"] is None
+    assert direct_valuation_context["current_state"]["supportability"] == "PARTIAL"
+    assert workspace_valuation_context["current_state"]["supportability"] == "PARTIAL"
 
 
 def test_stateful_workspace_handoff_uses_current_draft_state(monkeypatch) -> None:

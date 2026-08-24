@@ -16,6 +16,7 @@ from src.core.advisory.provider_ports import (
     resolve_advisory_simulation_fallback_policy,
     simulate_with_advisory_simulation_provider,
 )
+from src.core.advisory.valuation_context import build_proposal_valuation_context
 from src.core.advisory_engine import run_proposal_simulation
 from src.core.common.idempotency import normalize_optional_idempotency_key
 from src.core.proposal_request_models import ProposalSimulateRequest
@@ -91,6 +92,8 @@ def evaluate_advisory_proposal(
     correlation_id: str,
     resolved_as_of: str | None = None,
     input_mode: str | None = None,
+    requested_as_of_date: str | None = None,
+    requested_reporting_currency: str | None = None,
     policy_context: dict[str, object] | None = None,
 ) -> ProposalResult:
     idempotency_key = normalize_optional_idempotency_key(idempotency_key)
@@ -122,6 +125,15 @@ def evaluate_advisory_proposal(
         correlation_id=correlation_id,
         resolved_as_of=resolved_as_of,
         policy_context=policy_context,
+    )
+    risk.proposal_result.valuation_context = build_proposal_valuation_context(
+        portfolio=request.portfolio_snapshot,
+        before=risk.proposal_result.before,
+        simulated=risk.proposal_result.after_simulated,
+        source_provenance=risk.proposal_result.lineage.source_provenance,
+        requested_as_of_date=requested_as_of_date,
+        requested_reporting_currency=requested_reporting_currency,
+        input_mode=input_mode,
     )
     return cast(ProposalResult, risk.proposal_result)
 

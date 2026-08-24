@@ -114,6 +114,8 @@ def create_proposal_command(
         request=resolved_request.simulate_request,
         resolved_as_of=resolved_request.resolved_context.as_of,
         input_mode=resolved_request.input_mode,
+        requested_as_of_date=resolved_request.resolved_context.requested_as_of,
+        requested_reporting_currency=resolved_request.resolved_context.requested_reporting_currency,
         request_hash=request_hash,
         idempotency_key=idempotency_key,
         correlation_id=correlation_id,

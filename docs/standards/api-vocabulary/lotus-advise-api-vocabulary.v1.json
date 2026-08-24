@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-08-23T07:14:15.974229+00:00",
+  "generatedAt": "2026-08-24T05:25:22.090052+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -2739,7 +2739,8 @@
         "body"
       ],
       "observedTypes": [
-        "string"
+        "string",
+        "ProposalValuationContextState"
       ]
     },
     {
@@ -3484,6 +3485,34 @@
       ],
       "observedTypes": [
         "Money-Output"
+      ]
+    },
+    {
+      "semanticId": "lotus.effective_as_of_date",
+      "canonicalTerm": "effective_as_of_date",
+      "preferredName": "effective_as_of_date",
+      "description": "Effective source valuation/as-of date or timestamp. Null means the source did not provide one that can be trusted for this state.",
+      "example": "2026-03-02",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.effective_reporting_currency",
+      "canonicalTerm": "effective_reporting_currency",
+      "preferredName": "effective_reporting_currency",
+      "description": "Currency actually used by the state valuation. This is source evidence, not a permission or suitability decision.",
+      "example": "USD",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -9437,6 +9466,20 @@
       ]
     },
     {
+      "semanticId": "lotus.requested_as_of_date",
+      "canonicalTerm": "requested_as_of_date",
+      "preferredName": "requested_as_of_date",
+      "description": "Requested valuation/as-of date or timestamp. Null means the caller did not request a date explicitly.",
+      "example": "2026-03-02",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.requested_by",
       "canonicalTerm": "requested_by",
       "preferredName": "requested_by",
@@ -9504,6 +9547,20 @@
       "preferredName": "requested_quantity",
       "description": "Requested sell quantity before budget limit.",
       "example": "0.125",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.requested_reporting_currency",
+      "canonicalTerm": "requested_reporting_currency",
+      "preferredName": "requested_reporting_currency",
+      "description": "Requested reporting currency. Null means the caller did not request a separate reporting currency.",
+      "example": "USD",
       "type": "string",
       "locations": [
         "body"
@@ -10464,8 +10521,8 @@
       "semanticId": "lotus.schema_version",
       "canonicalTerm": "schema_version",
       "preferredName": "schema_version",
-      "description": "Stable schema version for persisted advisory copilot run records.",
-      "example": "advisory-copilot-run-record.v1",
+      "description": "Versioned typed proposal valuation-context contract.",
+      "example": "lotus.proposal-valuation-context.v1",
       "type": "string",
       "locations": [
         "body"
@@ -10780,6 +10837,22 @@
       ],
       "observedTypes": [
         "ProposalSimulateRequest-Input"
+      ]
+    },
+    {
+      "semanticId": "lotus.simulated_state",
+      "canonicalTerm": "simulated_state",
+      "preferredName": "simulated_state",
+      "description": "Canonical simulated state used by lotus-advise APIs.",
+      "example": {
+        "supportability": "READY"
+      },
+      "type": "ProposalValuationContextState",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ProposalValuationContextState"
       ]
     },
     {
@@ -11201,6 +11274,22 @@
       ]
     },
     {
+      "semanticId": "lotus.source_references",
+      "canonicalTerm": "source_references",
+      "preferredName": "source_references",
+      "description": "Stable source snapshot or revision references. Raw source payloads and opaque client-invented evidence are not stored here.",
+      "example": [
+        "advisory_review_context"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.source_refs",
       "canonicalTerm": "source_refs",
       "preferredName": "source_refs",
@@ -11280,7 +11369,7 @@
       "semanticId": "lotus.source_service",
       "canonicalTerm": "source_service",
       "preferredName": "source_service",
-      "description": "Risk authority used to produce the proposal risk lens.",
+      "description": "Authoritative source service for the valuation-context evidence.",
       "example": "lotus-advise",
       "type": "string",
       "locations": [
@@ -11670,16 +11759,14 @@
       "semanticId": "lotus.supportability",
       "canonicalTerm": "supportability",
       "preferredName": "supportability",
-      "description": "Current RFC-0025 support boundary for this policy pack.",
-      "example": {
-        "source_system": "lotus-advise",
-        "business_context": "supportability_contract"
-      },
-      "type": "object",
+      "description": "Supportability of the typed date/currency evidence. Missing evidence remains UNAVAILABLE and is never inferred as current, zero, pass, or approval.",
+      "example": "READY",
+      "type": "string",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "string",
         "object",
         "AdvisorySupportability",
         "TacticalHouseViewSupportability"
@@ -12410,6 +12497,23 @@
       ],
       "observedTypes": [
         "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.valuation_context",
+      "canonicalTerm": "valuation_context",
+      "preferredName": "valuation_context",
+      "description": "Canonical valuation context used by lotus-advise APIs.",
+      "example": {
+        "current_state": "current_state_value",
+        "simulated_state": "simulated_state_value"
+      },
+      "type": "ProposalValuationContext",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ProposalValuationContext"
       ]
     },
     {
@@ -18537,6 +18641,150 @@
             "attributeRef": "#/attributeCatalog/lotus.source"
           },
           {
+            "name": "version.proposal_result.valuation_context",
+            "location": "body",
+            "required": false,
+            "type": "ProposalValuationContext",
+            "semanticId": "lotus.valuation_context",
+            "attributeRef": "#/attributeCatalog/lotus.valuation_context"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.current_state",
+            "attributeRef": "#/attributeCatalog/lotus.current_state"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.simulated_state",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_state"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
             "name": "version.proposal_result.lineage",
             "location": "body",
             "required": true,
@@ -21727,6 +21975,150 @@
             "attributeRef": "#/attributeCatalog/lotus.source"
           },
           {
+            "name": "current_version.proposal_result.valuation_context",
+            "location": "body",
+            "required": false,
+            "type": "ProposalValuationContext",
+            "semanticId": "lotus.valuation_context",
+            "attributeRef": "#/attributeCatalog/lotus.valuation_context"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.current_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.current_state",
+            "attributeRef": "#/attributeCatalog/lotus.current_state"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.current_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.current_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.current_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.current_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.current_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.current_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.simulated_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.simulated_state",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_state"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.simulated_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.simulated_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.simulated_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.simulated_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.simulated_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "current_version.proposal_result.valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
             "name": "current_version.proposal_result.lineage",
             "location": "body",
             "required": true,
@@ -24556,6 +24948,150 @@
             "type": "string",
             "semanticId": "lotus.source",
             "attributeRef": "#/attributeCatalog/lotus.source"
+          },
+          {
+            "name": "proposal_result.valuation_context",
+            "location": "body",
+            "required": false,
+            "type": "ProposalValuationContext",
+            "semanticId": "lotus.valuation_context",
+            "attributeRef": "#/attributeCatalog/lotus.valuation_context"
+          },
+          {
+            "name": "proposal_result.valuation_context.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "proposal_result.valuation_context.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal_result.valuation_context.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_result.valuation_context.current_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.current_state",
+            "attributeRef": "#/attributeCatalog/lotus.current_state"
+          },
+          {
+            "name": "proposal_result.valuation_context.current_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal_result.valuation_context.current_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal_result.valuation_context.current_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "proposal_result.valuation_context.current_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "proposal_result.valuation_context.current_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal_result.valuation_context.current_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal_result.valuation_context.simulated_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.simulated_state",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_state"
+          },
+          {
+            "name": "proposal_result.valuation_context.simulated_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal_result.valuation_context.simulated_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal_result.valuation_context.simulated_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "proposal_result.valuation_context.simulated_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "proposal_result.valuation_context.simulated_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal_result.valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
           },
           {
             "name": "proposal_result.lineage",
@@ -27531,6 +28067,150 @@
             "type": "string",
             "semanticId": "lotus.source",
             "attributeRef": "#/attributeCatalog/lotus.source"
+          },
+          {
+            "name": "version.proposal_result.valuation_context",
+            "location": "body",
+            "required": false,
+            "type": "ProposalValuationContext",
+            "semanticId": "lotus.valuation_context",
+            "attributeRef": "#/attributeCatalog/lotus.valuation_context"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.current_state",
+            "attributeRef": "#/attributeCatalog/lotus.current_state"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.current_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.simulated_state",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_state"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
           },
           {
             "name": "version.proposal_result.lineage",
@@ -51373,6 +52053,150 @@
             "attributeRef": "#/attributeCatalog/lotus.source"
           },
           {
+            "name": "valuation_context",
+            "location": "body",
+            "required": false,
+            "type": "ProposalValuationContext",
+            "semanticId": "lotus.valuation_context",
+            "attributeRef": "#/attributeCatalog/lotus.valuation_context"
+          },
+          {
+            "name": "valuation_context.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "valuation_context.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "valuation_context.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "valuation_context.current_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.current_state",
+            "attributeRef": "#/attributeCatalog/lotus.current_state"
+          },
+          {
+            "name": "valuation_context.current_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "valuation_context.current_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "valuation_context.current_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "valuation_context.current_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "valuation_context.current_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "valuation_context.current_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "valuation_context.simulated_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.simulated_state",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_state"
+          },
+          {
+            "name": "valuation_context.simulated_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "valuation_context.simulated_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "valuation_context.simulated_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "valuation_context.simulated_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "valuation_context.simulated_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
             "name": "lineage",
             "location": "body",
             "required": true,
@@ -64743,6 +65567,150 @@
             "type": "string",
             "semanticId": "lotus.source",
             "attributeRef": "#/attributeCatalog/lotus.source"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context",
+            "location": "body",
+            "required": false,
+            "type": "ProposalValuationContext",
+            "semanticId": "lotus.valuation_context",
+            "attributeRef": "#/attributeCatalog/lotus.valuation_context"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.current_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.current_state",
+            "attributeRef": "#/attributeCatalog/lotus.current_state"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.current_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.current_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.current_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.current_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.current_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.current_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.simulated_state",
+            "location": "body",
+            "required": true,
+            "type": "ProposalValuationContextState",
+            "semanticId": "lotus.simulated_state",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_state"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.simulated_state.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.simulated_state.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.simulated_state.requested_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.requested_reporting_currency"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.simulated_state.effective_reporting_currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_reporting_currency",
+            "attributeRef": "#/attributeCatalog/lotus.effective_reporting_currency"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.simulated_state.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal.version.proposal_result.valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
           },
           {
             "name": "proposal.version.proposal_result.lineage",

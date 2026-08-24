@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from src.core.advisory.alternatives_models import ProposalAlternatives
 from src.core.advisory.decision_summary_models import ProposalDecisionSummary
+from src.core.advisory.valuation_context_models import ProposalValuationContext
 from src.core.diagnostics_models import DiagnosticsData, LineageData, RuleResult
 from src.core.drift_models import DriftAnalysis
 from src.core.gate_models import GateDecision
@@ -102,6 +103,13 @@ class ProposalResult(BaseModel):
     allocation_lens: ProposalAllocationLens = Field(
         default_factory=ProposalAllocationLens,
         description="Canonical allocation-lens metadata for proposal before/after states.",
+    )
+    valuation_context: ProposalValuationContext = Field(
+        default_factory=ProposalValuationContext.unavailable,
+        description=(
+            "Typed requested/effective valuation-date and reporting-currency evidence for "
+            "current and simulated states. Missing source evidence is explicit and unavailable."
+        ),
     )
     lineage: LineageData = Field(description="Lineage identifiers and request hash.")
 

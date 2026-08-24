@@ -8,9 +8,9 @@ from src.core.proposals.models import (
     ProposalCreateMetadata,
     ProposalCreateRequest,
     ProposalCreateResponse,
-    ProposalResolvedContext,
     ProposalVersionRequest,
 )
+from src.core.workspace.context_resolution import build_workspace_proposal_context
 from src.core.workspace.handoff_models import (
     WorkspaceLifecycleHandoffRequest,
     WorkspaceLifecycleHandoffResponse,
@@ -46,8 +46,10 @@ def build_workspace_handoff_context_resolution(
 ) -> dict[str, Any]:
     if session.resolved_context is None:
         raise WorkspaceHandoffError("WORKSPACE_RESOLVED_CONTEXT_MISSING")
-    resolved_context = ProposalResolvedContext.model_validate(
-        session.resolved_context.model_dump(mode="json")
+    resolved_context = build_workspace_proposal_context(
+        resolved_context=session.resolved_context,
+        stateful_input=session.stateful_input,
+        simulate_request=simulate_request,
     )
     resolved_request = ResolvedProposalContext(
         input_mode=session.input_mode,

@@ -209,6 +209,12 @@ def _build_resolved_context_from_simulate_request(
         as_of=simulate_request.reference_model.as_of
         if simulate_request.reference_model is not None
         else _current_business_date_iso(),
+        requested_as_of=(
+            simulate_request.reference_model.as_of
+            if simulate_request.reference_model is not None
+            else None
+        ),
+        requested_reporting_currency=simulate_request.portfolio_snapshot.base_currency,
         portfolio_snapshot_id=simulate_request.portfolio_snapshot.snapshot_id,
         market_data_snapshot_id=simulate_request.market_data_snapshot.snapshot_id,
     )
@@ -268,12 +274,20 @@ def _resolve_stateful_input(
             "PROPOSAL_STATEFUL_CONTEXT_RESOLUTION_UNAVAILABLE"
         ) from exc
 
+    resolved_context = ProposalResolvedContext.model_validate(
+        resolved.resolved_context.model_dump(mode="json")
+    ).model_copy(
+        update={
+            "requested_as_of": stateful_input.as_of,
+            "requested_reporting_currency": stateful_input.reporting_currency,
+        }
+    )
     return (
         _merge_stateful_narrative_request(
             resolved.simulate_request,
             stateful_input=stateful_input,
         ),
-        ProposalResolvedContext.model_validate(resolved.resolved_context.model_dump(mode="json")),
+        resolved_context,
     )
 
 
