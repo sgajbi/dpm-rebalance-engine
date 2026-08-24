@@ -8,7 +8,8 @@
   change introduces measurable source growth or weakens a quality trend; the comparison must be
   deterministic, fail closed, and visible in CI evidence.
 - Status: Implemented and merged to `main`; this bounded trend-gate slice is complete. Issue #495
-  remains open for threshold/rate ratcheting, expiry follow-through, and hotspot decomposition.
+  remains open for threshold/rate ratcheting, deliberate exception retirement, and hotspot
+  decomposition.
 - Finding Class: CI quality gate, maintainability regression prevention, review evidence.
 - Summary: The slice adds a versioned policy and comparator that reports base ref, effective
   merge-base SHA, head SHA, measured deltas, thresholds, and reviewed exception provenance. It
@@ -45,8 +46,9 @@
 - Documentation decision: repository engineering context, generated quality evidence, validation
   guidance, wiki source, and this ledger changed because the blocking developer/operator quality
   surface changed. No OpenAPI, migration, or platform-wide context change is needed.
-- Follow-Up: #495 owns the expiring-exception lapse, future wording/rate calibration, threshold
-  ratcheting, and hotspot decomposition. No follow-up is being left only in chat.
+- Follow-Up: #495 owns deliberate retirement of the one-slice exception, future wording/rate
+  calibration, threshold ratcheting, and hotspot decomposition. No follow-up is being left only in
+  chat.
 - Issue evidence: GitHub issue #495 records the bounded objective, deliberate metric-root choice,
   review holds and final verdict, merged commits, exact-mainline validation, wiki publication and
   parity, runtime health, and the remaining follow-up scope.
