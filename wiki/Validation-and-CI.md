@@ -62,7 +62,8 @@ runtime evidence fields.
 The same fast static lanes also run `make quality-trend-gate`. This gate compares the committed
 `quality/baseline_report.md` metrics at the merge base of the supplied base/head revisions and the
 exact head revision, then writes `output/quality-trend-gate.json`. The versioned policy allows at most 250 additional Python lines;
-this is an evidence-based ratchet from 500 that remains above the recent +172-line ordinary quality slice while rejecting an
+this is an evidence-based ratchet from 500 that remains above the recent +45-line ordinary quality slice maximum across merged
+PRs #526-#535 while rejecting an
 unreviewed half-kiloline batch;
 no increase in Radon B-ranked blocks, no increase in the worst Radon complexity, and no decrease
 in Interrogate coverage. Interrogate comparisons derive from the exact `covered` and `total`
