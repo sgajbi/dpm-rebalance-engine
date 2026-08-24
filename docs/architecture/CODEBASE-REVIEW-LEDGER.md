@@ -11,8 +11,9 @@
   remains open for threshold/rate ratcheting, deliberate exception retirement, and hotspot
   decomposition.
 - Finding Class: CI quality gate, maintainability regression prevention, review evidence.
-- Summary: The slice adds a versioned policy and comparator that reports base ref, effective
-  merge-base SHA, head SHA, measured deltas, thresholds, and reviewed exception provenance. It
+- Summary: The slice adds a versioned policy and comparator that reports the effective comparison
+  base ref, merge-base SHA, head SHA, measured deltas, thresholds, and reviewed exception
+  provenance. It
   keeps `src`, `scripts`, and `tests` in one visible Python-growth budget so test-only bulk cannot
   hide from review, while preserving the existing aggregate coverage and complexity controls.
 - Evidence:
