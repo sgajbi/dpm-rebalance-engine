@@ -5,7 +5,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _make_recipe(makefile: str, target: str) -> str:
-    match = re.search(rf"(?ms)^{re.escape(target)}:\n(?P<recipe>(?:\t.*\n)+)", makefile)
+    match = re.search(rf"(?m)^{re.escape(target)}:\n(?P<recipe>(?:\t.*\n)+)", makefile)
     assert match is not None, f"Make target {target!r} is missing a recipe."
     return match.group("recipe")
 
@@ -105,3 +105,9 @@ def test_quality_control_command_parser_rejects_comments_and_echoes() -> None:
         "python scripts/radon_complexity_gate.py --fail-rank C",
         "python -c \"print('quoted; semicolon')\"",
     )
+
+
+def test_make_recipe_does_not_capture_later_targets() -> None:
+    makefile = "alpha:\n\techo alpha\n\nbeta:\n\techo beta\n"
+
+    assert _make_recipe(makefile, "alpha") == "\techo alpha\n"
