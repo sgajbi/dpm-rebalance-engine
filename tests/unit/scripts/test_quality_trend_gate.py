@@ -53,6 +53,7 @@ def test_compare_metrics_passes_within_thresholds_and_reports_deltas() -> None:
 
 def test_compare_metrics_rejects_complexity_and_documentation_regressions() -> None:
     policy = _policy()
+    policy["exceptions"]["entries"] = []
     policy["metrics"][0]["allowed_delta"] = 5
     results, failures = quality_trend_gate.compare_metrics(
         quality_trend_gate.parse_report(_report()),
