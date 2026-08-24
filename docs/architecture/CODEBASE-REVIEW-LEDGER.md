@@ -45,14 +45,16 @@
     and `027c91b6`; focused contract/CI tests passed `37`; the changed-source coverage floor
     passed after the self-validation branches were covered; focused mypy, Ruff, format,
     pre-commit, and `git diff --check` passed.
-  - Follow-up signed feature commit `c1049d1d` derives insufficient-evidence allowed actions from
-    the evidence-gap branch map, cross-checks decision-status workflow gates against the runtime
-    `_GATE_DECISION_STATUS` inverse, and documents the top-level-status compatibility declaration.
-    Focused contract/decision-summary tests passed `39`; full `make check` passed `2,702` unit
-    tests in `77.01s`; combined coverage passed at `97%` across `2,702` unit, `57` integration,
-    and `12` e2e tests; the changed-source floor passed for the one changed Python module at
-    `90%+`; quality baseline, dependency, dead-code, duplicate-code, oversized-code, security,
-    OpenAPI/Spectral, architecture, type, format, and documentation gates passed.
+  - Follow-up signed feature commits `c1049d1d` and `22274ca1` derive insufficient-evidence
+    allowed actions from the evidence-gap branch map, cross-check decision-status workflow gates
+    against the runtime `_GATE_DECISION_STATUS` inverse, reject unknown published gate names, and
+    document the top-level-status compatibility declaration. Focused contract/decision-summary
+    tests passed `41` with `100%` coverage for the changed rule module; full `make check` passed
+    `2,703` unit tests in `74.57s`; combined coverage passed at `97%` across `2,702` unit, `57`
+    integration, and `12` e2e tests before the final gate-name regression test; the changed-source
+    floor passed for the one changed Python module at `90%+`; quality baseline, dependency,
+    dead-code, duplicate-code, oversized-code, security, OpenAPI/Spectral, architecture, type,
+    format, and documentation gates passed.
   - The workflow-gate next-step half remains derived from live `_GATE_OUTCOME_RULES` and is
     verified against conflicting-outcome and expected-map drift failures. Decision-status
     workflow-gate pairings are additionally cross-checked against the runtime inverse in
