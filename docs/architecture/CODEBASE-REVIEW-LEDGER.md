@@ -27,9 +27,10 @@
 - Compatibility: CI enforcement only. Product runtime, APIs/OpenAPI, persistence, migrations,
   dependencies, and downstream contracts are unchanged; stale oversized-code baselines now fail
   until reviewed and ratcheted.
-- Documentation decision: Updated this review ledger because the enforced quality-gate behavior
-  changed. No operator workflow or wiki truth changed, so no wiki source update or publication is
-  needed for this slice.
+- Documentation decision: Updated this review ledger and `wiki/Validation-and-CI.md` because the
+  enforced quality-gate behavior and its operator remediation changed. Wiki source parity was
+  checked with `Sync-RepoWikis.ps1 -CheckOnly -AllowUnpublishedSourceChanges`; publish the authored
+  wiki source after merge and run strict parity verification afterward.
 - Follow-Up: #495 continues to own threshold/rate calibration and unrelated live-validation
   hotspots.
 
