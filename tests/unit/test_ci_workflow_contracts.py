@@ -111,10 +111,55 @@ def test_quality_trend_gate_is_hard_versioned_and_present_across_ci_lanes() -> N
         assert "Quality Trend Regression Gate" in section
         base_ref = {
             "feature-lane.yml": "origin/main",
-            "pr-merge-gate.yml": "${{ github.event.pull_request.base.sha }}",
+            "pr-merge-gate.yml": (
+                "${{ github.event_name == 'pull_request' && "
+                "github.event.pull_request.base.sha || 'origin/main' }}"
+            ),
             "main-releasability.yml": "HEAD^",
         }[workflow_name]
         assert f"QUALITY_BASE_REF: {base_ref}" in section
+
+
+def test_manual_pr_gate_dispatch_binds_quality_and_changed_coverage_refs() -> None:
+    workflow = _workflow_text("pr-merge-gate.yml")
+    governance_section = _workflow_job_section(workflow, "lint-typecheck-governance")
+    coverage_section = _workflow_job_section(workflow, "coverage-gate")
+    event_aware_base = (
+        "QUALITY_BASE_REF: ${{ github.event_name == 'pull_request' && "
+        "github.event.pull_request.base.sha || 'origin/main' }}"
+    )
+    event_aware_head = (
+        "QUALITY_HEAD_REF: ${{ github.event_name == 'pull_request' && "
+        "github.event.pull_request.head.sha || github.sha }}"
+    )
+    manual_coverage_condition = (
+        "if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'"
+    )
+    coverage_base_arg = (
+        "--base-ref \"${{ github.event_name == 'pull_request' && "
+        "github.event.pull_request.base.sha || 'origin/main' }}\""
+    )
+    coverage_head_arg = (
+        "--head-ref \"${{ github.event_name == 'pull_request' && "
+        'github.event.pull_request.head.sha || github.sha }}"'
+    )
+    unsupported_event_condition = (
+        "if: github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch'"
+    )
+
+    assert "workflow_dispatch:" in workflow
+    assert event_aware_base in governance_section
+    assert event_aware_head in governance_section
+    assert "Verify quality comparison refs" in governance_section
+    assert "Quality comparison context:" in governance_section
+    assert "refusing an unbound quality-trend comparison" in governance_section
+    assert 'git rev-parse --verify "${QUALITY_BASE_REF}^{commit}"' in governance_section
+    assert 'git rev-parse --verify "${QUALITY_HEAD_REF}^{commit}"' in governance_section
+    assert manual_coverage_condition in coverage_section
+    assert coverage_base_arg in coverage_section
+    assert coverage_head_arg in coverage_section
+    assert "Record changed coverage skip for unsupported workflow event" in coverage_section
+    assert unsupported_event_condition in coverage_section
 
 
 def test_dead_code_regression_gate_is_hard_and_versioned_across_ci_lanes() -> None:
@@ -261,7 +306,7 @@ def test_coverage_gate_enforces_changed_source_floor_with_versioned_policy() -> 
     assert "Enforce changed source coverage floor" in coverage_section
     assert "github.event.pull_request.base.sha" in coverage_section
     assert "github.event.pull_request.head.sha" in coverage_section
-    assert "Record changed coverage skip outside pull request" in coverage_section
+    assert "Record changed coverage skip for unsupported workflow event" in coverage_section
     assert "quality/quality-policy.v1.json" in coverage_section
     assert "Upload changed coverage evidence" in coverage_section
     assert "fetch-depth: 0" in coverage_section

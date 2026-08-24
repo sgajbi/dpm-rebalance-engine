@@ -599,11 +599,14 @@ Important validation expectations:
     becomes required.
 20. PR coverage quality retains the aggregate 97% floor and additionally enforces the versioned
     `quality/quality-policy.v1.json` changed-source threshold through
-    `scripts/changed_coverage_gate.py`. The gate compares the pull request base/head, reports every
+    `scripts/changed_coverage_gate.py`. The gate compares the pull request base/head, or
+    `origin/main` and the selected checkout SHA for a manual PR Merge Gate dispatch, reports every
     changed executable source lines under `src/` with measured and threshold percentages, and emits
     `output/changed-coverage-gate.json`; it has no exceptions in this initial slice. Diff parsing is
     fail-closed: supported hunk shapes are validated for new-line counts, and malformed Python
-    hunks produce failed machine-readable evidence rather than an empty 100% measurement.
+    hunks produce failed machine-readable evidence rather than an empty 100% measurement. Manual
+    dispatches log and resolve the event-aware comparison refs before running the trend gate so
+    missing pull-request fields cannot silently produce an unbound quality comparison.
 21. CI-local Docker execution is isolated from the product runtime: `make ci-local-docker`,
     `make ci-local-docker-down`, and `scripts/run_runtime_smoke_checks.py` use the same
     checkout-specific `CI_LOCAL_COMPOSE_PROJECT` identity, derived from the absolute checkout path

@@ -65,10 +65,24 @@ jobs:
         run: make proposal-decision-vocabulary-gate
       - name: Quality Baseline Freshness
         run: make quality-baseline-check
+      - name: Verify quality comparison refs
+        shell: bash
+        env:
+          QUALITY_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'origin/main' }}
+          QUALITY_HEAD_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          echo "Quality comparison context: event=${GITHUB_EVENT_NAME} base_ref=${QUALITY_BASE_REF} head_ref=${QUALITY_HEAD_REF} checkout_sha=${GITHUB_SHA}"
+          if [ -z "$QUALITY_BASE_REF" ] || [ -z "$QUALITY_HEAD_REF" ]; then
+            echo "::error::Quality comparison refs are empty for event ${GITHUB_EVENT_NAME}; refusing an unbound quality-trend comparison."
+            exit 1
+          fi
+          git rev-parse --verify "${QUALITY_BASE_REF}^{commit}" >/dev/null
+          git rev-parse --verify "${QUALITY_HEAD_REF}^{commit}" >/dev/null
       - name: Quality Trend Regression Gate
         env:
-          QUALITY_BASE_REF: ${{ github.event.pull_request.base.sha }}
-          QUALITY_HEAD_REF: ${{ github.event.pull_request.head.sha }}
+          QUALITY_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'origin/main' }}
+          QUALITY_HEAD_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: make quality-trend-gate
       - name: Upload Quality Trend Evidence
         if: always()
@@ -183,16 +197,16 @@ jobs:
           python -m coverage combine coverage-data
           python -m coverage report --fail-under=97
       - name: Enforce changed source coverage floor
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
         run: |
           python scripts/changed_coverage_gate.py \
-            --base-ref "${{ github.event.pull_request.base.sha }}" \
-            --head-ref "${{ github.event.pull_request.head.sha }}" \
+            --base-ref "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || 'origin/main' }}" \
+            --head-ref "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}" \
             --coverage-data .coverage \
             --policy quality/quality-policy.v1.json \
             --output output/changed-coverage-gate.json
-      - name: Record changed coverage skip outside pull request
-        if: github.event_name != 'pull_request'
+      - name: Record changed coverage skip for unsupported workflow event
+        if: github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch'
         run: |
           python scripts/changed_coverage_gate.py \
             --policy quality/quality-policy.v1.json \

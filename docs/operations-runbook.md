@@ -8,6 +8,10 @@
 - `make ci-local`: local PR Merge Gate subset without Docker, including quality-baseline
   freshness.
 - `make quality-baseline`: regenerate report-only quality artifacts in `quality/`.
+- GitHub `Pull Request Merge Gate` manual dispatches use the selected checkout SHA as the quality
+  head and `origin/main` as the comparison base. The workflow logs and resolves both revisions,
+  runs changed-source coverage, and fails closed when a ref is unavailable; do not treat a manual
+  run with an empty pull-request context as equivalent to PR-triggered evidence.
 - `make engineering-health`: regenerate the structural engineering-health baseline.
 - `make ci-local-docker` and `make ci-local-docker-down`: run and clean up the CI-local Compose
   project. By default, both targets derive the same checkout-specific project identity, so `down

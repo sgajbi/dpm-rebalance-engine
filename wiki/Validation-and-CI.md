@@ -67,14 +67,17 @@ in Interrogate coverage. Interrogate comparisons derive from the exact `covered`
 counts in the evidence line rather than its one-decimal display percentage; inconsistent or
 zero-total counts fail closed. Any reviewed exception must name the metric, justification, approver,
 and expiry date; policy content changes require a matching content-fingerprint version. Feature
-Lane supplies `origin/main`, PR Merge Gate supplies the pull request base/head SHAs, and Main
-Releasability supplies `HEAD^` with `HEAD`; all comparisons resolve and record the merge base so
-unrelated mainline merges cannot erase branch growth. Evidence records the supplied base ref,
-effective base ref, explicit fallback state, requested base SHA, and resolved merge-base SHA. The
-gate records the effective ref and fallback state at the decision boundary, so failed revision or
-baseline reads preserve truthful fallback provenance as well as successful comparisons. The gate
-is CI/developer evidence only and does not change runtime, API, persistence, migration, or
-data-model behavior.
+Lane supplies `origin/main`; PR Merge Gate supplies pull-request base/head SHAs on `pull_request`
+and deterministically compares `origin/main` with the selected `github.sha` on `workflow_dispatch`.
+Manual PR-gate dispatches therefore cannot silently run with empty pull-request fields. The same
+event-aware comparison refs drive changed-source coverage, and the gate logs the event, refs, and
+checkout SHA before resolving both revisions. Main Releasability supplies `HEAD^` with `HEAD`;
+all comparisons resolve and record the merge base so unrelated mainline merges cannot erase branch
+growth. Evidence records the supplied base ref, effective base ref, explicit fallback state,
+requested base SHA, and resolved merge-base SHA. The gate records the effective ref and fallback
+state at the decision boundary, so failed revision or baseline reads preserve truthful fallback
+provenance as well as successful comparisons. The gate is CI/developer evidence only and does not
+change runtime, API, persistence, migration, or data-model behavior.
 
 ## Reader Map
 
