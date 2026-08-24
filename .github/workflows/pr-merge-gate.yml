@@ -33,6 +33,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -63,6 +65,18 @@ jobs:
         run: make proposal-decision-vocabulary-gate
       - name: Quality Baseline Freshness
         run: make quality-baseline-check
+      - name: Quality Trend Regression Gate
+        env:
+          QUALITY_BASE_REF: ${{ github.event.pull_request.base.sha }}
+          QUALITY_HEAD_REF: ${{ github.event.pull_request.head.sha }}
+        run: make quality-trend-gate
+      - name: Upload Quality Trend Evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: quality-trend-gate
+          path: output/quality-trend-gate.json
+          if-no-files-found: error
       - name: Dead Code Regression Gate
         run: make dead-code-gate
       - name: Duplicate Code Regression Gate

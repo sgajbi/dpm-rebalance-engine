@@ -1,0 +1,42 @@
+{
+  "schema_version": "lotus.advise.quality-trend-policy.v1",
+  "policy_version": "lotus-advise-quality-trend.v1+a3f197817b6e",
+  "report_path": "quality/baseline_report.md",
+  "metrics": [
+    {
+      "name": "total_python_lines",
+      "direction": "increase",
+      "allowed_delta": 500,
+      "reason": "Limit unreviewed repository growth that can hide AI-generated or low-value code behind aggregate gates."
+    },
+    {
+      "name": "radon_b_ranked_blocks",
+      "direction": "increase",
+      "allowed_delta": 0,
+      "reason": "Keep the calibrated B-ranked complexity inventory from growing while stricter thresholds remain under review."
+    },
+    {
+      "name": "radon_worst_complexity",
+      "direction": "increase",
+      "allowed_delta": 0,
+      "reason": "Prevent the worst measured control-flow complexity from regressing between governed revisions."
+    },
+    {
+      "name": "interrogate_coverage_percent",
+      "direction": "decrease",
+      "allowed_delta": 0,
+      "reason": "Do not reduce the measured public/module documentation inventory while documentation thresholds are calibrated."
+    }
+  ],
+  "exceptions": {
+    "allowed": true,
+    "entry_schema": {
+      "metric": "quality metric name",
+      "allowed_delta": "non-negative number",
+      "reason": "reviewed justification",
+      "approver": "GitHub identity",
+      "expires_on": "YYYY-MM-DD"
+    },
+    "entries": []
+  }
+}

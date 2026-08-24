@@ -169,6 +169,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Git Identity: omitted from committed Markdown" in scorecard
     assert "No-C/D/E/F gate plus Radon inventory" in scorecard
     assert "Quality baseline freshness" in scorecard
+    assert "make quality-trend-gate" in scorecard
     assert "make check, make ci, make ci-local" in scorecard
     assert "Feature Lane, PR Merge Gate, and Main Releasability" in scorecard
     assert "Hard no-new-regression Vulture gate" in scorecard
@@ -358,7 +359,7 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "Calibrate Radon complexity enforcement beyond the current no-C/D/E/F gate" in (
         refactor_health
     )
-    assert "machine-readable trend/regression slices" in refactor_health
+    assert "machine-readable quality trend/regression gate" in refactor_health
     assert "Interrogate docstring inventory" in refactor_health
     assert "Reduce the governed Bandit medium/low baseline before expiry" in refactor_health
     assert "Spectral OpenAPI enforcement" in refactor_health
