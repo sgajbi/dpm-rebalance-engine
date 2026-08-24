@@ -6,6 +6,7 @@ import pytest
 
 from scripts import dead_code_gate
 from scripts.dead_code_gate import DeadCodeFinding, load_policy, parse_finding, run_gate
+from scripts.quality_gate_common import expected_policy_version
 
 
 def _completed(*, stdout: str = "", returncode: int = 0, stderr: str = "") -> object:
@@ -17,7 +18,7 @@ def _completed(*, stdout: str = "", returncode: int = 0, stderr: str = "") -> ob
 
 
 def _write_policy(path: Path, policy: dict[str, object]) -> None:
-    policy["policy_version"] = dead_code_gate.expected_policy_version(policy)
+    policy["policy_version"] = expected_policy_version(policy)
     path.write_text(json.dumps(policy), encoding="utf-8")
 
 
@@ -303,17 +304,17 @@ def test_policy_version_must_change_when_policy_content_changes(tmp_path: Path) 
     with pytest.raises(ValueError, match="Bump policy_version when policy content changes"):
         load_policy(policy_path)
 
-    changed_policy["policy_version"] = dead_code_gate.expected_policy_version(changed_policy)
+    changed_policy["policy_version"] = expected_policy_version(changed_policy)
     policy_path.write_text(json.dumps(changed_policy), encoding="utf-8")
     loaded = load_policy(policy_path)
     assert loaded["policy_version"] != original_version
-    assert loaded["policy_version"] == dead_code_gate.expected_policy_version(loaded)
+    assert loaded["policy_version"] == expected_policy_version(loaded)
 
 
 def test_repository_policy_is_versioned_and_classifies_current_facade_findings() -> None:
     policy = load_policy(Path("quality/dead-code-policy.v1.json"))
 
     assert policy["policy_version"].startswith("lotus-advise-dead-code.v1+")
-    assert policy["policy_version"] == dead_code_gate.expected_policy_version(policy)
+    assert policy["policy_version"] == expected_policy_version(policy)
     assert policy["max_new_findings"] == 0
     assert len(policy["exceptions"]["entries"]) == 6

@@ -6,6 +6,7 @@ import pytest
 
 from scripts import duplicate_code_gate
 from scripts.duplicate_code_gate import DuplicateFinding
+from scripts.quality_gate_common import expected_policy_version
 
 
 def _write_policy(tmp_path: Path, *, fingerprints: list[str]) -> tuple[Path, Path]:
@@ -36,7 +37,7 @@ def _write_policy(tmp_path: Path, *, fingerprints: list[str]) -> tuple[Path, Pat
         },
         "exceptions": {"allowed": False, "entries": []},
     }
-    policy["policy_version"] = duplicate_code_gate.expected_policy_version(policy)
+    policy["policy_version"] = expected_policy_version(policy)
     policy_path = tmp_path / "policy.json"
     policy_path.write_text(json.dumps(policy), encoding="utf-8")
     return policy_path, baseline_path

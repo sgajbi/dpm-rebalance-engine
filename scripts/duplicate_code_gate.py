@@ -16,11 +16,6 @@ from typing import Any
 
 from scripts import quality_gate_common
 
-
-def __getattr__(name: str) -> Any:
-    return getattr(quality_gate_common, name)
-
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "quality" / "duplicate-code-policy.v1.json"
 DEFAULT_OUTPUT_PATH = REPO_ROOT / "output" / "duplicate-code-gate.json"

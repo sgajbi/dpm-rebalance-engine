@@ -409,11 +409,32 @@
   reports, wiki validation guidance, and this ledger change because the blocking developer/operator
   validation surface changed. No OpenAPI, migration, or platform-wide context change is needed.
 - Follow-Up: The review lead recorded one non-blocking hygiene follow-up: remove the compatibility
-  `__getattr__` helper-path shims after no callers use the old gate-module helper paths. Oversized
-  module/function and trend-comparison gates remain separate #495 slices.
+  `__getattr__` helper-path shims after no callers use the old gate-module helper paths. That
+  follow-up is closed by `LA-REV-495-CI-QUALITY-GATE-SHIMS` below. Oversized module/function and
+  trend-comparison gates remain separate #495 slices.
 - Issue evidence: GitHub issue #495 records the bounded objective, measured 14-to-13
   classification, compatibility boundary, merged commit/run evidence, wiki publication/parity,
   canonical-runtime preservation, and remaining follow-up scope.
+
+## LA-REV-495-CI-QUALITY-GATE-SHIMS
+
+- Scope: Internal helper exposure in the three repository quality-gate modules.
+- Pattern: Module-level `__getattr__` proxies silently exposed arbitrary names from
+  `quality_gate_common`, preserving compatibility paths without repository callers or an
+  intentional public module contract.
+- Status: Removed in the bounded #495 hygiene slice.
+- Finding Class: Dead compatibility path, module boundary clarity, CI maintainability.
+- Summary: `scripts/dead_code_gate.py`, `scripts/duplicate_code_gate.py`, and
+  `scripts/dependency_hygiene_gate.py` now expose only their declared module namespace and use
+  explicit `quality_gate_common.<helper>` calls. `typing.Any` remains because it is used by the
+  modules' typed policy and evidence structures.
+- Evidence: `tests/unit/scripts/test_quality_gate_module_boundaries.py` asserts that shared helper
+  names formerly resolved through the proxies now raise `AttributeError` for all three modules;
+  repository-wide caller search found no old helper-path imports or attribute calls.
+- Compatibility: CI/developer tooling only. Gate execution, policy thresholds, tool versions,
+  evidence schemas, product APIs, persistence, migrations, and runtime behavior are unchanged.
+- Documentation decision: This ledger records the removed internal compatibility paths. No
+  OpenAPI, migration, repository-context, or wiki operator-workflow change is required.
 
 ## LA-REV-512-PROPOSAL-PRINCIPAL-OWNER
 
