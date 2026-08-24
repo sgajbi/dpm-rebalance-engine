@@ -28427,3 +28427,47 @@
   - Continue #491 with separately bounded benchmark/limit context and named scenario-analysis
     evidence slices. Those slices must reuse this typed source/effective-state vocabulary and must
     not introduce a second valuation or source-authority contract.
+
+## LA-REV-928-PROPOSAL-LIFECYCLE-ASOF-AUTHORITY
+
+- Scope: Direct/stateless proposal and workspace lifecycle context date resolution
+- Pattern: A current-date fallback in stateless context resolution could place an inferred lifecycle
+  date beside typed valuation evidence that correctly reported the effective date as unavailable.
+  The same fallback existed in the canonical workspace projection, so fixing only the proposal
+  resolver would have left a supported path with contradictory date semantics.
+- Status: Hardened
+- Finding Class: Source-authority truth, contract compatibility, workspace/proposal boundary
+- Summary: `ProposalResolvedContext.as_of` and `WorkspaceResolvedContext.as_of` are now optional
+  lifecycle values. Direct/stateless requests preserve a supplied reference-model date and otherwise
+  publish null; stateful Core context still requires a resolved source date and fails explicitly if
+  the adapter violates that contract. The evaluation and risk-enrichment ports accept the truthful
+  absent value instead of receiving a fabricated current date.
+- Evidence:
+  - Removed `_current_business_date_iso` from proposal context resolution and the workspace
+    application service; removed the unused `fallback_as_of` parameter from the workspace source
+    resolver port, adapter, service wrapper, and session builder.
+  - Workspace stateless projection now preserves `requested_as_of` when a reference model exists,
+    and never manufactures a date otherwise. A missing stateful Core `as_of` fails with the stable
+    `WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING` posture before trade-draft enrichment.
+  - Normalized proposal replay evidence preserves portfolio and snapshot identity with
+    `resolved_context.as_of: null` instead of dropping the whole context when no lifecycle date
+    exists; the replay DTO and OpenAPI contract are optional-date aware.
+  - Regression tests cover no-date direct resolution, reference-model preservation, API evaluation
+    propagation of null, workspace projection, replay preservation, OpenAPI optionality, and
+    existing stateful behavior.
+  - Focused validation passed `38` tests; full `make check` passed `2722` unit tests, Ruff
+    check/format, mypy across `658` source files, OpenAPI/Spectral, security, dependency, migration,
+    architecture, and quality gates; repository `git diff --check` passed.
+- Compatibility:
+  - This is an intentional contract correction: direct/stateless lifecycle responses may now carry
+    `as_of: null` when no explicit/source-owned date exists. Supplied reference-model dates,
+    stateful Core dates, persistence shape, migrations, calculations, and valuation-context v1
+    fields remain unchanged. Downstream consumers must handle the documented optional lifecycle
+    date and use nested valuation-context effective dates for valuation evidence.
+- Documentation:
+  - Updated repository engineering context, RFC-0082 source-contract mapping, Proposal-Lifecycle
+    wiki source, and this ledger. Wiki publication and strict parity are required after merge.
+- Follow-Up:
+  - Continue #491 with separately bounded benchmark/limit and named scenario-analysis evidence;
+    those slices must reuse the same source/effective-state authority and must not reintroduce a
+    current-date fallback.

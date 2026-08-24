@@ -92,9 +92,11 @@ performance conclusions from `lotus-core` operational reads.
    missing or mismatched dates/currencies remain partial, restricted, or unavailable evidence.
 5. Requested valuation-context dimensions must be populated only from explicit caller input; a
    portfolio base currency must not be relabeled as a requested reporting currency.
-6. `ProposalResolvedContext.as_of` is a lifecycle evaluation/replay/routing value, not authoritative
-   valuation evidence. Consumers must use the nested `valuation_context` effective date, which stays
-   null when trusted source provenance is unavailable. When both requested date and currency are not
+6. `ProposalResolvedContext.as_of` and normalized replay-context `as_of` are optional lifecycle
+   evaluation/replay/routing values, not authoritative valuation evidence. Direct/stateless requests
+   without an explicit reference-model or source-owned date keep them null; no current-date fallback
+   is permitted. Consumers must use the nested `valuation_context` effective date, which stays null
+   when trusted source provenance is unavailable. When both requested date and currency are not
    honored, the single v1 `reason_code` is the primary date reason rather than a complete mismatch
    list.
 7. Proposal alternatives must remain anchored to canonical `lotus-core` simulation and `lotus-risk`

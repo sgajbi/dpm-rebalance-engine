@@ -77,12 +77,15 @@ the current and simulated states:
 
 Requested date and currency fields are populated only when the caller explicitly provides those
 dimensions; a portfolio base currency is effective source evidence, not a synthesized request.
-`ProposalResolvedContext.as_of` remains a lifecycle context date used for evaluation, replay, or
-upstream routing and can have a controlled runtime fallback for stateless requests. It is not
-authoritative valuation evidence: consumers must use
+`ProposalResolvedContext.as_of` is an optional lifecycle context date used for evaluation, replay,
+or upstream routing. Direct/stateless requests do not synthesize a current date when no reference
+model or source-owned date is present. It is not authoritative valuation evidence: consumers must use
 `valuation_context.current_state.effective_as_of_date` or
 `valuation_context.simulated_state.effective_as_of_date`. When both requested date and currency
 are not honored, `reason_code` reports the primary date reason and is not a complete mismatch list.
+Normalized proposal replay evidence preserves the same lifecycle context with `as_of: null` when
+the direct/stateless source context has no explicit date; it does not discard the portfolio or
+snapshot identity.
 
 The contract also carries the authoritative source service and stable source snapshot references.
 Missing provenance is represented as unavailable or partial evidence; the service never substitutes
