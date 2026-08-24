@@ -1,5 +1,37 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-LIVE-POLICY-FLOW-DECOMPOSITION
+
+- Scope: `scripts/validate_cross_service_parity_live.py::_assert_live_policy_evaluation_flow`
+  and the extracted `scripts/live_policy_evaluation_support.py` helpers.
+- Pattern: The live policy certification path combined policy-pack activation, evaluation
+  creation, read-surface checks, pre-sign-off guards, sign-off, report degradation handling, AI
+  evidence, lineage, and replay in one oversized orchestration function.
+- Status: Decomposed in this bounded #495 implementation slice; the live validator CLI and its
+  endpoint order, status assertions, evidence extraction, and returned snapshot remain intact.
+- Finding Class: Live-validation maintainability, domain responsibility boundaries, and
+  regression-proof quality enforcement.
+- Summary: Certification responsibilities now have domain-named helpers. Policy-pack activation,
+  evidence-bundle construction, and report success/degraded handling belong to the dedicated
+  policy-evaluation support module; the validator retains workflow orchestration and snapshot
+  assembly. The refactored validator module is 3,992 lines, and the resolved function fingerprint
+  is removed from the versioned oversized-code inventory without relaxing thresholds.
+- Evidence:
+  - `tests/unit/advisory/api/test_live_cross_service_parity.py` proves the extracted report helper
+    preserves both the 200/READY and 503/degraded outcomes.
+  - `make typecheck`, `make refactored-complexity-gate`, `make oversized-code-gate`, and the
+    focused live-parity/runtime-suite tests pass. The oversized-code gate reports 8 findings, 0
+    new, and 0 resolved under the refreshed baseline and policy fingerprints.
+  - `quality/baseline_report.md` records the reduced validator module size and updated generated
+    inventory.
+- Compatibility: Internal live-validation tooling only. No runtime/API/OpenAPI, persistence,
+  migration, calculation, dependency, or downstream contract change is intended.
+- Documentation decision: Updated this review ledger and generated quality evidence because the
+  tracked hotspot inventory and module ownership changed. No wiki or operator-workflow truth
+  changed, so no wiki source update or publication is needed for this slice.
+- Follow-Up: #495 still owns the remaining threshold/rate calibration and unrelated live-validation
+  hotspots; no actionable follow-up is left only in chat.
+
 ## LA-REV-495-CONTROL-TRUTH
 
 - Scope: Architecture-boundary and complexity-enforcement wording in the repository architecture

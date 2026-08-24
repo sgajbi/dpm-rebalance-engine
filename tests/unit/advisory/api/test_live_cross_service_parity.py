@@ -3,6 +3,10 @@ from typing import Any
 
 import pytest
 
+from scripts.live_policy_evaluation_support import (
+    ensure_sg_policy_pack_active,
+    request_live_policy_report,
+)
 from scripts.live_runtime_proposal_alternatives import extract_live_proposal_alternatives_snapshot
 from scripts.validate_cross_service_parity_live import (
     PortfolioParityScenario,
@@ -18,6 +22,96 @@ from scripts.validate_cross_service_parity_live import (
     _select_cross_currency_changed_state_security,
     _select_non_held_changed_state_security,
 )
+
+
+class _FakePolicyResponse:
+    def __init__(self, *, status_code: int, payload: dict[str, Any]) -> None:
+        self.status_code = status_code
+        self._payload = payload
+        self.text = str(payload)
+
+    def json(self) -> dict[str, Any]:
+        return self._payload
+
+
+class _FakePolicyClient:
+    def __init__(self, response: _FakePolicyResponse) -> None:
+        self.response = response
+
+    def post(self, *args: Any, **kwargs: Any) -> _FakePolicyResponse:
+        return self.response
+
+
+def test_live_policy_pack_activation_is_idempotent_when_already_active() -> None:
+    posts: list[dict[str, Any]] = []
+
+    ensure_sg_policy_pack_active(
+        _FakePolicyClient(_FakePolicyResponse(status_code=200, payload={})),
+        advise_base_url="http://advise.dev.lotus",
+        get_json=lambda *args, **kwargs: {
+            "policy_pack": {"activation_state": "ACTIVE", "content_hash": "sha256:pack"}
+        },
+        post_json=lambda *args, **kwargs: posts.append(kwargs) or {},
+    )
+
+    assert posts == []
+
+
+def test_live_policy_pack_activation_validates_and_binds_content_hash() -> None:
+    posts: list[dict[str, Any]] = []
+
+    ensure_sg_policy_pack_active(
+        _FakePolicyClient(_FakePolicyResponse(status_code=200, payload={})),
+        advise_base_url="http://advise.dev.lotus",
+        get_json=lambda *args, **kwargs: {
+            "policy_pack": {"activation_state": "DRAFT", "content_hash": "sha256:pack"}
+        },
+        post_json=lambda *args, **kwargs: posts.append(kwargs) or {},
+    )
+
+    assert [post["url"] for post in posts] == [
+        "http://advise.dev.lotus/advisory/policy-packs/SG_PRIVATE_BANKING_REFERENCE/versions/2026.05/validate",
+        "http://advise.dev.lotus/advisory/policy-packs/SG_PRIVATE_BANKING_REFERENCE/versions/2026.05/activate",
+    ]
+    assert posts[1]["json_body"]["source_content_hash"] == "sha256:pack"
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    (
+        (
+            _FakePolicyResponse(status_code=200, payload={"report": {"status": "READY"}}),
+            ("READY", {"report": {"status": "READY"}}, None),
+        ),
+        (
+            _FakePolicyResponse(status_code=503, payload={"detail": "provider unavailable"}),
+            ("UNAVAILABLE", None, "provider unavailable"),
+        ),
+    ),
+)
+def test_live_policy_report_preserves_ready_and_degraded_outcomes(
+    response: _FakePolicyResponse,
+    expected: tuple[str, dict[str, Any] | None, str | None],
+) -> None:
+    def assert_condition(condition: bool, message: str) -> None:
+        assert condition, message
+
+    result = request_live_policy_report(
+        _FakePolicyClient(response),
+        advise_base_url="http://advise.dev.lotus",
+        evaluation_id="pev_live_policy_001",
+        evaluation_hash="sha256:policy",
+        scenario=PortfolioParityScenario(
+            portfolio_id="PB_SG_GLOBAL_BAL_001",
+            as_of_date="2026-03-25",
+            reporting_currency="USD",
+            issuer_coverage_status="complete",
+            risk_available=True,
+        ),
+        assert_condition=assert_condition,
+    )
+
+    assert result == expected
 
 
 def test_select_changed_state_security_prefers_highest_weight_non_cash_position() -> None:

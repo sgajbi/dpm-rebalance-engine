@@ -17,6 +17,11 @@ import httpx
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts.live_policy_evaluation_support import (  # noqa: E402
+    ensure_sg_policy_pack_active,
+    live_policy_evidence_bundle,
+    request_live_policy_report,
+)
 from scripts.live_runtime_decision_summary import (  # noqa: E402
     LiveDecisionSnapshot,
     extract_live_decision_snapshot,
@@ -2488,14 +2493,18 @@ def _assert_live_proposal_memo_flow(
     )
 
 
-def _assert_live_policy_evaluation_flow(
+def _create_live_policy_evaluation(
     client: httpx.Client,
     *,
     advise_base_url: str,
     scenario: PortfolioParityScenario,
-) -> LivePolicyEvaluationSnapshot:
-    started = time.perf_counter()
-    _ensure_sg_policy_pack_active(client, advise_base_url=advise_base_url)
+) -> tuple[dict[str, Any], dict[str, Any], str, str]:
+    ensure_sg_policy_pack_active(
+        client,
+        advise_base_url=advise_base_url,
+        get_json=_get_json,
+        post_json=_post_json,
+    )
     proposal_id = f"pp_live_policy_{uuid.uuid4().hex[:10]}"
     proposal_version_id = f"ppv_live_policy_{uuid.uuid4().hex[:10]}"
     created_body = _post_json(
@@ -2507,7 +2516,7 @@ def _assert_live_policy_evaluation_flow(
             "policy_pack_id": "SG_PRIVATE_BANKING_REFERENCE",
             "policy_version": "2026.05",
             "created_by": "live-parity-validator-policy",
-            "evidence_bundle": _live_policy_evidence_bundle(scenario=scenario),
+            "evidence_bundle": live_policy_evidence_bundle(scenario=scenario),
             "reason": {"purpose": "RFC-0025 Slice 14 live policy implementation proof"},
         },
         headers={"Idempotency-Key": f"live-policy-eval-{uuid.uuid4().hex}"},
@@ -2525,7 +2534,16 @@ def _assert_live_policy_evaluation_flow(
         and bool(record["consent_requirements"]),
         f"{evaluation_id}: policy evaluation did not expose review requirements",
     )
+    return created_body, record, evaluation_id, evaluation_hash
 
+
+def _assert_live_policy_read_surfaces(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    evaluation_id: str,
+    evaluation_hash: str,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     read_body = _get_json(
         client,
         url=f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}",
@@ -2562,7 +2580,17 @@ def _assert_live_policy_evaluation_flow(
         sign_off_package["evaluation"]["evaluation_id"] == evaluation_id,
         f"{evaluation_id}: sign-off package lost evaluation identity",
     )
+    return read_body, queue_body, workflow_body
 
+
+def _assert_live_policy_pre_sign_off_guards(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    evaluation_id: str,
+    evaluation_hash: str,
+    scenario: PortfolioParityScenario,
+) -> tuple[str, str]:
     stale_hash_response = client.post(
         f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/sign-off-decisions",
         json={
@@ -2596,7 +2624,17 @@ def _assert_live_policy_evaluation_flow(
     client_ready_document_block_status = str(
         cast(dict[str, Any], client_ready_document_response.json()).get("detail")
     )
+    return stale_hash_block_status, client_ready_document_block_status
 
+
+def _sign_off_live_policy_evaluation(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    evaluation_id: str,
+    evaluation_hash: str,
+    record: dict[str, Any],
+) -> dict[str, Any]:
     sign_off_body = _post_json(
         client,
         url=f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/sign-off-decisions",
@@ -2616,38 +2654,16 @@ def _assert_live_policy_evaluation_flow(
         cast(dict[str, Any], sign_off_body["workflow"])["sign_off_status"] == "SIGNED_OFF",
         f"{evaluation_id}: policy sign-off did not close requirements",
     )
+    return sign_off_body
 
-    report_response = client.post(
-        f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/report-packages",
-        json={
-            "requested_by": "policy_checker_live",
-            "portfolio_id": scenario.portfolio_id,
-            "source_evaluation_hash": evaluation_hash,
-            "requested_output_formats": ["pdf"],
-            "client_ready_document_requested": False,
-            "reason": {"purpose": "policy sign-off package live proof"},
-        },
-        headers={"Idempotency-Key": f"live-policy-report-{uuid.uuid4().hex}"},
-    )
-    report_body: dict[str, Any] | None
-    report_status: str
-    report_degraded_reason: str | None
-    if report_response.status_code == 200:
-        report_body = cast(dict[str, Any], report_response.json())
-        report_status = str(cast(dict[str, Any], report_body["report"])["status"])
-        report_degraded_reason = None
-    else:
-        _assert(
-            report_response.status_code == 503,
-            (
-                f"{evaluation_id}: expected policy report package success or degraded 503, got "
-                f"{report_response.status_code} body={report_response.text}"
-            ),
-        )
-        report_body = None
-        report_status = "UNAVAILABLE"
-        report_degraded_reason = str(cast(dict[str, Any], report_response.json()).get("detail"))
 
+def _request_live_policy_ai_evidence(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    evaluation_id: str,
+    evaluation_hash: str,
+) -> tuple[str, dict[str, Any]]:
     forbidden_ai_response = client.post(
         f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/ai-evidence",
         json={
@@ -2694,33 +2710,104 @@ def _assert_live_policy_evaluation_flow(
         is False,
         f"{evaluation_id}: AI evidence included raw source evidence",
     )
+    return forbidden_ai_action_block_status, ai_body
 
+
+def _assert_live_policy_lineage_and_replay(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    evaluation_id: str,
+    evaluation_hash: str,
+    source_evidence_hash: str,
+    policy_content_hash: str,
+    scenario: PortfolioParityScenario,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     lineage_body = _get_json(
         client,
         url=f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/lineage",
         expected_status=200,
     )
+    lineage_posture = cast(dict[str, Any], lineage_body["lineage_posture"])
     _assert(
         lineage_body["evaluation_hash"] == evaluation_hash
-        and lineage_body["source_evidence_hash"] == record["source_evidence_hash"]
-        and lineage_body["policy_content_hash"] == record["policy_content_hash"]
+        and lineage_body["source_evidence_hash"] == source_evidence_hash
+        and lineage_body["policy_content_hash"] == policy_content_hash
         and bool(lineage_body["rule_result_hashes"])
         and bool(lineage_body["source_refs"])
         and bool(lineage_body["audit_events"])
-        and cast(dict[str, Any], lineage_body["lineage_posture"])["client_ready_publication"]
-        == "BLOCKED",
+        and lineage_posture["client_ready_publication"] == "BLOCKED",
         f"{evaluation_id}: policy lineage did not retain complete hash-backed evidence",
     )
     replay_body = _post_json(
         client,
         url=f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/replay",
         expected_status=200,
-        json_body={"evidence_bundle": _live_policy_evidence_bundle(scenario=scenario)},
+        json_body={"evidence_bundle": live_policy_evidence_bundle(scenario=scenario)},
     )
-    hash_comparison = cast(dict[str, Any], replay_body["hash_comparison"])
     _assert(
-        hash_comparison["evaluation_hash_matches"] is True,
+        cast(dict[str, Any], replay_body["hash_comparison"])["evaluation_hash_matches"] is True,
         f"{evaluation_id}: replay lost evaluation hash continuity",
+    )
+    return lineage_body, replay_body
+
+
+def _assert_live_policy_evaluation_flow(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    scenario: PortfolioParityScenario,
+) -> LivePolicyEvaluationSnapshot:
+    started = time.perf_counter()
+    created_body, record, evaluation_id, evaluation_hash = _create_live_policy_evaluation(
+        client,
+        advise_base_url=advise_base_url,
+        scenario=scenario,
+    )
+    read_body, queue_body, workflow_body = _assert_live_policy_read_surfaces(
+        client,
+        advise_base_url=advise_base_url,
+        evaluation_id=evaluation_id,
+        evaluation_hash=evaluation_hash,
+    )
+    stale_hash_block_status, client_ready_document_block_status = (
+        _assert_live_policy_pre_sign_off_guards(
+            client,
+            advise_base_url=advise_base_url,
+            evaluation_id=evaluation_id,
+            evaluation_hash=evaluation_hash,
+            scenario=scenario,
+        )
+    )
+    sign_off_body = _sign_off_live_policy_evaluation(
+        client,
+        advise_base_url=advise_base_url,
+        evaluation_id=evaluation_id,
+        evaluation_hash=evaluation_hash,
+        record=record,
+    )
+    report_status, report_body, report_degraded_reason = request_live_policy_report(
+        client,
+        advise_base_url=advise_base_url,
+        evaluation_id=evaluation_id,
+        evaluation_hash=evaluation_hash,
+        scenario=scenario,
+        assert_condition=_assert,
+    )
+    forbidden_ai_action_block_status, ai_body = _request_live_policy_ai_evidence(
+        client,
+        advise_base_url=advise_base_url,
+        evaluation_id=evaluation_id,
+        evaluation_hash=evaluation_hash,
+    )
+    lineage_body, replay_body = _assert_live_policy_lineage_and_replay(
+        client,
+        advise_base_url=advise_base_url,
+        evaluation_id=evaluation_id,
+        evaluation_hash=evaluation_hash,
+        source_evidence_hash=str(record["source_evidence_hash"]),
+        policy_content_hash=str(record["policy_content_hash"]),
+        scenario=scenario,
     )
     latency_ms = (time.perf_counter() - started) * 1000.0
     return extract_live_policy_evaluation_snapshot(
@@ -2740,111 +2827,6 @@ def _assert_live_policy_evaluation_flow(
         report_degraded_reason=report_degraded_reason,
         latency_ms=latency_ms,
     )
-
-
-def _ensure_sg_policy_pack_active(client: httpx.Client, *, advise_base_url: str) -> None:
-    detail = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/policy-packs/SG_PRIVATE_BANKING_REFERENCE/versions/2026.05",
-        expected_status=200,
-    )
-    policy_pack = cast(dict[str, Any], detail["policy_pack"])
-    if policy_pack["activation_state"] == "ACTIVE":
-        return
-    content_hash = str(policy_pack["content_hash"])
-    _post_json(
-        client,
-        url=f"{advise_base_url}/advisory/policy-packs/SG_PRIVATE_BANKING_REFERENCE/versions/2026.05/validate",
-        expected_status=200,
-        json_body={
-            "requested_by": "policy_steward_live",
-            "reason": {"purpose": "live policy pack validation"},
-        },
-        headers={"Idempotency-Key": f"live-policy-pack-validate-{uuid.uuid4().hex}"},
-    )
-    _post_json(
-        client,
-        url=f"{advise_base_url}/advisory/policy-packs/SG_PRIVATE_BANKING_REFERENCE/versions/2026.05/activate",
-        expected_status=200,
-        json_body={
-            "activated_by": "policy_checker_live",
-            "source_content_hash": content_hash,
-            "reason": {"purpose": "live policy pack activation"},
-        },
-        headers={"Idempotency-Key": f"live-policy-pack-activate-{uuid.uuid4().hex}"},
-    )
-
-
-def _live_policy_evidence_bundle(*, scenario: PortfolioParityScenario) -> dict[str, Any]:
-    return {
-        "context_resolution": {
-            "advisory_policy_context": {
-                "household_id": "HH-PB-001",
-                "jurisdiction": "SG",
-                "client_classification": "ACCREDITED_INVESTOR",
-                "booking_center_code": "SG",
-                "account_id": "ACCT-PB-001",
-                "time_horizon": "5Y",
-                "liquidity_need": "MEDIUM",
-                "mandate_id": "MANDATE-BALANCED-001",
-                "objectives": ["capital_preservation", "balanced_growth"],
-                "restrictions": ["no_single_name_above_10pct"],
-            }
-        },
-        "inputs": {
-            "portfolio_snapshot": {
-                "portfolio_id": scenario.portfolio_id,
-                "positions": [{"instrument_id": "SG_STRUCTURED_NOTE", "quantity": "100"}],
-                "cash_balances": [{"currency": scenario.reporting_currency, "amount": "50000"}],
-            },
-            "market_data_snapshot": {
-                "prices": [
-                    {
-                        "instrument_id": "SG_STRUCTURED_NOTE",
-                        "price": "100",
-                        "currency": scenario.reporting_currency,
-                    }
-                ],
-                "fx_rates": [{"pair": "USD/SGD", "rate": "1.35"}],
-            },
-            "shelf_entries": [
-                {
-                    "instrument_id": "SG_STRUCTURED_NOTE",
-                    "eligibility": {"jurisdictions": ["SG"]},
-                    "target_market": {"client_segments": ["ACCREDITED_INVESTOR"]},
-                    "complexity": "COMPLEX",
-                    "private_asset": False,
-                    "structured_product": True,
-                }
-            ],
-            "proposed_trades": [{"instrument_id": "SG_STRUCTURED_NOTE", "side": "BUY"}],
-        },
-        "risk_lens": {
-            "source_service": "lotus-risk",
-            "single_position_concentration": {"top_position_weight_current": "0.10"},
-            "issuer_concentration": {"hhi_current": "1200"},
-            "drawdown": {"max_drawdown_1y": "0.08"},
-            "var": {"var_95_1m": "0.04"},
-            "stress": {"equity_down_20": "-0.09"},
-            "liquidity_risk": {"days_to_liquidate": "3"},
-            "private_asset_risk": {"private_asset_weight": "0.00"},
-            "climate_geopolitical_risk": {"status": "not_material"},
-        },
-        "artifact": {
-            "assumptions_and_limits": {
-                "costs_and_fees": {"included": True},
-                "tax": {"included": True},
-                "execution": {"included": True},
-            },
-            "disclosures": {
-                "product_docs": [{"instrument_id": "SG_STRUCTURED_NOTE", "doc_ref": "Term sheet"}],
-            },
-        },
-        "conflict_evidence": {
-            "material_conflict": False,
-            "review_ref": "conflict-review-live-001",
-        },
-    }
 
 
 def _assert_async_lifecycle_read_surfaces(

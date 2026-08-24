@@ -35,16 +35,6 @@
     {
       "kind": "function",
       "path": "scripts/validate_cross_service_parity_live.py",
-      "symbol": "_assert_live_policy_evaluation_flow",
-      "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_assert_live_policy_evaluation_flow",
-      "max_lines": 252,
-      "owner": "lotus-advise-quality-governance",
-      "reason": "Live policy-evaluation certification flow remains a transitional orchestration helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
-      "expires_on": "2027-08-24"
-    },
-    {
-      "kind": "function",
-      "path": "scripts/validate_cross_service_parity_live.py",
       "symbol": "_assert_lifecycle_and_delivery_flow",
       "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_assert_lifecycle_and_delivery_flow",
       "max_lines": 249,
