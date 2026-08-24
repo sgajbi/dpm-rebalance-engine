@@ -49,10 +49,12 @@ class AdvisoryResolvedContext(BaseModel):
         description="Resolved portfolio identifier used by advisory evaluation.",
         examples=["PB_SG_GLOBAL_BAL_001"],
     )
-    as_of: str = Field(
+    as_of: Optional[str] = Field(
+        default=None,
         description=(
-            "Resolved lifecycle date or timestamp used for evaluation, replay, or upstream "
-            "request routing. This is not authoritative valuation evidence; consumers must use "
+            "Optional resolved lifecycle date or timestamp used for evaluation, replay, or "
+            "upstream request routing. It is absent when a direct request supplies no date and "
+            "is not authoritative valuation evidence; consumers must use "
             "proposal_result.valuation_context.*.effective_as_of_date for valuation dates."
         ),
         examples=["2026-03-25"],

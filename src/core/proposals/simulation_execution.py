@@ -9,7 +9,7 @@ from src.core.proposals.correlation import resolve_correlation_id
 def run_advisory_proposal_simulation(
     *,
     request: ProposalSimulateRequest,
-    resolved_as_of: str,
+    resolved_as_of: str | None,
     input_mode: str | None = None,
     requested_as_of_date: str | None = None,
     requested_reporting_currency: str | None = None,

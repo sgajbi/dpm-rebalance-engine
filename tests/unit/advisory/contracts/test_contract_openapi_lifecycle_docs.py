@@ -178,6 +178,13 @@ def test_lifecycle_async_and_support_schemas_have_descriptions_and_examples():
     _assert_property_has_docs(replay_schema, "evidence")
     _assert_property_has_docs(replay_schema, "explanation")
 
+    replay_context_schema = schemas["AdvisoryReplayResolvedContext"]
+    assert "as_of" not in replay_context_schema.get("required", [])
+    assert (
+        "null when the direct/stateless source context"
+        in (replay_context_schema["properties"]["as_of"]["description"])
+    )
+
     narrative_review_request_schema = schemas["ProposalNarrativeReviewRequest"]
     _assert_property_has_docs(narrative_review_request_schema, "action")
     _assert_property_has_docs(narrative_review_request_schema, "reviewed_by")

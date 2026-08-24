@@ -7,7 +7,10 @@ from src.core.proposals.models import (
     ProposalWorkflowEventRecord,
 )
 from src.core.proposals.proposal_replay import load_proposal_version_replay_referents
-from src.core.replay.service import build_async_operation_replay_response
+from src.core.replay.service import (
+    build_async_operation_replay_response,
+    build_proposal_version_replay_response,
+)
 from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
 
 
@@ -160,6 +163,33 @@ def test_build_async_operation_replay_response_links_terminal_proposal_version()
     }
     assert "payload_json" not in response.evidence["async_runtime"]
     assert response.explanation["source"] == "ASYNC_OPERATION_AND_PROPOSAL_VERSION"
+
+
+def test_build_proposal_version_replay_response_preserves_context_without_inferred_date():
+    version = _version().model_copy(
+        update={
+            "evidence_bundle_json": {
+                "context_resolution": {
+                    "resolved_context": {
+                        "portfolio_id": "pf_replay",
+                        "as_of": None,
+                        "portfolio_snapshot_id": "ps_replay",
+                    }
+                }
+            }
+        }
+    )
+
+    response = build_proposal_version_replay_response(
+        proposal=_proposal(),
+        version=version,
+        events=[_event("pwe_replay_1")],
+    )
+
+    assert response.resolved_context is not None
+    assert response.resolved_context.portfolio_id == "pf_replay"
+    assert response.resolved_context.as_of is None
+    assert response.resolved_context.portfolio_snapshot_id == "ps_replay"
 
 
 def test_build_async_operation_replay_response_preserves_operation_only_runtime_evidence():

@@ -77,6 +77,40 @@ def test_build_create_request_hash_normalizes_legacy_and_stateless_contracts():
     assert legacy_hash == stateless_hash
 
 
+def test_stateless_context_does_not_infer_a_lifecycle_date_without_source_input():
+    payload = ProposalCreateRequest(
+        created_by="advisor_context",
+        input_mode="stateless",
+        stateless_input={"simulate_request": _simulate_request()},
+    )
+
+    resolved = resolve_create_request(payload)
+    evidence = build_context_resolution_evidence(resolved)
+
+    assert resolved.resolved_context.as_of is None
+    assert resolved.resolved_context.requested_as_of is None
+    assert evidence["resolved_context"]["as_of"] is None
+
+
+def test_stateless_context_preserves_reference_model_date_as_lifecycle_input():
+    simulate_request = _simulate_request()
+    simulate_request["reference_model"] = {
+        "model_id": "model_context",
+        "as_of": "2026-06-15",
+        "base_currency": "USD",
+    }
+    payload = ProposalCreateRequest(
+        created_by="advisor_context",
+        input_mode="stateless",
+        stateless_input={"simulate_request": simulate_request},
+    )
+
+    resolved = resolve_create_request(payload)
+
+    assert resolved.resolved_context.as_of == "2026-06-15"
+    assert resolved.resolved_context.requested_as_of == "2026-06-15"
+
+
 def test_build_version_request_hash_is_canonical_and_concurrency_sensitive():
     first_payload = ProposalVersionRequest(
         created_by="advisor_context",
