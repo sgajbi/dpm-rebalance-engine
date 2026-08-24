@@ -17,15 +17,15 @@ DEFAULT_POLICY_PATH = REPO_ROOT / "quality" / "quality-trend-policy.v1.json"
 DEFAULT_OUTPUT_PATH = REPO_ROOT / "output" / "quality-trend-gate.json"
 _POLICY_VERSION = re.compile(r"^.+\+[0-9a-f]{12}$")
 _REPORT_PATTERNS: dict[str, re.Pattern[str]] = {
-    "total_python_lines": re.compile(r"^- Total Python lines: `(?P<value>\d+)`$", re.MULTILINE),
+    "total_python_lines": re.compile(r"^- Total Python lines: `(?P<reading>\d+)`$", re.MULTILINE),
     "radon_b_ranked_blocks": re.compile(
-        r"^- Radon complexity rank inventory: `A=\d+, B=(?P<value>\d+)`$", re.MULTILINE
+        r"^- Radon complexity rank inventory: `A=\d+, B=(?P<reading>\d+)`$", re.MULTILINE
     ),
     "radon_worst_complexity": re.compile(
-        r"^- Radon worst complexity: `rank=[A-F], complexity=(?P<value>\d+)`$", re.MULTILINE
+        r"^- Radon worst complexity: `rank=[A-F], complexity=(?P<reading>\d+)`$", re.MULTILINE
     ),
     "interrogate_coverage_percent": re.compile(
-        r"^- Interrogate docstring inventory: `.*coverage=(?P<value>\d+(?:\.\d+)?)%`$",
+        r"^- Interrogate docstring inventory: `.*coverage=(?P<reading>\d+(?:\.\d+)?)%`$",
         re.MULTILINE,
     ),
 }
@@ -45,10 +45,10 @@ class MetricResult:
     exception: dict[str, Any] | None
 
 
-def _number(value: object, *, field: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0:
+def _number(candidate: object, *, field: str) -> float:
+    if isinstance(candidate, bool) or not isinstance(candidate, (int, float)) or candidate < 0:
         raise ValueError(f"Quality-trend field {field!r} must be a non-negative number.")
-    return float(value)
+    return candidate + 0.0
 
 
 def load_policy(path: Path) -> dict[str, Any]:
@@ -89,15 +89,18 @@ def load_policy(path: Path) -> dict[str, Any]:
         )
         if direction not in {"increase", "decrease"}:
             raise ValueError(f"Unsupported quality-trend direction for {name}: {direction}")
-        allowed_delta = _number(
-            raw_metric.get("allowed_delta"), field=f"metrics[{name}].allowed_delta"
-        )
+        _number(raw_metric.get("allowed_delta"), field=f"metrics[{name}].allowed_delta")
         reason = quality_gate_common.non_empty_string(
             raw_metric.get("reason"), field=f"metrics[{name}].reason"
         )
         names.add(name)
         metrics.append(
-            {"name": name, "direction": direction, "allowed_delta": allowed_delta, "reason": reason}
+            {
+                "name": name,
+                "direction": direction,
+                "allowed_delta": raw_metric["allowed_delta"],
+                "reason": reason,
+            }
         )
     exceptions = policy.get("exceptions")
     if not isinstance(exceptions, dict) or exceptions.get("allowed") is not True:
@@ -136,30 +139,34 @@ def load_policy(path: Path) -> dict[str, Any]:
 
 
 def parse_report(content: str) -> dict[str, float]:
-    values: dict[str, float] = {}
+    measurements: dict[str, float] = {}
     for name, pattern in _REPORT_PATTERNS.items():
         match = pattern.search(content)
         if match is None:
             raise ValueError(f"Quality baseline report is missing metric: {name}")
-        values[name] = float(match.group("value"))
-    return values
+        measurements[name] = float(match.group("reading"))
+    return measurements
 
 
 def compare_metrics(
-    base_values: dict[str, float], head_values: dict[str, float], policy: dict[str, Any]
+    base_metrics: dict[str, float], head_metrics: dict[str, float], policy: dict[str, Any]
 ) -> tuple[list[MetricResult], list[str]]:
     results: list[MetricResult] = []
     failures: list[str] = []
     entries = {entry["metric"]: entry for entry in policy["exceptions"]["entries"]}
     for metric in policy["metrics"]:
         name = metric["name"]
-        base = base_values[name]
-        head = head_values[name]
+        base = base_metrics[name]
+        head = head_metrics[name]
         delta = head - base
-        policy_allowed_delta = float(metric["allowed_delta"])
+        policy_allowed_delta = _number(
+            metric["allowed_delta"], field=f"metrics[{name}].allowed_delta"
+        )
         exception = entries.get(name)
         allowed_delta = (
-            float(exception["allowed_delta"]) if exception is not None else policy_allowed_delta
+            _number(exception["allowed_delta"], field=f"exceptions[{name}].allowed_delta")
+            if exception is not None
+            else policy_allowed_delta
         )
         regressed = (
             (delta > allowed_delta)
