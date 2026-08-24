@@ -454,7 +454,14 @@ Use these commands as the primary local contract:
    `quality/oversized-code-baseline.v1.json`, and fails on new, grown, resolved, expired, or
    malformed findings. Baseline entries require owner, reason, expiry, and policy/baseline hash
    provenance; this is CI/developer evidence only and does not change product contracts.
-12. live demo certification evidence
+12. proposal decision vocabulary contract
+   `make proposal-decision-vocabulary-gate` validates
+   `docs/standards/proposal-decision-vocabulary.v1.json` against the Advise-owned
+   `src/core/advisory/decision_summary_status_rules.py` and `src/core/common/workflow_gates.py`
+   rule owners. It fails with the affected decision or workflow pairing when a checked-in
+   consumer-facing artifact drifts; approval requirements and gate reasons remain separate
+   runtime evidence fields.
+13. live demo certification evidence
    `make demo-certification-live`
 
 ## Validation And CI Expectations
@@ -467,7 +474,8 @@ Use these commands as the primary local contract:
 
 Important validation expectations:
 
-1. dependency health, OpenAPI, vocabulary, and no-alias governance are active,
+1. dependency health, OpenAPI, API vocabulary, producer-owned proposal decision vocabulary, and
+   no-alias governance are active,
    and direct dependency freshness is evaluated against the repository-supported Python 3.11
    runtime rather than an incompatible package release that only supports a newer Python line,
    while routine Dependabot version-update PRs are paused with

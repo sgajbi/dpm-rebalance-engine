@@ -1,5 +1,49 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-508-PROPOSAL-DECISION-VOCABULARY
+
+- Scope: Advise-owned versioned proposal decision and workflow-gate vocabulary publication for
+  downstream anti-corruption validation.
+- Pattern: OpenAPI enum membership exposed the vocabulary, but the decision-status,
+  top-level-status, recommended-action, workflow-gate, and gate-next-step pairings were not
+  published. Gateway therefore carried a duplicated matrix that could drift into a production
+  502/Workbench outage after an Advise rule change.
+- Status: Implementation complete on the feature branch; merge, exact-mainline validation, wiki
+  publication, and issue closure remain pending.
+- Finding Class: producer-owned contract governance, downstream compatibility, CI regression
+  prevention.
+- Summary: The bounded #508 slice publishes `docs/standards/proposal-decision-vocabulary.v1.json`
+  from the actual Advise rule-owner modules. The contract names Advise as vocabulary authority,
+  exposes every decision-status pairing and workflow-gate next-step mapping, and keeps approval
+  requirements and gate reasons as separate runtime evidence fields.
+- Evidence:
+  - `scripts/proposal_decision_vocabulary.py` generates the artifact from
+    `src/core/advisory/decision_summary_status_rules.py` and
+    `src/core/common/workflow_gates.py`; validation fails with the affected decision or gate
+    pairing when the checked-in artifact drifts.
+  - `make proposal-decision-vocabulary-gate` is wired into `make check`, `make check-all`,
+    `make ci`, and `make ci-local`; Feature Lane, PR Merge Gate, and Main Releasability run it as
+    a named governance step.
+  - Focused contract and workflow tests cover source/artifact parity, the canonical
+    `REQUIRES_CLIENT_CONSENT` / `READY` / `DISCUSS_WITH_CLIENT` / `CLIENT_CONSENT_REQUIRED` /
+    `REQUEST_CLIENT_CONSENT` pairing, separate approval/reason evidence fields, and actionable
+    decision/gate drift messages.
+  - The generated `docs/architecture/ENGINEERING-HEALTH-BASELINE.md` gate inventory includes the
+    new target; its generator and fixture regression were corrected in signed commit `1c241ca6`.
+  - Signed implementation commit: `eedb16b4` (`feat(contract): publish proposal decision
+    vocabulary`). Focused contract/workflow tests passed `34`; decision/gate regression tests
+    passed `38`; focused mypy, Ruff, format, pre-commit, and `git diff --check` passed.
+- Compatibility: additive repository contract and CI validation only. Current decision and gate
+  pairings are preserved; no runtime behavior, API schema, persistence, migration, calculation,
+  or dependency-version contract change is intended.
+- Documentation decision: updated repository context, supported-features, operations runbook,
+  wiki source, and this ledger because producer ownership and blocking validation behavior changed;
+  no OpenAPI route, migration, or platform-wide context change is needed.
+- Downstream handoff: `lotus-gateway#599` consumes this producer-owned artifact to detect matrix
+  drift while retaining its anti-corruption runtime validation.
+- Issue evidence: GitHub issue #508 records the bounded objective and acceptance criteria; merge
+  and exact-mainline evidence will be appended before verified closure.
+
 ## LA-REV-495-CI-OVERSIZED-CODE
 
 - Scope: deterministic oversized Python module/function regression enforcement for `src` and
