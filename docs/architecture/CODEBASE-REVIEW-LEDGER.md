@@ -18,9 +18,10 @@
   requirements and gate reasons as separate runtime evidence fields.
 - Evidence:
   - `scripts/proposal_decision_vocabulary.py` generates the artifact from
-    `src/core/advisory/decision_summary_status_rules.py` and
-    `src/core/common/workflow_gates.py`; validation fails with the affected decision or gate
-    pairing when the checked-in artifact drifts.
+    `src/core/advisory/decision_summary_status_rules.py`, the gate outcomes in
+    `src/core/common/workflow_gates.py`, and the dedicated
+    `src/core/common/workflow_gate_vocabulary.py` contract owner; validation fails with the
+    affected decision or gate pairing when the checked-in artifact drifts.
   - `make proposal-decision-vocabulary-gate` is wired into `make check`, `make check-all`,
     `make ci`, and `make ci-local`; Feature Lane, PR Merge Gate, and Main Releasability run it as
     a named governance step.

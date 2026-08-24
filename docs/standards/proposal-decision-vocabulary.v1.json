@@ -6,7 +6,8 @@
     "authority": "Advise owns proposal decision statuses, top-level status pairings, recommended next actions, workflow gates, and gate next-step mappings.",
     "rule_modules": [
       "src/core/advisory/decision_summary_status_rules.py",
-      "src/core/common/workflow_gates.py"
+      "src/core/common/workflow_gates.py",
+      "src/core/common/workflow_gate_vocabulary.py"
     ]
   },
   "decision_statuses": [
