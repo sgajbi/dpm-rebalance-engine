@@ -8,22 +8,22 @@
   change introduces measurable source growth or weakens a quality trend; the comparison must be
   deterministic, fail closed, and visible in CI evidence.
 - Status: Implemented and merged to `main`; this bounded trend-gate slice is complete. Issue #495
-  remains open for threshold/rate ratcheting, deliberate exception retirement, and hotspot
-  decomposition.
+  remains open for exception binding, threshold/rate ratcheting, and hotspot decomposition.
 - Finding Class: CI quality gate, maintainability regression prevention, review evidence.
-- Summary: The slice adds a versioned policy and comparator that reports the effective comparison
-  base ref, merge-base SHA, head SHA, measured deltas, thresholds, and reviewed exception
-  provenance, while keeping `src`, `scripts`, and `tests` in one visible Python-growth budget so
-  test-only bulk cannot hide from review and preserving the existing aggregate coverage and
-  complexity controls.
+- Summary: The slice adds a versioned policy and comparator that reports the requested and effective
+  comparison base refs, explicit fallback state, merge-base SHA, head SHA, measured deltas,
+  thresholds, and reviewed exception provenance, while keeping `src`, `scripts`, and `tests` in one
+  visible Python-growth budget so test-only bulk cannot hide from review and preserving the existing
+  aggregate coverage and complexity controls.
 - Evidence:
   - `quality/quality-trend-policy.v1.json` defines a default `500`-line growth allowance,
     zero-growth Radon B/worst-complexity and interrogate-decrease limits, content-fingerprint
-    protection, and one explicitly approved `525`-line exception expiring `2026-09-30`.
+    protection, and no active exception entries after the prior one-slice allowance was retired.
   - `scripts/quality_trend_gate.py` resolves `git merge-base` before reading the comparison
-    report, records the effective base ref, supplied head ref, and comparison provenance, validates
-    the policy fingerprint and report metrics, and fails closed on malformed, expired, or
-    unexplained evidence. The surrounding quality-baseline check owns committed-report freshness.
+    report, records the supplied base ref, effective base ref, fallback state, supplied head ref,
+    and comparison provenance, validates the policy fingerprint and report metrics, and fails closed
+    on malformed, expired, or unexplained evidence. The surrounding quality-baseline check owns
+    committed-report freshness.
   - Regression tests include a genuinely divergent fork where the feature changes from 100 to 104
     while main independently changes to 103; the gate proves it compares from the fork point and
     reports delta 4 rather than the wrong tip-based delta.
@@ -48,12 +48,46 @@
 - Documentation decision: repository engineering context, generated quality evidence, validation
   guidance, wiki source, and this ledger changed because the blocking developer/operator quality
   surface changed. No OpenAPI, migration, or platform-wide context change is needed.
-- Follow-Up: #495 owns deliberate retirement of the one-slice exception, future wording/rate
-  calibration, threshold ratcheting, and hotspot decomposition. No follow-up is being left only in
-  chat.
+- Follow-Up: #495 owns change-bound exception binding, future wording/rate calibration, threshold
+  ratcheting, and hotspot decomposition. No follow-up is being left only in chat.
 - Issue evidence: GitHub issue #495 records the bounded objective, deliberate metric-root choice,
   review holds and final verdict, merged commits, exact-mainline validation, wiki publication and
   parity, runtime health, and the remaining follow-up scope.
+
+## LA-REV-495-QUALITY-TREND-PROVENANCE
+
+- Scope: Quality-trend policy exception retirement and machine-readable comparison provenance.
+- Pattern: A one-slice `total_python_lines` exception was keyed only by metric name, so its
+  allowance applied to unrelated future changes until expiry. The trend artifact also replaced the
+  supplied base ref with `HEAD^` when the fallback was used, making requested and effective
+  comparison provenance indistinguishable.
+- Status: Hardened on the bounded #495 follow-up branch; issue #495 remains open for change-bound
+  exception design, threshold/rate calibration, and hotspot decomposition.
+- Finding Class: CI quality gate truth, evidence provenance, exception scope.
+- Summary: The global 525-line allowance is retired and the policy fingerprint is regenerated, so
+  `total_python_lines` is again governed by its configured 500-line limit. Trend evidence now keeps
+  `supplied_base_ref`, effective `base_ref`, and `base_ref_fallback` as separate fields while
+  preserving the existing SHA, merge-base, metric, threshold, and exception evidence.
+- Evidence:
+  - `quality/quality-trend-policy.v1.json` now has `exceptions.entries: []` and policy fingerprint
+    `lotus-advise-quality-trend.v1+05d2e577184e`.
+  - `scripts/quality_trend_gate.py` retains the requested base ref before deterministic fallback
+    resolution and records the effective ref and boolean fallback state in both successful evidence
+    and the fail-closed initial report shape.
+  - Regression tests prove the active policy has no global Python-growth exception, preserve
+    requested/effective refs for a normal comparison, and prove `feature` to `HEAD^` fallback
+    evidence when the supplied base resolves to the current head.
+  - Implementation commit `a06f460a824f5188bb02aa11a79f71012b1bca85` is signed; focused quality and
+    workflow tests pass, and full `make check` passes `2724` unit tests with quality trend reporting
+    zero regressions under the restored policy.
+- Compatibility: CI/evidence behavior only. This intentionally tightens future Python-growth
+  enforcement by removing an unrelated allowance; no runtime, API/OpenAPI, persistence, migration,
+  calculation, or dependency-version contract changes are intended.
+- Documentation: Updated this ledger and `wiki/Validation-and-CI.md` because CI operator/developer
+  evidence truth changed. Wiki publication and strict parity are required after merge. No API,
+  migration, or platform-wide context update is needed.
+- Follow-Up: Keep change-bound exception design, threshold/rate calibration, and hotspot
+  decomposition on #495. No actionable follow-up is left only in chat.
 
 ## LA-REV-508-PROPOSAL-DECISION-VOCABULARY
 
