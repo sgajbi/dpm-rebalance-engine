@@ -443,11 +443,12 @@ Use these commands as the primary local contract:
 9. quality evidence freshness gate
    `make quality-baseline-check`
 10. quality trend regression gate
-   `make quality-trend-gate` compares the committed baseline report at the governed base and
-   exact head revisions. The versioned policy blocks more than 500 added Python lines, any new
-   Radon B-ranked block, any increase in worst Radon complexity, or any Interrogate coverage
-   decrease; reviewed exceptions require an approver, reason, and expiry. Evidence is emitted
-   to `output/quality-trend-gate.json` with revision SHAs and metric deltas.
+   `make quality-trend-gate` compares the committed baseline report at the merge base of the
+   governed base/head revisions and the exact head. The versioned policy blocks more than 500
+   added Python lines, any new Radon B-ranked block, any increase in worst Radon complexity, or
+   any Interrogate coverage decrease; reviewed exceptions require an approver, reason, and expiry.
+   Evidence is emitted to `output/quality-trend-gate.json` with requested and resolved revision
+   SHAs and metric deltas.
 11. dead-code regression gate
    `make dead-code-gate`
    This runs the pinned Vulture scanner against `src` and `scripts`, fails on new or malformed

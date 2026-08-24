@@ -60,14 +60,16 @@ The artifact publishes pairings only; approval requirements and gate reasons rem
 runtime evidence fields.
 
 The same fast static lanes also run `make quality-trend-gate`. This gate compares the committed
-`quality/baseline_report.md` metrics at a base revision and the exact head revision, then writes
-`output/quality-trend-gate.json`. The versioned policy allows at most 500 additional Python lines,
+`quality/baseline_report.md` metrics at the merge base of the supplied base/head revisions and the
+exact head revision, then writes `output/quality-trend-gate.json`. The versioned policy allows at most 500 additional Python lines,
 no increase in Radon B-ranked blocks, no increase in the worst Radon complexity, and no decrease
 in Interrogate coverage. Any reviewed exception must name the metric, justification, approver,
 and expiry date; policy content changes require a matching content-fingerprint version. Feature
-Lane compares against `origin/main`, PR Merge Gate uses the pull request base/head SHAs, and Main
-Releasability compares `HEAD^` with `HEAD`. The gate is CI/developer evidence only and does not
-change runtime, API, persistence, migration, or data-model behavior.
+Lane supplies `origin/main`, PR Merge Gate supplies the pull request base/head SHAs, and Main
+Releasability supplies `HEAD^` with `HEAD`; all comparisons resolve and record the merge base so
+unrelated mainline merges cannot erase branch growth. Evidence records the requested base SHA and
+resolved merge-base SHA. The gate is CI/developer evidence only and does not change runtime, API,
+persistence, migration, or data-model behavior.
 
 ## Reader Map
 
@@ -192,11 +194,11 @@ The current blocking posture is intentionally high-signal:
    evidence to reference real regression tests.
 10. `make quality-baseline-check`
    blocks stale committed quality report and scorecard truth.
-   `make quality-trend-gate` compares committed base/head metrics and blocks policy-defined
-   regressions in Python-line growth, Radon B-ranked blocks, worst Radon complexity, or
-   Interrogate coverage. It emits `output/quality-trend-gate.json` with both revision SHAs,
-   metric deltas, thresholds, policy fingerprint, and any exception provenance. This is a
-   CI/developer quality gate and does not alter product behavior or contracts.
+   `make quality-trend-gate` resolves the merge base of committed base/head revisions, then blocks
+   policy-defined regressions in Python-line growth, Radon B-ranked blocks, worst Radon complexity,
+   or Interrogate coverage. It emits `output/quality-trend-gate.json` with requested and resolved
+   revision SHAs, metric deltas, thresholds, policy fingerprint, and any exception provenance.
+   This is a CI/developer quality gate and does not alter product behavior or contracts.
 11. `make duplicate-code-gate`
    runs strict jscpd against `src` and `scripts`, compares normalized clone fingerprints with
    the reviewed baseline, and fails on new or resolved findings or any tool/parser/policy/baseline-
