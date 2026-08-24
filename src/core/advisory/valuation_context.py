@@ -120,19 +120,15 @@ def _requested_mismatch_reason(
     requested_reporting_currency: str | None,
     effective_reporting_currency: str | None,
 ) -> ValuationContextReasonCode | None:
-    if (
-        requested_as_of_date is not None
-        and effective_as_of_date is not None
-        and requested_as_of_date != effective_as_of_date
-    ):
+    if _values_mismatch(requested_as_of_date, effective_as_of_date):
         return "REQUESTED_AS_OF_NOT_HONORED"
-    if (
-        requested_reporting_currency is not None
-        and effective_reporting_currency is not None
-        and requested_reporting_currency != effective_reporting_currency
-    ):
+    if _values_mismatch(requested_reporting_currency, effective_reporting_currency):
         return "REQUESTED_REPORTING_CURRENCY_NOT_HONORED"
     return None
+
+
+def _values_mismatch(requested: str | None, effective: str | None) -> bool:
+    return requested is not None and effective is not None and requested != effective
 
 
 def _supportability(
@@ -141,15 +137,20 @@ def _supportability(
     effective_reporting_currency: str | None,
     reason_code: ValuationContextReasonCode | None,
 ) -> ValuationContextSupportability:
-    missing_as_of = effective_as_of_date is None
-    missing_currency = effective_reporting_currency is None
-    if missing_as_of and missing_currency:
+    missing_evidence = sum(
+        value is None for value in (effective_as_of_date, effective_reporting_currency)
+    )
+    if missing_evidence == 2:
         return "UNAVAILABLE"
-    if missing_as_of or missing_currency:
+    if missing_evidence:
         return "PARTIAL"
-    if reason_code is not None and reason_code.startswith("REQUESTED_"):
+    if _is_requested_mismatch(reason_code):
         return "RESTRICTED"
     return "READY"
+
+
+def _is_requested_mismatch(reason_code: ValuationContextReasonCode | None) -> bool:
+    return reason_code is not None and reason_code.startswith("REQUESTED_")
 
 
 __all__ = ["build_proposal_valuation_context"]
