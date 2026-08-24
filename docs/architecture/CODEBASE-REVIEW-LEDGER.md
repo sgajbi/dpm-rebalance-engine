@@ -20,8 +20,9 @@
     zero-growth Radon B/worst-complexity and interrogate-decrease limits, content-fingerprint
     protection, and one explicitly approved `525`-line exception expiring `2026-09-30`.
   - `scripts/quality_trend_gate.py` resolves `git merge-base` before reading the comparison
-    report, records supplied and effective provenance, validates policy/report fingerprints, and
-    fails closed on malformed, stale, expired, or unexplained evidence.
+    report, records supplied and effective provenance, validates the policy fingerprint and report
+    metrics, and fails closed on malformed, expired, or unexplained evidence. The surrounding
+    quality-baseline check owns committed-report freshness.
   - Regression tests include a genuinely divergent fork where the feature changes from 100 to 104
     while main independently changes to 103; the gate proves it compares from the fork point and
     reports delta 4 rather than the wrong tip-based delta.
