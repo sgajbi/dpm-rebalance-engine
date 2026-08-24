@@ -134,6 +134,7 @@ def load_policy(path: Path) -> dict[str, Any]:
 
 
 def _measurement(name: str, match: re.Match[str]) -> float:
+    """Derive a trend value while preserving exact evidence for count-based metrics."""
     if name != "interrogate_coverage_percent":
         measurement = float(match.group("reading"))
     else:
