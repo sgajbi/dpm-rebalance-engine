@@ -1,5 +1,34 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-QUALITY-TREND-RATCHET
+
+- Scope: The active `total_python_lines` allowance in the machine-readable quality-trend policy.
+- Pattern: A 500-line per-comparison allowance left a half-kiloline window in which generated
+  production code or shallow test bulk could remain green even though ordinary recent quality
+  slices were materially smaller.
+- Status: Ratcheted in the bounded #495 implementation slice; review and exact-mainline closure
+  evidence remain governed by the PR and issue lifecycle.
+- Finding Class: CI quality threshold calibration, maintainability regression prevention, and
+  operator/developer evidence truth.
+- Summary: `quality/quality-trend-policy.v1.json` now rejects more than 250 added Python lines
+  without an exact, reviewed exception. The boundary is explicit: +250 passes the active policy
+  and +251 fails. The 250-line allowance preserves bounded room above the recent +172-line
+  ordinary mainline slice while removing the unreviewed half-kiloline admission window.
+- Evidence:
+  - `tests/unit/scripts/test_quality_trend_gate.py` proves the active policy's +250/+251 boundary
+    through the comparator and checks the actionable failure evidence.
+  - `tests/unit/test_ci_workflow_contracts.py` prevents the workflow contract from silently
+    restoring the former 500-line allowance.
+  - Repository context and `wiki/Validation-and-CI.md` publish the current threshold and its
+    calibration basis.
+- Compatibility: CI/evidence policy and developer/operator guidance only. No runtime, API/OpenAPI,
+  persistence, migration, calculation, data-model, dependency, or downstream contract changes
+  are intended.
+- Documentation decision: Updated repository context, this ledger, and `wiki/Validation-and-CI.md`
+  because the enforced quality threshold changed. No OpenAPI or migration update is needed.
+- Follow-Up: #495 still owns mandatory-control wording and hotspot decomposition; exception schema
+  and revision binding are complete in prior bounded slices.
+
 ## LA-REV-495-QUALITY-TREND-EXCEPTION-BINDING
 
 - Scope: Reviewed exceptions in the machine-readable quality-trend policy.

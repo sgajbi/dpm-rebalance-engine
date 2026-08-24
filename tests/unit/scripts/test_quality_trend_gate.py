@@ -195,7 +195,38 @@ def test_current_policy_has_no_global_python_growth_exception() -> None:
     total_lines = next(
         metric for metric in policy["metrics"] if metric["name"] == "total_python_lines"
     )
-    assert total_lines["allowed_delta"] == 500
+    assert total_lines["allowed_delta"] == 250
+
+
+def test_active_python_growth_threshold_is_a_hard_250_line_boundary() -> None:
+    policy = _policy()
+    policy["exceptions"]["entries"] = []
+    base = quality_trend_gate.parse_report(_report(total_lines=100))
+
+    within_limit, within_failures = quality_trend_gate.compare_metrics(
+        base,
+        quality_trend_gate.parse_report(_report(total_lines=350)),
+        policy,
+        base_sha=BASE_SHA,
+        head_sha=HEAD_SHA,
+    )
+    beyond_limit, beyond_failures = quality_trend_gate.compare_metrics(
+        base,
+        quality_trend_gate.parse_report(_report(total_lines=351)),
+        policy,
+        base_sha=BASE_SHA,
+        head_sha=HEAD_SHA,
+    )
+
+    assert within_failures == []
+    assert within_limit[0].delta == 250
+    assert within_limit[0].allowed_delta == 250
+    assert beyond_limit[0].delta == 251
+    assert beyond_limit[0].status == "failed"
+    assert beyond_failures == [
+        "Quality trend regression: total_python_lines base=100, head=351, delta=+251, "
+        "allowed_delta=250 (policy=250). Review the change or add an expiring, approved exception."
+    ]
 
 
 def test_load_policy_rejects_content_without_a_matching_fingerprint(tmp_path: Path) -> None:
