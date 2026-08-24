@@ -1,16 +1,16 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-23T22:56:56.825470+00:00`
+- Generated At: `2026-08-24T00:04:14.459801+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
 
 ## Code Size
 
-- Python files: `1068`
+- Python files: `1070`
 - Packages: `42`
-- Modules: `1026`
-- Total Python lines: `192804`
+- Modules: `1028`
+- Total Python lines: `193170`
 
 ## Largest Files
 
@@ -47,8 +47,8 @@
 - Current baseline uses largest-function and router-hotspot evidence as deterministic
   complexity proxies.
 - Radon config executable: `True`
-- Radon analyzed block inventory: `4989`
-- Radon complexity rank inventory: `A=4855, B=134`
+- Radon analyzed block inventory: `4991`
+- Radon complexity rank inventory: `A=4857, B=134`
 - Radon worst complexity: `rank=B, complexity=10`
 - Radon C/D/E/F-ranked block enforcement is repo-native through
   `make complexity-regression-gate` and the `lint` lane.
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5617, missing=5556, covered=61, coverage=1.1%`
+- Interrogate docstring inventory: `total=5626, missing=5561, covered=65, coverage=1.2%`
 - Interrogate remains report-only until public API and module ownership thresholds
   are classified.
 

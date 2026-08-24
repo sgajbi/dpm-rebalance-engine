@@ -30,6 +30,13 @@
     decision/gate drift messages.
   - The generated `docs/architecture/ENGINEERING-HEALTH-BASELINE.md` gate inventory includes the
     new target; its generator and fixture regression were corrected in signed commit `1c241ca6`.
+  - Quality-baseline reports were regenerated after the artifact and focused tests increased the
+    measured repository to `1,070` Python files, `1,028` modules, and `193,170` Python lines;
+    Radon inventory is `A=4,857, B=134`, with no new C-or-worse complexity.
+  - Feature-head `make check` passed `2,697` unit tests in `106.66s`; Ruff, format, mypy,
+    architecture, OpenAPI/Spectral, no-alias, API vocabulary, this contract gate, data products,
+    lifecycle, security, dependency, license, dead-code, duplicate-code, oversized-code, and
+    quality-baseline checks all passed.
   - Signed implementation commit: `eedb16b4` (`feat(contract): publish proposal decision
     vocabulary`). Focused contract/workflow tests passed `34`; decision/gate regression tests
     passed `38`; focused mypy, Ruff, format, pre-commit, and `git diff --check` passed.
