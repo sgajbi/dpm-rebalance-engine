@@ -93,6 +93,8 @@ def test_quality_trend_gate_is_hard_versioned_and_present_across_ci_lanes() -> N
     assert '"allowed_delta": 500' in policy
     assert policy.count('"allowed_delta": 0') == 3
     assert '"exceptions"' in policy
+    assert '"base_sha"' in policy
+    assert '"head_sha"' in policy
     assert '"expires_on"' in policy
     for workflow_name, governance_job in (
         ("feature-lane.yml", "lint-dependency-governance"),

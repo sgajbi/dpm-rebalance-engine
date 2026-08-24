@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+05d2e577184e",
+  "policy_version": "lotus-advise-quality-trend.v1+4ea2ca330ce4",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -32,6 +32,8 @@
     "allowed": true,
     "entry_schema": {
       "metric": "quality metric name",
+      "base_sha": "40-character lowercase effective comparison base SHA",
+      "head_sha": "40-character lowercase comparison head SHA",
       "allowed_delta": "non-negative number",
       "reason": "reviewed justification",
       "approver": "GitHub identity",
