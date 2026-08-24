@@ -63,7 +63,9 @@ The same fast static lanes also run `make quality-trend-gate`. This gate compare
 `quality/baseline_report.md` metrics at the merge base of the supplied base/head revisions and the
 exact head revision, then writes `output/quality-trend-gate.json`. The versioned policy allows at most 500 additional Python lines,
 no increase in Radon B-ranked blocks, no increase in the worst Radon complexity, and no decrease
-in Interrogate coverage. Any reviewed exception must name the metric, justification, approver,
+in Interrogate coverage. Interrogate comparisons derive from the exact `covered` and `total`
+counts in the evidence line rather than its one-decimal display percentage; inconsistent or
+zero-total counts fail closed. Any reviewed exception must name the metric, justification, approver,
 and expiry date; policy content changes require a matching content-fingerprint version. Feature
 Lane supplies `origin/main`, PR Merge Gate supplies the pull request base/head SHAs, and Main
 Releasability supplies `HEAD^` with `HEAD`; all comparisons resolve and record the merge base so
@@ -199,7 +201,8 @@ The current blocking posture is intentionally high-signal:
    blocks stale committed quality report and scorecard truth.
    `make quality-trend-gate` resolves the merge base of committed base/head revisions, then blocks
    policy-defined regressions in Python-line growth, Radon B-ranked blocks, worst Radon complexity,
-   or Interrogate coverage. It emits `output/quality-trend-gate.json` with supplied and effective
+   or Interrogate coverage. Interrogate coverage is calculated from the report's exact counts and
+   malformed counts are rejected before comparison. It emits `output/quality-trend-gate.json` with supplied and effective
    base refs, explicit fallback state, requested and resolved revision SHAs, metric deltas,
    thresholds, policy fingerprint, and any exception provenance. Fallback provenance is written
    before later revision or baseline-read work, so failed artifacts do not falsely report that

@@ -16,6 +16,9 @@ def _report(
     total_lines: int = 100,
     b_ranked_blocks: int = 4,
     worst_complexity: int = 10,
+    documentation_total: int = 100,
+    documentation_missing: int = 90,
+    documentation_covered: int = 10,
     documentation_coverage: float = 1.2,
 ) -> str:
     return "\n".join(
@@ -24,7 +27,8 @@ def _report(
             f"- Radon complexity rank inventory: `A=20, B={b_ranked_blocks}`",
             f"- Radon worst complexity: `rank=B, complexity={worst_complexity}`",
             "- Interrogate docstring inventory: "
-            f"`total=100, missing=90, covered=10, coverage={documentation_coverage}%`",
+            f"`total={documentation_total}, missing={documentation_missing}, "
+            f"covered={documentation_covered}, coverage={documentation_coverage}%`",
         ]
     )
 
@@ -59,7 +63,12 @@ def test_compare_metrics_rejects_complexity_and_documentation_regressions() -> N
         quality_trend_gate.parse_report(_report()),
         quality_trend_gate.parse_report(
             _report(
-                total_lines=106, b_ranked_blocks=5, worst_complexity=11, documentation_coverage=1.1
+                total_lines=106,
+                b_ranked_blocks=5,
+                worst_complexity=11,
+                documentation_missing=91,
+                documentation_covered=9,
+                documentation_coverage=1.1,
             )
         ),
         policy,
@@ -69,6 +78,52 @@ def test_compare_metrics_rejects_complexity_and_documentation_regressions() -> N
     assert all(result.status == "failed" for result in results)
     assert "radon_b_ranked_blocks" in failures[1]
     assert "interrogate_coverage_percent" in failures[3]
+
+
+def test_compare_metrics_rejects_sub_rounding_interrogate_decrease() -> None:
+    policy = _policy()
+    policy["exceptions"]["entries"] = []
+    base = quality_trend_gate.parse_report(
+        _report(
+            documentation_total=10_000,
+            documentation_missing=9_877,
+            documentation_covered=123,
+            documentation_coverage=1.2,
+        )
+    )
+    head = quality_trend_gate.parse_report(
+        _report(
+            documentation_total=10_000,
+            documentation_missing=9_878,
+            documentation_covered=122,
+            documentation_coverage=1.2,
+        )
+    )
+
+    results, failures = quality_trend_gate.compare_metrics(base, head, policy)
+
+    assert base["interrogate_coverage_percent"] == pytest.approx(1.23)
+    assert head["interrogate_coverage_percent"] == pytest.approx(1.22)
+    assert results[3].delta == pytest.approx(-0.01)
+    assert results[3].status == "failed"
+    assert any("interrogate_coverage_percent" in failure for failure in failures)
+
+
+@pytest.mark.parametrize(
+    ("documentation_total", "documentation_missing", "documentation_covered"),
+    [(0, 0, 0), (100, 90, 9)],
+)
+def test_parse_report_rejects_invalid_interrogate_counts(
+    documentation_total: int, documentation_missing: int, documentation_covered: int
+) -> None:
+    with pytest.raises(ValueError, match="Interrogate report counts"):
+        quality_trend_gate.parse_report(
+            _report(
+                documentation_total=documentation_total,
+                documentation_missing=documentation_missing,
+                documentation_covered=documentation_covered,
+            )
+        )
 
 
 def test_reviewed_exception_is_visible_and_applies_its_expiring_limit() -> None:

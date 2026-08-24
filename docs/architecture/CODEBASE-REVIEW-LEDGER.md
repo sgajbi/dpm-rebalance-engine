@@ -1,5 +1,33 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-QUALITY-TREND-INTERROGATE-PRECISION
+
+- Scope: Exact Interrogate documentation-coverage comparison in the machine-readable quality trend
+  gate.
+- Pattern: The gate parsed the report's one-decimal rendered percentage even though the same line
+  carried exact total and covered counts. A real decrease smaller than the rendered precision could
+  therefore compare as zero and pass the configured zero-tolerance policy.
+- Status: Hardened on `main` in bounded issue #495 follow-up work; remaining exception binding,
+  wording, threshold/rate, and hotspot follow-ups remain open.
+- Finding Class: CI quality gate precision, fail-closed evidence validation, regression prevention.
+- Summary: Interrogate coverage is now compared from exact `covered / total * 100` counts. The
+  human-readable report format and metric name remain unchanged, while inconsistent or zero-total
+  counts fail closed before comparison.
+- Evidence:
+  - `scripts/quality_trend_gate.py` captures and validates `total`, `missing`, and `covered` from
+    the Interrogate inventory line, then derives the comparison value from the exact counts rather
+    than the rounded display percentage.
+  - Regression tests prove a one-item decrease from `1.23%` to `1.22%` fails even when both lines
+    render `coverage=1.2%`, and reject zero or inconsistent counts.
+- Compatibility: CI/evidence behavior only. This makes the existing zero-tolerance documentation
+  trend policy truthful; no runtime, API/OpenAPI, persistence, migration, calculation, data-model,
+  or dependency-version contract changes are intended.
+- Documentation decision: Updated this ledger and `wiki/Validation-and-CI.md` because the enforced
+  CI evidence semantics changed. No OpenAPI, migration, or platform-wide context change is needed.
+- Follow-Up: #495 continues to own PR/SHA-bound exception design, mandatory-control wording,
+  threshold/rate ratcheting, and hotspot decomposition. No actionable follow-up is left only in
+  chat.
+
 ## LA-REV-495-CI-QUALITY-TREND
 
 - Scope: machine-readable quality regression comparison across the Feature Lane, PR Merge Gate,
