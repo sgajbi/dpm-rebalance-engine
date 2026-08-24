@@ -458,9 +458,9 @@ Use these commands as the primary local contract:
    `make proposal-decision-vocabulary-gate` validates
    `docs/standards/proposal-decision-vocabulary.v1.json` against the Advise-owned
    `src/core/advisory/decision_summary_status_rules.py` and `src/core/common/workflow_gates.py`
-   rule owners. It fails with the affected decision or workflow pairing when a checked-in
-   consumer-facing artifact drifts; approval requirements and gate reasons remain separate
-   runtime evidence fields.
+   rule owners plus `src/core/common/workflow_gate_vocabulary.py`. It fails with the affected
+   decision or workflow pairing when a checked-in consumer-facing artifact drifts; approval
+   requirements and gate reasons remain separate runtime evidence fields.
 13. live demo certification evidence
    `make demo-certification-live`
 

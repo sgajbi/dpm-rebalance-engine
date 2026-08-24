@@ -3,7 +3,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from scripts.proposal_decision_vocabulary import validate_contract
+from src.core.advisory import decision_summary_status_rules
+from src.core.common import workflow_gate_vocabulary
+from src.core.common.workflow_gates import GateOutcomeRule
 
 CONTRACT_PATH = Path("docs/standards/proposal-decision-vocabulary.v1.json")
 
@@ -65,3 +70,33 @@ def test_workflow_gate_drift_names_the_changed_gate() -> None:
         "CLIENT_CONSENT_REQUIRED pairing drift" in error and "REQUEST_CLIENT_CONSENT" in error
         for error in errors
     )
+
+
+def test_decision_vocabulary_fails_when_rule_maps_do_not_cover_same_statuses(monkeypatch) -> None:
+    monkeypatch.setattr(decision_summary_status_rules, "_DECISION_STATUS_WORKFLOW_GATES", {})
+
+    with pytest.raises(RuntimeError, match="maps do not cover the same statuses"):
+        decision_summary_status_rules.proposal_decision_vocabulary()
+
+
+def test_workflow_vocabulary_fails_on_conflicting_rule_outcomes(monkeypatch) -> None:
+    conflicting_rule = GateOutcomeRule(lambda _context: False, ("BLOCKED", "EXECUTE"))
+    monkeypatch.setattr(
+        workflow_gate_vocabulary,
+        "_GATE_OUTCOME_RULES",
+        (*workflow_gate_vocabulary._GATE_OUTCOME_RULES, conflicting_rule),
+    )
+
+    with pytest.raises(RuntimeError, match="BLOCKED has conflicting next steps"):
+        workflow_gate_vocabulary.workflow_gate_vocabulary()
+
+
+def test_workflow_vocabulary_fails_when_expected_next_step_map_drifts(monkeypatch) -> None:
+    monkeypatch.setattr(
+        workflow_gate_vocabulary,
+        "_WORKFLOW_GATE_NEXT_STEPS",
+        {**workflow_gate_vocabulary._WORKFLOW_GATE_NEXT_STEPS, "BLOCKED": "EXECUTE"},
+    )
+
+    with pytest.raises(RuntimeError, match="vocabulary drifted from outcome rules"):
+        workflow_gate_vocabulary.workflow_gate_vocabulary()

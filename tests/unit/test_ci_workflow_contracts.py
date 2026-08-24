@@ -200,6 +200,7 @@ def test_proposal_decision_vocabulary_is_source_owned_and_hard_across_ci_lanes()
     assert '"service": "lotus-advise"' in contract
     assert "decision_summary_status_rules.py" in contract
     assert "workflow_gates.py" in contract
+    assert "workflow_gate_vocabulary.py" in contract
     for workflow_name in ("feature-lane.yml", "pr-merge-gate.yml", "main-releasability.yml"):
         workflow = _workflow_text(workflow_name)
         governance_job = (

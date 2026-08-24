@@ -53,8 +53,9 @@
   from observed implementation evidence so stale snapshots cannot claim current data-product
   promotion evidence.
 - `make proposal-decision-vocabulary-gate`: validates the checked-in versioned proposal decision
-  vocabulary against `decision_summary_status_rules.py` and `workflow_gates.py`; pairing drift
-  fails with the affected decision status or workflow gate.
+  vocabulary against `decision_summary_status_rules.py`, `workflow_gates.py`, and the dedicated
+  `workflow_gate_vocabulary.py` contract owner; pairing drift fails with the affected decision
+  status or workflow gate.
 
 ## Required Runtime Identity
 

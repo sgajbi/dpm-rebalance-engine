@@ -14,7 +14,7 @@ if ROOT_PATH not in sys.path:
 from src.core.advisory.decision_summary_status_rules import (  # noqa: E402
     proposal_decision_vocabulary,
 )
-from src.core.common.workflow_gates import workflow_gate_vocabulary  # noqa: E402
+from src.core.common.workflow_gate_vocabulary import workflow_gate_vocabulary  # noqa: E402
 
 DEFAULT_OUTPUT = PROJECT_ROOT / "docs" / "standards" / "proposal-decision-vocabulary.v1.json"
 SCHEMA_VERSION = "lotus.advise.proposal-decision-vocabulary.v1"
@@ -28,6 +28,7 @@ SOURCE_OWNER = {
     "rule_modules": [
         "src/core/advisory/decision_summary_status_rules.py",
         "src/core/common/workflow_gates.py",
+        "src/core/common/workflow_gate_vocabulary.py",
     ],
 }
 
