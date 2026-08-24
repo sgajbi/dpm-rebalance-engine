@@ -3,7 +3,7 @@
   "contract_version": "proposal-decision-vocabulary.v1",
   "source_owner": {
     "service": "lotus-advise",
-    "authority": "Advise owns proposal decision statuses, top-level status pairings, recommended next actions, workflow gates, and gate next-step mappings.",
+    "authority": "Advise owns proposal decision statuses, reviewed top-level status compatibility declarations, recommended next actions, runtime-checked workflow gates, and gate next-step mappings.",
     "rule_modules": [
       "src/core/advisory/decision_summary_status_rules.py",
       "src/core/common/workflow_gates.py",

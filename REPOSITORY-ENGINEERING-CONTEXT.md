@@ -460,7 +460,11 @@ Use these commands as the primary local contract:
    `src/core/advisory/decision_summary_status_rules.py` and `src/core/common/workflow_gates.py`
    rule owners plus `src/core/common/workflow_gate_vocabulary.py`. It fails with the affected
    decision or workflow pairing when a checked-in consumer-facing artifact drifts; approval
-   requirements and gate reasons remain separate runtime evidence fields.
+   requirements and gate reasons remain separate runtime evidence fields. The status-rule module
+   cross-checks workflow-gate pairings against the runtime gate inverse and derives insufficient-
+   evidence next actions from the evidence-gap branch map. Its READY/PENDING_REVIEW/BLOCKED
+   projections are intentionally documented as reviewed compatibility declarations because no
+   separate runtime producer owns that legacy status family.
 13. live demo certification evidence
    `make demo-certification-live`
 

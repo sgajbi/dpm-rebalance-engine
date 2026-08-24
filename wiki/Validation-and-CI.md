@@ -52,8 +52,12 @@ The fast static lanes also run `make proposal-decision-vocabulary-gate`. It vali
 versioned `docs/standards/proposal-decision-vocabulary.v1.json` artifact directly against the
 Advise-owned decision-status and workflow-gate rule modules. A changed decision pairing or gate
 next-step mapping fails with the affected vocabulary name, so Gateway consumers can compare a
-producer-owned contract rather than silently carrying a local snapshot. The artifact publishes
-pairings only; approval requirements and gate reasons remain separate runtime evidence fields.
+producer-owned contract rather than silently carrying a local snapshot. The gate also cross-checks
+decision-status workflow-gate pairings against the runtime gate inverse and checks insufficient-
+evidence next actions against the evidence-gap branch map. The legacy top-level status projection
+is explicitly a reviewed compatibility declaration because it has no separate runtime producer.
+The artifact publishes pairings only; approval requirements and gate reasons remain separate
+runtime evidence fields.
 
 ## Reader Map
 
