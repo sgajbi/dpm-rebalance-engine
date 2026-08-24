@@ -19,9 +19,12 @@
 - Evidence:
   - `tests/unit/advisory/api/test_live_cross_service_parity.py` proves the extracted report helper
     preserves both the 200/READY and 503/degraded outcomes.
-  - The nine extracted helpers carry domain-specific docstrings; generated Interrogate evidence
-    therefore improves from 73 to 82 documented items and from 1.3% to 1.4% coverage rather than
+  - The nine extracted helpers plus their new support module and protocol carry domain-specific
+    docstrings; generated Interrogate evidence therefore improves from 73 to 84 documented items
+    and from 1.3% to 1.5% coverage rather than
     regressing the hard-gated quality trend.
+  - The final branch-vs-main Python-line delta is +250, exactly at the active quality-trend
+    allowance; no exception or threshold relaxation was added.
   - `make typecheck`, `make refactored-complexity-gate`, `make oversized-code-gate`, and the
     focused live-parity/runtime-suite tests pass. The oversized-code gate reports 8 findings, 0
     new, and 0 resolved under the refreshed baseline and policy fingerprints.
