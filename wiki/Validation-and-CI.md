@@ -27,13 +27,13 @@ dead/unused-code regressions only.
 
 The same fast static lanes also run `make duplicate-code-gate`. It scans `src` and `scripts` with
 pinned jscpd `5.0.16` in strict mode, requiring at least 100 tokens and 10 lines per clone. The
-reviewed 43-finding inventory is committed as stable content fingerprints with owner, reason,
+reviewed fingerprint inventory is committed as stable content fingerprints with owner, reason,
 expiry, and policy/baseline hash provenance; any new or resolved fingerprint or scanner, parser,
 policy, or baseline-integrity failure blocks the lane. This gate is CI/developer evidence only and does not
 change runtime, API, persistence, migration, or data-model behavior.
 
 The same fast static lanes also run `make unused-dependency-gate`. It runs the pinned deptry
-`0.25.1` configuration, classifies the current 13-entry install-closure inventory in
+`0.25.1` configuration, classifies the committed install-closure inventory in
 `quality/dependency-hygiene-baseline.v1.json`, and fails on tool-version drift, malformed output,
 new or resolved fingerprints, duplicate identities, expired provenance, or policy/baseline hash
 drift. The gate emits `output/dependency-hygiene-gate.json` and uploads it from each governance
@@ -42,9 +42,12 @@ or data-model behavior.
 
 The same fast static lanes also run `make oversized-code-gate`. It scans Python modules and
 functions under `src/` and `scripts/` against the explicit `1,000`-module-line and `200`-function-
-line thresholds. The reviewed ten-finding baseline is content-hashed and each entry carries an
-owner, reason, and expiry; new findings, growth, stale entries, expiry, scanner/parser failures,
-or policy/baseline hash drift fail closed. Evidence is emitted at
+line thresholds. The reviewed baseline at `quality/oversized-code-baseline.v1.json` is
+content-hashed and each entry carries an owner, reason, and expiry; new findings, growth, shrinkage
+without a reviewed `max_lines` ratchet, stale entries, expiry, scanner/parser failures, or
+policy/baseline hash drift fail closed. When an oversized finding remains above its threshold but
+measures below its baseline ceiling, update `max_lines` to the measured value and refresh the
+baseline and policy fingerprints. Evidence is emitted at
 `output/oversized-code-gate.json` and uploaded from each governance lane. This is CI/developer
 evidence only and does not change runtime, API, persistence, migration, or data-model behavior.
 
