@@ -22,13 +22,28 @@ def _active_make_commands(recipe: str) -> tuple[str, ...]:
     )
 
 
+def _contains_unquoted_shell_operator(command: str) -> bool:
+    quote = None
+    for character in command:
+        if quote:
+            if character == quote:
+                quote = None
+        elif character in {"'", '"'}:
+            quote = character
+        elif character in {";", "|", "&"}:
+            return True
+    return False
+
+
 def _active_python_commands(recipe: str) -> tuple[str, ...]:
     commands = []
     for command in _active_make_commands(recipe):
         normalized = command
         while normalized[:1] in {"+", "@"}:
             normalized = normalized[1:].lstrip()
-        if re.match(r"^python(?:\.exe)?(?:\s|$)", normalized, re.IGNORECASE):
+        if re.match(
+            r"^python(?:\.exe)?(?:\s|$)", normalized, re.IGNORECASE
+        ) and not _contains_unquoted_shell_operator(normalized):
             commands.append(normalized)
     return tuple(commands)
 
@@ -81,9 +96,12 @@ def test_quality_control_command_parser_rejects_comments_and_echoes() -> None:
             "\t@python scripts/radon_complexity_gate.py --fail-rank C",
             "\t-python scripts/radon_complexity_gate.py --fail-rank C",
             "\t@-python scripts/radon_complexity_gate.py --fail-rank C",
+            "\tpython scripts/radon_complexity_gate.py --fail-rank C || true",
+            "\tpython -c \"print('quoted; semicolon')\"",
         )
     )
 
     assert _active_python_commands(recipe) == (
         "python scripts/radon_complexity_gate.py --fail-rank C",
+        "python -c \"print('quoted; semicolon')\"",
     )
