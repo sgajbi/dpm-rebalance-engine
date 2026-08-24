@@ -28402,6 +28402,9 @@
   - Proposal create, version, direct simulation, workspace evaluation, and workspace handoff paths
     preserve requested stateful dimensions through shared advisory context models and a single
     workspace-to-proposal projection owner.
+  - The repository-wide reference search also removed the superseded, unreferenced API-layer
+    `workspace_reevaluations.py` compatibility path; canonical re-evaluation is owned by
+    `CoreWorkspaceProposalEvaluator`, so the deleted path cannot publish stale request dimensions.
   - Contract tests cover ready source evidence, missing-source non-inference, source-date
     mismatch, requested-date/currency mismatch, OpenAPI publication, stateful resolution, and
     direct/workspace calculation parity.
