@@ -8,10 +8,11 @@
   top-level-status, recommended-action, workflow-gate, and gate-next-step pairings were not
   published. Gateway therefore carried a duplicated matrix that could drift into a production
   502/Workbench outage after an Advise rule change.
-- Status: Implemented and merged to `main`; the workflow-gate half is closed, while issue #508
-  remains open for the actionable decision-status derivation follow-up. It is not open for
-  bookkeeping: decision-status pairings remain reviewed declarations rather than fully derived
-  from the runtime rules that produce them.
+- Status: Initial contract publication is merged to `main`; this bounded derivation follow-up is
+  implemented on the feature branch and remains pending merge/review before issue #508 closes.
+  Workflow-gate and insufficient-evidence action pairings now fail closed against their runtime
+  rule sources. The legacy top-level status projection is explicitly a reviewed compatibility
+  declaration by design, not an untracked derivation gap.
 - Finding Class: producer-owned contract governance, downstream compatibility, CI regression
   prevention.
 - Summary: The bounded #508 slice publishes `docs/standards/proposal-decision-vocabulary.v1.json`
@@ -30,7 +31,7 @@
   - Focused contract and workflow tests cover source/artifact parity, the canonical
     `REQUIRES_CLIENT_CONSENT` / `READY` / `DISCUSS_WITH_CLIENT` / `CLIENT_CONSENT_REQUIRED` /
     `REQUEST_CLIENT_CONSENT` pairing, separate approval/reason evidence fields, and actionable
-    decision/gate drift messages.
+    decision/gate drift messages, including runtime gate-inverse and evidence-gap branch drift.
   - The generated `docs/architecture/ENGINEERING-HEALTH-BASELINE.md` gate inventory includes the
     new target; its generator and fixture regression were corrected in signed commit `1c241ca6`.
   - Quality-baseline reports were regenerated after the artifact and measured contract module
@@ -44,11 +45,21 @@
     and `027c91b6`; focused contract/CI tests passed `37`; the changed-source coverage floor
     passed after the self-validation branches were covered; focused mypy, Ruff, format,
     pre-commit, and `git diff --check` passed.
-  - The workflow-gate half is derived from live `_GATE_OUTCOME_RULES` and verified against
-    conflicting-outcome and expected-map drift failures. The decision-status half remains a
-    reviewed declaration co-located with its rule module: its workflow-gate inverse,
-    insufficient-evidence action branches, and top-level-status pairings are not yet all
-    machine-derived from runtime sources. This is the tracked reason #508 remains open.
+  - Follow-up signed feature commit `c1049d1d` derives insufficient-evidence allowed actions from
+    the evidence-gap branch map, cross-checks decision-status workflow gates against the runtime
+    `_GATE_DECISION_STATUS` inverse, and documents the top-level-status compatibility declaration.
+    Focused contract/decision-summary tests passed `39`; full `make check` passed `2,702` unit
+    tests in `77.01s`; combined coverage passed at `97%` across `2,702` unit, `57` integration,
+    and `12` e2e tests; the changed-source floor passed for the one changed Python module at
+    `90%+`; quality baseline, dependency, dead-code, duplicate-code, oversized-code, security,
+    OpenAPI/Spectral, architecture, type, format, and documentation gates passed.
+  - The workflow-gate next-step half remains derived from live `_GATE_OUTCOME_RULES` and is
+    verified against conflicting-outcome and expected-map drift failures. Decision-status
+    workflow-gate pairings are additionally cross-checked against the runtime inverse in
+    `_GATE_DECISION_STATUS`; insufficient-evidence allowed actions are derived from the actual
+    evidence-gap branch map and fail closed on drift. The legacy top-level-status pairings remain
+    a reviewed compatibility declaration because no separate runtime producer owns READY,
+    PENDING_REVIEW, or BLOCKED.
   - PR #522 merged by approved rebase/non-squash method at mainline commit
     `fff3bfbdef88c7357f31bcd2ed70051ebc5681a4` after the exact-head review-lead verdict
     `VERDICT: mergeable` on `027c91b6` and green PR Merge Gate run `32677564834`.
