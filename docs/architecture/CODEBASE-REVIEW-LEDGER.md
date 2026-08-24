@@ -1,5 +1,37 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-SCORECARD-HOTSPOT-DECOMPOSITION
+
+- Scope: `scripts/quality_baseline_report.py::render_quality_scorecard` and its generated
+  quality-report evidence.
+- Pattern: The scorecard renderer combined status-row construction, dynamic before/after
+  evidence, and final Markdown assembly in a 255-line function inside a 1,636-line transitional
+  quality-report module, making the evidence formatter harder to review and extend safely.
+- Status: Decomposed in this bounded #495 implementation slice; the public renderer import and
+  generated scorecard contract remain unchanged.
+- Finding Class: Quality-evidence maintainability, hotspot decomposition, and report-contract
+  regression prevention.
+- Summary: Dynamic before/after evidence now belongs to `_scorecard_before_after_rows`, while
+  `render_quality_scorecard` remains a small orchestration function. The renderer is 109 lines,
+  the extracted helper is 145 lines, the module is 1,636 lines, and the oversized-code inventory
+  fell from 10 to 9 findings with no new findings.
+- Evidence:
+  - `tests/unit/scripts/test_quality_baseline_report.py` preserves the scorecard section
+    assertions and verifies that the public renderer delegates the before/after evidence while
+    remaining below the 200-line function threshold.
+  - `quality/oversized-code-baseline.v1.json` removes the resolved renderer finding; the refreshed
+    policy fingerprint and baseline hash are validated by `make oversized-code-gate`.
+  - Generated report freshness and focused report tests verify that the scorecard content remains
+    unchanged apart from governed generated metadata.
+- Compatibility: Quality-evidence generation only. No CLI, public import, runtime, API/OpenAPI,
+  persistence, migration, calculation, data-model, dependency, or downstream contract change is
+  intended.
+- Documentation decision: Updated this review ledger and generated quality evidence because the
+  tracked hotspot inventory changed. No wiki or operator-workflow truth changed, so no wiki source
+  update or publication is needed for this slice.
+- Follow-Up: #495 still owns the remaining mandatory-control wording and unrelated quality/live
+  validation hotspot decomposition; no threshold ratchet is introduced here.
+
 ## LA-REV-495-QUALITY-TREND-RATCHET
 
 - Scope: The active `total_python_lines` allowance in the machine-readable quality-trend policy.
