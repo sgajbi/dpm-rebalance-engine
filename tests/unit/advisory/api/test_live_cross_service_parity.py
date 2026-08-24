@@ -26,9 +26,7 @@ from scripts.validate_cross_service_parity_live import (
 
 class _FakePolicyResponse:
     def __init__(self, *, status_code: int, payload: dict[str, Any]) -> None:
-        self.status_code = status_code
-        self._payload = payload
-        self.text = str(payload)
+        self.status_code, self._payload, self.text = status_code, payload, str(payload)
 
     def json(self) -> dict[str, Any]:
         return self._payload
