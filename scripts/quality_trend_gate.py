@@ -296,11 +296,12 @@ def run_gate(
             )
             base_sha = _git_sha(repo_root, effective_base_ref)
         merge_base_sha = _git_merge_base(repo_root, effective_base_ref, head_ref)
+        comparison_base_sha = merge_base_sha
         report_path = policy["report_path"]
         base_values = parse_report(_git_file(repo_root, merge_base_sha, report_path))
         head_values = parse_report(_git_file(repo_root, head_ref, report_path))
         results, failures = compare_metrics(
-            base_values, head_values, policy, base_sha=base_sha, head_sha=head_sha
+            base_values, head_values, policy, base_sha=comparison_base_sha, head_sha=head_sha
         )
         report.update(
             {
@@ -313,7 +314,8 @@ def run_gate(
                 "supplied_base_ref": supplied_base_ref,
                 "base_ref": effective_base_ref,
                 "base_ref_fallback": base_ref_fallback,
-                "base_sha": base_sha,
+                "base_ref_sha": base_sha,
+                "base_sha": comparison_base_sha,
                 "merge_base_sha": merge_base_sha,
                 "head_sha": head_sha,
                 "metrics": [asdict(result) for result in results],

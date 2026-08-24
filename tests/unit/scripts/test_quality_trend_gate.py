@@ -281,7 +281,7 @@ def test_run_gate_compares_reports_and_preserves_failure_provenance(
     git("add", ".")
     git("commit", "-m", "test: establish quality baseline")
     git("switch", "-c", "feature")
-    report_path.write_text(_report(total_lines=104), encoding="utf-8")
+    report_path.write_text(_report(total_lines=104, b_ranked_blocks=5), encoding="utf-8")
     git("add", ".")
     git("commit", "-m", "test: advance feature quality baseline")
     git("switch", "main")
@@ -289,6 +289,27 @@ def test_run_gate_compares_reports_and_preserves_failure_provenance(
     git("add", ".")
     git("commit", "-m", "test: advance unrelated main baseline")
     git("switch", "feature")
+
+    comparison_base_sha = subprocess.check_output(
+        ["git", "merge-base", "main", "HEAD"], cwd=tmp_path, text=True
+    ).strip()
+    head_sha = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True
+    ).strip()
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    policy["exceptions"]["entries"] = [
+        {
+            "metric": "radon_b_ranked_blocks",
+            "base_sha": comparison_base_sha,
+            "head_sha": head_sha,
+            "allowed_delta": 1,
+            "reason": "Bounded comparison-pair regression fixture.",
+            "approver": "review-lead",
+            "expires_on": "2099-01-01",
+        }
+    ]
+    policy["policy_version"] = expected_policy_version(policy)
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
 
     output_path = tmp_path / "output" / "quality-trend-gate.json"
     result = quality_trend_gate.run_gate(
@@ -303,7 +324,11 @@ def test_run_gate_compares_reports_and_preserves_failure_provenance(
     assert result == 0
     assert evidence["status"] == "passed"
     assert evidence["counts"]["findings"] == 4
-    assert evidence["base_sha"] != evidence["merge_base_sha"]
+    assert evidence["base_ref_sha"] != evidence["base_sha"]
+    assert evidence["base_sha"] == comparison_base_sha
+    assert evidence["merge_base_sha"] == comparison_base_sha
+    assert evidence["head_sha"] == head_sha
+    assert evidence["counts"]["exceptions"] == 1
     assert evidence["supplied_base_ref"] == "main"
     assert evidence["base_ref"] == "main"
     assert evidence["base_ref_fallback"] is False
