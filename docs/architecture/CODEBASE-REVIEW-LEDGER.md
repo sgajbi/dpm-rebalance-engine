@@ -21,9 +21,9 @@
     `quality/refactor_health_report.md` are refreshed with no unrelated control changes.
   - `tests/unit/test_quality_documentation_contracts.py` derives all complexity-gate target names
     from the `lint` recipe, verifies normalized active Python commands without Make's
-    error-ignoring prefix for the architecture and Radon targets, requires those controls in the
-    architecture rules, and rejects the stale report-only wording; report tests preserve generated
-    evidence assertions.
+    error-ignoring prefix or unquoted shell masking for the architecture and Radon targets,
+    requires those controls in the architecture rules, and rejects the stale report-only wording;
+    report tests preserve generated evidence assertions.
 - Compatibility: Documentation and CI-evidence truth only. No workflow behavior, threshold,
   runtime, API/OpenAPI, persistence, migration, dependency, calculation, or downstream contract
   change is intended.
