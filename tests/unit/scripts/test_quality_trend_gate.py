@@ -10,6 +10,9 @@ import pytest
 from scripts import quality_trend_gate
 from scripts.quality_gate_common import expected_policy_version
 
+BASE_SHA = "a" * 40
+HEAD_SHA = "b" * 40
+
 
 def _report(
     *,
@@ -48,6 +51,8 @@ def test_compare_metrics_passes_within_thresholds_and_reports_deltas() -> None:
             )
         ),
         policy,
+        base_sha=BASE_SHA,
+        head_sha=HEAD_SHA,
     )
 
     assert failures == []
@@ -72,6 +77,8 @@ def test_compare_metrics_rejects_complexity_and_documentation_regressions() -> N
             )
         ),
         policy,
+        base_sha=BASE_SHA,
+        head_sha=HEAD_SHA,
     )
 
     assert len(failures) == 4
@@ -100,7 +107,9 @@ def test_compare_metrics_rejects_sub_rounding_interrogate_decrease() -> None:
         )
     )
 
-    results, failures = quality_trend_gate.compare_metrics(base, head, policy)
+    results, failures = quality_trend_gate.compare_metrics(
+        base, head, policy, base_sha=BASE_SHA, head_sha=HEAD_SHA
+    )
 
     assert base["interrogate_coverage_percent"] == pytest.approx(1.23)
     assert head["interrogate_coverage_percent"] == pytest.approx(1.22)
@@ -131,6 +140,8 @@ def test_reviewed_exception_is_visible_and_applies_its_expiring_limit() -> None:
     policy["exceptions"]["entries"] = [
         {
             "metric": "radon_b_ranked_blocks",
+            "base_sha": BASE_SHA,
+            "head_sha": HEAD_SHA,
             "allowed_delta": 2,
             "reason": "Reviewed decomposition is scheduled.",
             "approver": "review-lead",
@@ -141,12 +152,40 @@ def test_reviewed_exception_is_visible_and_applies_its_expiring_limit() -> None:
         quality_trend_gate.parse_report(_report()),
         quality_trend_gate.parse_report(_report(b_ranked_blocks=6)),
         policy,
+        base_sha=BASE_SHA,
+        head_sha=HEAD_SHA,
     )
 
     assert failures == []
     assert results[1].exception is not None
     assert results[1].policy_allowed_delta == 0
     assert results[1].allowed_delta == 2
+
+
+def test_reviewed_exception_does_not_apply_to_a_different_revision() -> None:
+    policy = _policy()
+    policy["exceptions"]["entries"] = [
+        {
+            "metric": "radon_b_ranked_blocks",
+            "base_sha": BASE_SHA,
+            "head_sha": HEAD_SHA,
+            "allowed_delta": 2,
+            "reason": "Reviewed decomposition is scheduled.",
+            "approver": "review-lead",
+            "expires_on": "2099-01-01",
+        }
+    ]
+    results, failures = quality_trend_gate.compare_metrics(
+        quality_trend_gate.parse_report(_report()),
+        quality_trend_gate.parse_report(_report(b_ranked_blocks=6)),
+        policy,
+        base_sha=BASE_SHA,
+        head_sha="c" * 40,
+    )
+
+    assert any("radon_b_ranked_blocks" in failure for failure in failures)
+    assert results[1].exception is None
+    assert results[1].allowed_delta == 0
 
 
 def test_current_policy_has_no_global_python_growth_exception() -> None:
@@ -174,6 +213,8 @@ def test_load_policy_rejects_expired_reviewed_exception(tmp_path: Path) -> None:
     policy["exceptions"]["entries"] = [
         {
             "metric": "total_python_lines",
+            "base_sha": BASE_SHA,
+            "head_sha": HEAD_SHA,
             "allowed_delta": 501,
             "reason": "Expired test exception.",
             "approver": "review-lead",
@@ -185,6 +226,33 @@ def test_load_policy_rejects_expired_reviewed_exception(tmp_path: Path) -> None:
     policy_path.write_text(json.dumps(policy), encoding="utf-8")
 
     with pytest.raises(ValueError, match="Expired quality-trend exception"):
+        quality_trend_gate.load_policy(policy_path)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [("base_sha", ""), ("head_sha", "not-a-sha")],
+)
+def test_load_policy_rejects_unbound_or_malformed_exception_revision(
+    tmp_path: Path, field: str, value: str
+) -> None:
+    policy = json.loads(Path("quality/quality-trend-policy.v1.json").read_text(encoding="utf-8"))
+    entry = {
+        "metric": "total_python_lines",
+        "base_sha": BASE_SHA,
+        "head_sha": HEAD_SHA,
+        "allowed_delta": 501,
+        "reason": "Bounded test exception.",
+        "approver": "review-lead",
+        "expires_on": "2099-01-01",
+    }
+    entry[field] = value
+    policy["exceptions"]["entries"] = [entry]
+    policy["policy_version"] = expected_policy_version(policy)
+    policy_path = tmp_path / "quality-trend-policy.json"
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=rf"exceptions\[\]\.{field}"):
         quality_trend_gate.load_policy(policy_path)
 
 

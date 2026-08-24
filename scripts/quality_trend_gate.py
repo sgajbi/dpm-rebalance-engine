@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = REPO_ROOT / "quality" / "quality-trend-policy.v1.json"
 DEFAULT_OUTPUT_PATH = REPO_ROOT / "output" / "quality-trend-gate.json"
 _POLICY_VERSION = re.compile(r"^.+\+[0-9a-f]{12}$")
+_SHA = re.compile(r"^[0-9a-f]{40}$")
 _REPORT_PATTERNS: dict[str, re.Pattern[str]] = {
     "total_python_lines": re.compile(r"^- Total Python lines: `(?P<reading>\d+)`$", re.MULTILINE),
     "radon_b_ranked_blocks": re.compile(
@@ -51,6 +52,13 @@ def _number(candidate: object, *, field: str) -> float:
     if isinstance(candidate, bool) or not isinstance(candidate, (int, float)) or candidate < 0:
         raise ValueError(f"Quality-trend field {field!r} must be a non-negative number.")
     return candidate + 0.0
+
+
+def _sha(candidate: object, *, field: str) -> str:
+    value = quality_gate_common.non_empty_string(candidate, field=field)
+    if _SHA.fullmatch(value) is None:
+        raise ValueError(f"Quality-trend field {field!r} must be a 40-character lowercase SHA.")
+    return value
 
 
 def load_policy(path: Path) -> dict[str, Any]:
@@ -101,7 +109,7 @@ def load_policy(path: Path) -> dict[str, Any]:
     entries = exceptions.get("entries")
     if not isinstance(entries, list):
         raise ValueError("Quality-trend policy exception entries must be a list.")
-    seen_exceptions: set[str] = set()
+    seen_exceptions: set[tuple[str, str, str]] = set()
     today = date.today()
     for entry in entries:
         if not isinstance(entry, dict):
@@ -109,7 +117,10 @@ def load_policy(path: Path) -> dict[str, Any]:
         name = quality_gate_common.non_empty_string(
             entry.get("metric"), field="exceptions[].metric"
         )
-        if name not in names or name in seen_exceptions:
+        base_sha = _sha(entry.get("base_sha"), field="exceptions[].base_sha")
+        head_sha = _sha(entry.get("head_sha"), field="exceptions[].head_sha")
+        identity = (name, base_sha, head_sha)
+        if name not in names or identity in seen_exceptions:
             raise ValueError(f"Unsupported or duplicate quality-trend exception metric: {name}")
         allowed = _number(entry.get("allowed_delta"), field=f"exceptions[{name}].allowed_delta")
         if allowed < next(
@@ -129,7 +140,7 @@ def load_policy(path: Path) -> dict[str, Any]:
             ) from exc
         if expiry_date < today:
             raise ValueError(f"Expired quality-trend exception for {name}: {expiry}")
-        seen_exceptions.add(name)
+        seen_exceptions.add(identity)
     return {**policy, "metrics": raw_metrics, "exceptions": {**exceptions, "entries": entries}}
 
 
@@ -161,11 +172,16 @@ def parse_report(content: str) -> dict[str, float]:
 
 
 def compare_metrics(
-    base_metrics: dict[str, float], head_metrics: dict[str, float], policy: dict[str, Any]
+    base_metrics: dict[str, float],
+    head_metrics: dict[str, float],
+    policy: dict[str, Any],
+    *,
+    base_sha: str,
+    head_sha: str,
 ) -> tuple[list[MetricResult], list[str]]:
     results: list[MetricResult] = []
     failures: list[str] = []
-    entries = {entry["metric"]: entry for entry in policy["exceptions"]["entries"]}
+    entries = policy["exceptions"]["entries"]
     for metric in policy["metrics"]:
         name = metric["name"]
         base = base_metrics[name]
@@ -174,7 +190,18 @@ def compare_metrics(
         policy_allowed_delta = _number(
             metric["allowed_delta"], field=f"metrics[{name}].allowed_delta"
         )
-        exception = entries.get(name)
+        matching_exceptions = [
+            entry
+            for entry in entries
+            if entry["metric"] == name
+            and entry["base_sha"] == base_sha
+            and entry["head_sha"] == head_sha
+        ]
+        if len(matching_exceptions) > 1:
+            raise ValueError(
+                f"Duplicate applicable quality-trend exceptions for {name} and {head_sha}."
+            )
+        exception = matching_exceptions[0] if matching_exceptions else None
         allowed_delta = (
             _number(exception["allowed_delta"], field=f"exceptions[{name}].allowed_delta")
             if exception is not None
@@ -271,7 +298,9 @@ def run_gate(
         report_path = policy["report_path"]
         base_values = parse_report(_git_file(repo_root, merge_base_sha, report_path))
         head_values = parse_report(_git_file(repo_root, head_ref, report_path))
-        results, failures = compare_metrics(base_values, head_values, policy)
+        results, failures = compare_metrics(
+            base_values, head_values, policy, base_sha=base_sha, head_sha=head_sha
+        )
         report.update(
             {
                 "policy_path": policy_path.as_posix(),

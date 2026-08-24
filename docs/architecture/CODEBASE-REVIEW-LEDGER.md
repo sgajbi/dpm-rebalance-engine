@@ -1,5 +1,33 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-QUALITY-TREND-EXCEPTION-BINDING
+
+- Scope: Reviewed exceptions in the machine-readable quality-trend policy.
+- Pattern: Exception identity was keyed only by metric, so an approved allowance could apply to
+  unrelated future revisions until expiry. The policy carried review metadata but not the exact
+  comparison revisions to which the allowance was authorized.
+- Status: Hardened in the bounded #495 implementation slice; merge authority and exact-mainline
+  closure evidence remain governed by the PR and issue lifecycle.
+- Finding Class: CI quality-gate exception scope, fail-closed policy governance, evidence integrity.
+- Summary: Each exception now requires a 40-character lowercase effective `base_sha` and `head_sha`
+  in addition to metric, allowance, justification, approver, and expiry. The comparator applies an
+  exception only when all three identity fields match; otherwise the normal policy limit remains in
+  force.
+- Evidence:
+  - `scripts/quality_trend_gate.py` validates exception SHA bindings, permits multiple bindings for
+    distinct revisions, rejects duplicate identities, and selects only an exact revision match.
+  - `tests/unit/scripts/test_quality_trend_gate.py` proves matching application, non-matching
+    revision rejection, and malformed/unbound SHA rejection.
+  - `quality/quality-trend-policy.v1.json` publishes the binding schema and a refreshed content
+    fingerprint.
+- Compatibility: CI/evidence behavior only. No runtime, API/OpenAPI, persistence, migration,
+  calculation, data-model, dependency, or threshold contract changes are intended.
+- Documentation decision: Updated repository context, this ledger, and `wiki/Validation-and-CI.md`
+  because the enforced exception evidence contract changed. No OpenAPI, migration, or platform-wide
+  context change is needed.
+- Follow-Up: #495 still owns mandatory-control wording, threshold/rate ratcheting, and hotspot
+  decomposition; those remain outside this slice.
+
 ## LA-REV-495-MANUAL-PR-GATE-REFS
 
 - Scope: Manual `workflow_dispatch` execution of the GitHub Pull Request Merge Gate.

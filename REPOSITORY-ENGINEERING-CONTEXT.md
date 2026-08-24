@@ -451,7 +451,8 @@ Use these commands as the primary local contract:
    `make quality-trend-gate` compares the committed baseline report at the merge base of the
    governed base/head revisions and the exact head. The versioned policy blocks more than 500
    added Python lines, any new Radon B-ranked block, any increase in worst Radon complexity, or
-   any Interrogate coverage decrease; reviewed exceptions require an approver, reason, and expiry.
+   any Interrogate coverage decrease; reviewed exceptions require the exact effective `base_sha`
+   and `head_sha`, approver, reason, and expiry, and cannot apply to a different comparison.
    Evidence is emitted to `output/quality-trend-gate.json` with requested and resolved revision
    SHAs and metric deltas.
 11. dead-code regression gate
