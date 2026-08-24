@@ -1310,98 +1310,19 @@ def render_refactor_health_report(context: QualityContext) -> str:
     return "\n".join(lines)
 
 
-def render_quality_scorecard(context: QualityContext) -> str:
-    radon_rank_inventory = ", ".join(
-        f"{rank}={count}" for rank, count in context.radon_rank_counts.items()
+def _scorecard_before_after_rows(context: QualityContext) -> list[tuple[str, str, str, str]]:
+    radon_rank_inventory = (
+        ", ".join(f"{rank}={count}" for rank, count in context.radon_rank_counts.items())
+        or "not run"
     )
-    if not radon_rank_inventory:
-        radon_rank_inventory = "not run"
     radon_worst = (
         f"{context.radon_worst_rank}/{context.radon_worst_complexity}"
         if context.radon_worst_rank is not None and context.radon_worst_complexity is not None
         else "not run"
     )
     interrogate_coverage_percent = context.interrogate_coverage_percent or "not run"
-    deptry_issue_count = (
-        str(context.deptry_issue_count) if context.deptry_issue_count is not None else "not run"
-    )
-    rows = [
-        ("Code size and hotspots", "Calibrated regression gate", "make oversized-code-gate"),
-        (
-            "Complexity",
-            "No-C/D/E/F gate plus Radon inventory",
-            "complexity-regression-gate + radon rank and worst-complexity counts",
-        ),
-        ("Maintainability", "Improving", "modularity slices and review ledger"),
-        ("Lint", "Enforced", "make lint"),
-        ("Type safety", "Enforced", "make typecheck"),
-        ("Coverage", "Enforced", "make coverage-combined fail-under 97"),
-        (
-            "Quality baseline freshness",
-            "Enforced in local and GitHub gates",
-            "make quality-baseline-check + quality-trend-gate in make check, make ci, "
-            "make ci-local, Feature Lane, PR Merge Gate, and Main Releasability",
-        ),
-        (
-            "Dead code",
-            "Hard no-new-regression Vulture gate",
-            "make dead-code-gate + fingerprinted exception evidence",
-        ),
-        (
-            "Duplicate code",
-            "Hard no-new-regression jscpd gate",
-            "make duplicate-code-gate + fingerprinted baseline evidence",
-        ),
-        (
-            "Dependencies",
-            "Hard no-new-regression deptry gate plus dependency/security checks",
-            "make unused-dependency-gate + dependency health + pip-audit + lock/license gates",
-        ),
-        (
-            "Security",
-            "Severity-regression enforced plus Bandit baseline",
-            "make check + Feature Lane + security-audit + bandit-severity-regression-gate + "
-            "Bandit severity counts",
-        ),
-        (
-            "OpenAPI",
-            "Enforced with Spectral",
-            "openapi-gate + Spectral zero-finding inventory",
-        ),
-        (
-            "Architecture boundaries",
-            "Enforced",
-            "make lint runs import-linter architecture contracts",
-        ),
-        (
-            "Docs",
-            "Gap tracked plus Interrogate inventory",
-            "requested docs + docstring coverage inventory + wiki CI/operator guidance contract",
-        ),
-        (
-            "Observability",
-            "Diagnostics target added",
-            "make observability-diagnostics",
-        ),
-        (
-            "Demo assurance",
-            "API/domain/observability/data-mesh gate plus live certification command",
-            "make demo-assurance-gate + manual make demo-certification-live evidence",
-        ),
-    ]
-    lines = [
-        "# Lotus Advise Quality Scorecard",
-        "",
-        "- Git Identity: omitted from committed Markdown; use Git history and GitHub Actions",
-        "  run metadata for exact branch/head evidence.",
-        "- Progressive Gate Phase: `2 - calibrated regression gates`",
-        "",
-        "| Area | Status | Evidence |",
-        "| --- | --- | --- |",
-    ]
-    for area, status, evidence in rows:
-        lines.append(f"| {area} | {status} | {evidence} |")
-    before_after_rows = [
+    deptry_issue_count = _optional_count(context.deptry_issue_count)
+    return [
         (
             "Complexity",
             "Radon and Xenon tracked as pending report-only tools.",
@@ -1534,6 +1455,86 @@ def render_quality_scorecard(context: QualityContext) -> str:
             "and agent-facing CI guidance is pinned by a deterministic wiki contract test.",
         ),
     ]
+
+
+def render_quality_scorecard(context: QualityContext) -> str:
+    rows = [
+        ("Code size and hotspots", "Calibrated regression gate", "make oversized-code-gate"),
+        (
+            "Complexity",
+            "No-C/D/E/F gate plus Radon inventory",
+            "complexity-regression-gate + radon rank and worst-complexity counts",
+        ),
+        ("Maintainability", "Improving", "modularity slices and review ledger"),
+        ("Lint", "Enforced", "make lint"),
+        ("Type safety", "Enforced", "make typecheck"),
+        ("Coverage", "Enforced", "make coverage-combined fail-under 97"),
+        (
+            "Quality baseline freshness",
+            "Enforced in local and GitHub gates",
+            "make quality-baseline-check + quality-trend-gate in make check, make ci, "
+            "make ci-local, Feature Lane, PR Merge Gate, and Main Releasability",
+        ),
+        (
+            "Dead code",
+            "Hard no-new-regression Vulture gate",
+            "make dead-code-gate + fingerprinted exception evidence",
+        ),
+        (
+            "Duplicate code",
+            "Hard no-new-regression jscpd gate",
+            "make duplicate-code-gate + fingerprinted baseline evidence",
+        ),
+        (
+            "Dependencies",
+            "Hard no-new-regression deptry gate plus dependency/security checks",
+            "make unused-dependency-gate + dependency health + pip-audit + lock/license gates",
+        ),
+        (
+            "Security",
+            "Severity-regression enforced plus Bandit baseline",
+            "make check + Feature Lane + security-audit + bandit-severity-regression-gate + "
+            "Bandit severity counts",
+        ),
+        (
+            "OpenAPI",
+            "Enforced with Spectral",
+            "openapi-gate + Spectral zero-finding inventory",
+        ),
+        (
+            "Architecture boundaries",
+            "Enforced",
+            "make lint runs import-linter architecture contracts",
+        ),
+        (
+            "Docs",
+            "Gap tracked plus Interrogate inventory",
+            "requested docs + docstring coverage inventory + wiki CI/operator guidance contract",
+        ),
+        (
+            "Observability",
+            "Diagnostics target added",
+            "make observability-diagnostics",
+        ),
+        (
+            "Demo assurance",
+            "API/domain/observability/data-mesh gate plus live certification command",
+            "make demo-assurance-gate + manual make demo-certification-live evidence",
+        ),
+    ]
+    lines = [
+        "# Lotus Advise Quality Scorecard",
+        "",
+        "- Git Identity: omitted from committed Markdown; use Git history and GitHub Actions",
+        "  run metadata for exact branch/head evidence.",
+        "- Progressive Gate Phase: `2 - calibrated regression gates`",
+        "",
+        "| Area | Status | Evidence |",
+        "| --- | --- | --- |",
+    ]
+    for area, status, evidence in rows:
+        lines.append(f"| {area} | {status} | {evidence} |")
+    before_after_rows = _scorecard_before_after_rows(context)
     lines.extend(
         [
             "",

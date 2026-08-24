@@ -34,16 +34,6 @@
     },
     {
       "kind": "function",
-      "path": "scripts/quality_baseline_report.py",
-      "symbol": "render_quality_scorecard",
-      "fingerprint": "oversized-code.v1|function|scripts/quality_baseline_report.py|render_quality_scorecard",
-      "max_lines": 256,
-      "owner": "lotus-advise-quality-governance",
-      "reason": "Quality scorecard rendering is a transitional formatter; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
-      "expires_on": "2027-08-24"
-    },
-    {
-      "kind": "function",
       "path": "scripts/validate_cross_service_parity_live.py",
       "symbol": "_assert_live_policy_evaluation_flow",
       "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_assert_live_policy_evaluation_flow",
