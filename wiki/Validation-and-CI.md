@@ -69,7 +69,9 @@ Lane supplies `origin/main`, PR Merge Gate supplies the pull request base/head S
 Releasability supplies `HEAD^` with `HEAD`; all comparisons resolve and record the merge base so
 unrelated mainline merges cannot erase branch growth. Evidence records the supplied base ref,
 effective base ref, explicit fallback state, requested base SHA, and resolved merge-base SHA. The
-gate is CI/developer evidence only and does not change runtime, API, persistence, migration, or
+gate records the effective ref and fallback state at the decision boundary, so failed revision or
+baseline reads preserve truthful fallback provenance as well as successful comparisons. The gate
+is CI/developer evidence only and does not change runtime, API, persistence, migration, or
 data-model behavior.
 
 ## Reader Map
@@ -199,7 +201,9 @@ The current blocking posture is intentionally high-signal:
    policy-defined regressions in Python-line growth, Radon B-ranked blocks, worst Radon complexity,
    or Interrogate coverage. It emits `output/quality-trend-gate.json` with supplied and effective
    base refs, explicit fallback state, requested and resolved revision SHAs, metric deltas,
-   thresholds, policy fingerprint, and any exception provenance.
+   thresholds, policy fingerprint, and any exception provenance. Fallback provenance is written
+   before later revision or baseline-read work, so failed artifacts do not falsely report that
+   fallback was unused.
    This is a CI/developer quality gate and does not alter product behavior or contracts.
 11. `make duplicate-code-gate`
    runs strict jscpd against `src` and `scripts`, compares normalized clone fingerprints with

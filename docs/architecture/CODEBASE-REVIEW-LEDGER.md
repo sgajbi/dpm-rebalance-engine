@@ -89,6 +89,31 @@
 - Follow-Up: Keep change-bound exception design, threshold/rate calibration, and hotspot
   decomposition on #495. No actionable follow-up is left only in chat.
 
+## LA-REV-495-QUALITY-TREND-FAILURE-PROVENANCE
+
+- Scope: Fail-closed quality-trend evidence after deterministic base-ref fallback.
+- Pattern: The initial report shape recorded the supplied base ref and `base_ref_fallback: false`,
+  but the effective `HEAD^` fallback was written only on the success path. A later revision,
+  merge-base, or baseline parse failure could therefore emit a failed artifact that falsely said
+  fallback had not occurred.
+- Status: Hardened on the bounded #495 follow-up branch; issue #495 remains open for change-bound
+  exception design, threshold/rate calibration, and hotspot decomposition.
+- Finding Class: CI evidence truth and failure-path supportability.
+- Evidence:
+  - `scripts/quality_trend_gate.py` now records `base_ref: HEAD^` and
+    `base_ref_fallback: true` immediately after selecting fallback, before resolving the fallback
+    revision or reading the comparison report.
+  - The quality-trend regression test supplies a malformed fallback baseline and proves the
+    failed artifact retains the supplied ref, effective ref, and true fallback state.
+  - Successful normal and fallback provenance remain covered by the existing tests.
+- Compatibility: Additive CI evidence correctness only. No runtime, API/OpenAPI, persistence,
+  migration, calculation, data-model, or dependency-version contract change is intended.
+- Documentation: Updated this ledger and `wiki/Validation-and-CI.md` because failure-artifact
+  provenance is an operator/developer evidence contract. No OpenAPI, migration, or platform-wide
+  context update is needed.
+- Follow-Up: Keep PR/SHA-bound exception enforcement, threshold/rate calibration, and hotspot
+  decomposition tracked on #495. No actionable follow-up is left only in chat.
+
 ## LA-REV-508-PROPOSAL-DECISION-VOCABULARY
 
 - Scope: Advise-owned versioned proposal decision and workflow-gate vocabulary publication for
