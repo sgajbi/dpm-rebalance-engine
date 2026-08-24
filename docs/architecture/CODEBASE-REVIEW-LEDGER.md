@@ -8,9 +8,10 @@
   top-level-status, recommended-action, workflow-gate, and gate-next-step pairings were not
   published. Gateway therefore carried a duplicated matrix that could drift into a production
   502/Workbench outage after an Advise rule change.
-- Status: Implemented and merged to `main`; bounded slice closure complete. Issue #508 remains
-  open until its final GitHub evidence comment and verified closure are recorded after this
-  ledger truth commit.
+- Status: Implemented and merged to `main`; the workflow-gate half is closed, while issue #508
+  remains open for the actionable decision-status derivation follow-up. It is not open for
+  bookkeeping: decision-status pairings remain reviewed declarations rather than fully derived
+  from the runtime rules that produce them.
 - Finding Class: producer-owned contract governance, downstream compatibility, CI regression
   prevention.
 - Summary: The bounded #508 slice publishes `docs/standards/proposal-decision-vocabulary.v1.json`
@@ -39,10 +40,15 @@
     architecture, OpenAPI/Spectral, no-alias, API vocabulary, this contract gate, data products,
     lifecycle, security, dependency, license, dead-code, duplicate-code, oversized-code, and
     quality-baseline checks all passed.
-  - Signed implementation commits: `eedb16b4`, `1c241ca6`, `1f76efa6`, `03488e6a`, `e7ebfb7a`,
+  - Signed feature-head implementation commits: `eedb16b4`, `1c241ca6`, `1f76efa6`, `03488e6a`, `e7ebfb7a`,
     and `027c91b6`; focused contract/CI tests passed `37`; the changed-source coverage floor
     passed after the self-validation branches were covered; focused mypy, Ruff, format,
     pre-commit, and `git diff --check` passed.
+  - The workflow-gate half is derived from live `_GATE_OUTCOME_RULES` and verified against
+    conflicting-outcome and expected-map drift failures. The decision-status half remains a
+    reviewed declaration co-located with its rule module: its workflow-gate inverse,
+    insufficient-evidence action branches, and top-level-status pairings are not yet all
+    machine-derived from runtime sources. This is the tracked reason #508 remains open.
   - PR #522 merged by approved rebase/non-squash method at mainline commit
     `fff3bfbdef88c7357f31bcd2ed70051ebc5681a4` after the exact-head review-lead verdict
     `VERDICT: mergeable` on `027c91b6` and green PR Merge Gate run `32677564834`.
@@ -63,8 +69,8 @@
 - Downstream handoff: `lotus-gateway#599` consumes this producer-owned artifact to detect matrix
   drift while retaining its anti-corruption runtime validation.
 - Issue evidence: GitHub issue #508 records the bounded objective, CI coverage correction,
-  downstream handoff, merge, exact-mainline, wiki, and runtime evidence; verified closure follows
-  this durable ledger update.
+  downstream handoff, merge, exact-mainline, wiki, and runtime evidence; the issue remains open
+  for the explicitly named decision-status derivation follow-up.
 
 ## LA-REV-495-CI-OVERSIZED-CODE
 
