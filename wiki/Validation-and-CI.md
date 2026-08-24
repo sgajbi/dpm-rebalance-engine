@@ -61,7 +61,9 @@ runtime evidence fields.
 
 The same fast static lanes also run `make quality-trend-gate`. This gate compares the committed
 `quality/baseline_report.md` metrics at the merge base of the supplied base/head revisions and the
-exact head revision, then writes `output/quality-trend-gate.json`. The versioned policy allows at most 500 additional Python lines,
+exact head revision, then writes `output/quality-trend-gate.json`. The versioned policy allows at most 250 additional Python lines;
+this is an evidence-based ratchet from 500 that remains above the recent +172-line ordinary quality slice while rejecting an
+unreviewed half-kiloline batch;
 no increase in Radon B-ranked blocks, no increase in the worst Radon complexity, and no decrease
 in Interrogate coverage. Interrogate comparisons derive from the exact `covered` and `total`
 counts in the evidence line rather than its one-decimal display percentage; inconsistent or
@@ -249,7 +251,7 @@ The current blocking posture is intentionally high-signal:
      dependency inventory.
 19. `make license-ip-gate`
      validates the committed runtime/development dependency license inventory and owner-approved
-     expiring exceptions in a temporary virtual environment installed from governed
+     expiring exceptions in an isolated virtual environment installed from governed
      runtime/development requirements files constrained to exact package versions projected from
      `uv.lock`, with pinned pip/setuptools bootstrap tooling and pip isolated from caller
      configuration. Transitive version-only drift is not a governance event; new packages, license

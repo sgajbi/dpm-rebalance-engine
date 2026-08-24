@@ -1,13 +1,13 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+613d60b2f428",
+  "policy_version": "lotus-advise-quality-trend.v1+85509979ab62",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
       "name": "total_python_lines",
       "direction": "increase",
-      "allowed_delta": 500,
-      "reason": "Keep src, scripts, and tests in one visible Python-growth budget so generated production code and shallow regression-test bulk cannot hide from review; the 500-line steady-state limit is the default, with only explicit expiring exceptions for mandatory control restoration."
+      "allowed_delta": 250,
+      "reason": "Keep src, scripts, and tests in one visible Python-growth budget so generated production code and shallow regression-test bulk cannot hide from review; the 250-line steady-state limit preserves bounded room above the recent +172-line ordinary slice while rejecting an unreviewed half-kiloline batch."
     },
     {
       "name": "radon_b_ranked_blocks",
