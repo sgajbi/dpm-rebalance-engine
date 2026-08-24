@@ -76,7 +76,6 @@ def load_policy(path: Path) -> dict[str, Any]:
     raw_metrics = policy.get("metrics")
     if not isinstance(raw_metrics, list) or not raw_metrics:
         raise ValueError("Quality-trend policy metrics must be a non-empty list.")
-    metrics: list[dict[str, Any]] = []
     names: set[str] = set()
     for raw_metric in raw_metrics:
         if not isinstance(raw_metric, dict):
@@ -90,18 +89,10 @@ def load_policy(path: Path) -> dict[str, Any]:
         if direction not in {"increase", "decrease"}:
             raise ValueError(f"Unsupported quality-trend direction for {name}: {direction}")
         _number(raw_metric.get("allowed_delta"), field=f"metrics[{name}].allowed_delta")
-        reason = quality_gate_common.non_empty_string(
+        quality_gate_common.non_empty_string(
             raw_metric.get("reason"), field=f"metrics[{name}].reason"
         )
         names.add(name)
-        metrics.append(
-            {
-                "name": name,
-                "direction": direction,
-                "allowed_delta": raw_metric["allowed_delta"],
-                "reason": reason,
-            }
-        )
     exceptions = policy.get("exceptions")
     if not isinstance(exceptions, dict) or exceptions.get("allowed") is not True:
         raise ValueError("Quality-trend policy must explicitly enable reviewed exceptions.")
@@ -119,7 +110,9 @@ def load_policy(path: Path) -> dict[str, Any]:
         if name not in names or name in seen_exceptions:
             raise ValueError(f"Unsupported or duplicate quality-trend exception metric: {name}")
         allowed = _number(entry.get("allowed_delta"), field=f"exceptions[{name}].allowed_delta")
-        if allowed < next(metric["allowed_delta"] for metric in metrics if metric["name"] == name):
+        if allowed < next(
+            metric["allowed_delta"] for metric in raw_metrics if metric["name"] == name
+        ):
             raise ValueError(f"Quality-trend exception for {name} may not weaken its policy limit.")
         quality_gate_common.non_empty_string(entry.get("reason"), field="exceptions[].reason")
         quality_gate_common.non_empty_string(entry.get("approver"), field="exceptions[].approver")
@@ -135,7 +128,7 @@ def load_policy(path: Path) -> dict[str, Any]:
         if expiry_date < today:
             raise ValueError(f"Expired quality-trend exception for {name}: {expiry}")
         seen_exceptions.add(name)
-    return {**policy, "metrics": metrics, "exceptions": {**exceptions, "entries": entries}}
+    return {**policy, "metrics": raw_metrics, "exceptions": {**exceptions, "entries": entries}}
 
 
 def parse_report(content: str) -> dict[str, float]:
@@ -196,27 +189,34 @@ def compare_metrics(
 
 
 def _git_file(repo_root: Path, ref: str, path: str) -> str:
-    completed = subprocess.run(
-        ["git", "show", f"{ref}:{path}"], cwd=repo_root, capture_output=True, text=True, check=False
-    )
-    if completed.returncode != 0:
-        raise ValueError(
-            f"Unable to read quality baseline report at {ref}: {completed.stderr.strip()}"
-        )
-    return completed.stdout
+    return _git_output(repo_root, ["show", f"{ref}:{path}"], f"Unable to read report at {ref}")
 
 
-def _git_sha(repo_root: Path, ref: str) -> str:
+def _git_output(repo_root: Path, arguments: list[str], error: str) -> str:
     completed = subprocess.run(
-        ["git", "rev-parse", "--verify", f"{ref}^{{commit}}"],
+        ["git", *arguments],
         cwd=repo_root,
         capture_output=True,
         text=True,
         check=False,
     )
     if completed.returncode != 0:
-        raise ValueError(f"Unable to resolve quality trend revision: {ref}")
+        raise ValueError(f"{error}: {completed.stderr.strip()}")
     return completed.stdout.strip()
+
+
+def _git_sha(repo_root: Path, ref: str) -> str:
+    return _git_output(
+        repo_root, ["rev-parse", "--verify", f"{ref}^{{commit}}"], "Unable to resolve revision"
+    )
+
+
+def _git_merge_base(repo_root: Path, base_ref: str, head_ref: str) -> str:
+    return _git_output(
+        repo_root,
+        ["merge-base", base_ref, head_ref],
+        f"Unable to resolve merge base for {base_ref} and {head_ref}",
+    )
 
 
 def run_gate(
@@ -232,13 +232,14 @@ def run_gate(
     try:
         policy = load_policy(policy_path)
         head_sha = _git_sha(repo_root, head_ref)
-        effective_base_ref = base_ref or "origin/main"
-        base_sha = _git_sha(repo_root, effective_base_ref)
+        base_ref = base_ref or "origin/main"
+        base_sha = _git_sha(repo_root, base_ref)
         if base_sha == head_sha:
-            effective_base_ref = "HEAD^"
-            base_sha = _git_sha(repo_root, effective_base_ref)
+            base_ref = "HEAD^"
+            base_sha = _git_sha(repo_root, base_ref)
+        merge_base_sha = _git_merge_base(repo_root, base_ref, head_ref)
         report_path = policy["report_path"]
-        base_values = parse_report(_git_file(repo_root, effective_base_ref, report_path))
+        base_values = parse_report(_git_file(repo_root, merge_base_sha, report_path))
         head_values = parse_report(_git_file(repo_root, head_ref, report_path))
         results, failures = compare_metrics(base_values, head_values, policy)
         report.update(
@@ -249,8 +250,9 @@ def run_gate(
                     policy
                 ),
                 "report_path": report_path,
-                "base_ref": effective_base_ref,
+                "base_ref": base_ref,
                 "base_sha": base_sha,
+                "merge_base_sha": merge_base_sha,
                 "head_sha": head_sha,
                 "metrics": [asdict(result) for result in results],
                 "counts": {

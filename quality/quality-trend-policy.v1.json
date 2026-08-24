@@ -1,13 +1,13 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+a3f197817b6e",
+  "policy_version": "lotus-advise-quality-trend.v1+d342d0d7d8b0",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
       "name": "total_python_lines",
       "direction": "increase",
       "allowed_delta": 500,
-      "reason": "Limit unreviewed repository growth that can hide AI-generated or low-value code behind aggregate gates."
+      "reason": "Set the steady-state change budget at 500 Python lines so unreviewed AI-generated or low-value growth cannot hide behind aggregate gates."
     },
     {
       "name": "radon_b_ranked_blocks",
