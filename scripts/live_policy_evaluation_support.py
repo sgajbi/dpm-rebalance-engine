@@ -24,6 +24,7 @@ def ensure_sg_policy_pack_active(
     get_json: JsonGetter,
     post_json: JsonPoster,
 ) -> None:
+    """Ensure the governed SG reference policy pack is active before evaluation."""
     detail = get_json(
         client,
         url=f"{advise_base_url}/advisory/policy-packs/SG_PRIVATE_BANKING_REFERENCE/versions/2026.05",
@@ -57,6 +58,7 @@ def ensure_sg_policy_pack_active(
 
 
 def live_policy_evidence_bundle(*, scenario: PolicyParityScenario) -> dict[str, Any]:
+    """Build the deterministic evidence bundle used by live policy parity checks."""
     return {
         "context_resolution": {
             "advisory_policy_context": {
@@ -137,6 +139,7 @@ def request_live_policy_report(
     scenario: PolicyParityScenario,
     assert_condition: Assertion,
 ) -> tuple[str, dict[str, Any] | None, str | None]:
+    """Normalize ready and provider-degraded report-package outcomes for the snapshot."""
     report_response = client.post(
         f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/report-packages",
         json={
