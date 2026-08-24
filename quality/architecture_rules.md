@@ -21,9 +21,10 @@
 ## Current Evidence
 
 - `.importlinter` defines the API-to-infrastructure, core-to-FastAPI, and infrastructure-to-API
-  dependency boundaries; `make architecture-boundaries` executes those contracts through
-  `make lint`.
-- `make complexity-regression-gate` fails C/D/E/F-ranked Radon blocks through `make lint`.
+  dependency boundaries; the `make lint` recipe invokes `make architecture-boundaries` to
+  execute those contracts.
+- The `make lint` recipe invokes `make complexity-regression-gate`, which fails C/D/E/F-ranked
+  Radon blocks.
 - `quality/baseline_report.md` records the executable import-linter inventory and the current
   C/D/E/F complexity enforcement evidence.
 
