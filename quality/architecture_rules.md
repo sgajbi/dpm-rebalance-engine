@@ -24,7 +24,8 @@
   dependency boundaries; the `make lint` recipe invokes `make architecture-boundaries` to
   execute those contracts.
 - The `make lint` recipe invokes `make complexity-regression-gate`, which fails C/D/E/F-ranked
-  Radon blocks.
+  Radon blocks, and `make refactored-complexity-gate`, which keeps the previously remediated
+  B-ranked modules below their stricter boundary.
 - `quality/baseline_report.md` records the executable import-linter inventory and the current
   C/D/E/F complexity enforcement evidence.
 
