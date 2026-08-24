@@ -75,6 +75,15 @@ the current and simulated states:
 - `READY`, `PARTIAL`, `RESTRICTED`, `UNAVAILABLE`, or `NOT_SUPPORTED` supportability
 - stable reason codes when source dates disagree, a request is not honoured, or evidence is absent
 
+Requested date and currency fields are populated only when the caller explicitly provides those
+dimensions; a portfolio base currency is effective source evidence, not a synthesized request.
+`ProposalResolvedContext.as_of` remains a lifecycle context date used for evaluation, replay, or
+upstream routing and can have a controlled runtime fallback for stateless requests. It is not
+authoritative valuation evidence: consumers must use
+`valuation_context.current_state.effective_as_of_date` or
+`valuation_context.simulated_state.effective_as_of_date`. When both requested date and currency
+are not honored, `reason_code` reports the primary date reason and is not a complete mismatch list.
+
 The contract also carries the authoritative source service and stable source snapshot references.
 Missing provenance is represented as unavailable or partial evidence; the service never substitutes
 today's date, zero, pass, approval, or an inferred valuation. `lotus-core` remains the source-data

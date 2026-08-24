@@ -127,13 +127,11 @@ def evaluate_advisory_proposal(
         policy_context=policy_context,
     )
     risk.proposal_result.valuation_context = build_proposal_valuation_context(
-        portfolio=request.portfolio_snapshot,
         before=risk.proposal_result.before,
         simulated=risk.proposal_result.after_simulated,
         source_provenance=risk.proposal_result.lineage.source_provenance,
         requested_as_of_date=requested_as_of_date,
         requested_reporting_currency=requested_reporting_currency,
-        input_mode=input_mode,
     )
     return cast(ProposalResult, risk.proposal_result)
 

@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from src.api.main import app
 from src.core.advisory.valuation_context import build_proposal_valuation_context
+from src.core.advisory.valuation_context_models import ProposalValuationContext
 from src.core.portfolio_models import Money, PortfolioSnapshot
 from src.core.proposal_request_models import ProposalSimulateRequest
 from src.core.proposals.context_ports import (
@@ -47,15 +48,27 @@ def _portfolio() -> PortfolioSnapshot:
     return PortfolioSnapshot(portfolio_id="PB_SG_GLOBAL_BAL_001", base_currency="USD")
 
 
+def _context(
+    *,
+    currency: str = "USD",
+    source_provenance: SourceProvenanceEnvelope | None = None,
+    requested_as_of_date: str | None = None,
+    requested_reporting_currency: str | None = None,
+) -> ProposalValuationContext:
+    return build_proposal_valuation_context(
+        before=_state(currency),
+        simulated=_state(currency),
+        source_provenance=source_provenance,
+        requested_as_of_date=requested_as_of_date,
+        requested_reporting_currency=requested_reporting_currency,
+    )
+
+
 def test_valuation_context_preserves_ready_source_evidence_for_both_states() -> None:
-    context = build_proposal_valuation_context(
-        portfolio=_portfolio(),
-        before=_state("USD"),
-        simulated=_state("USD"),
+    context = _context(
         source_provenance=_provenance(),
         requested_as_of_date="2026-03-25",
         requested_reporting_currency="USD",
-        input_mode="stateful",
     )
 
     assert context.schema_version == "lotus.proposal-valuation-context.v1"
@@ -68,32 +81,12 @@ def test_valuation_context_preserves_ready_source_evidence_for_both_states() -> 
     assert context.current_state.reason_code is None
 
 
-def test_valuation_context_never_infers_today_when_source_date_is_missing() -> None:
-    context = build_proposal_valuation_context(
-        portfolio=_portfolio(),
-        before=_state("USD"),
-        simulated=_state("USD"),
-        source_provenance=None,
-        requested_as_of_date=None,
-        requested_reporting_currency="USD",
-        input_mode="stateless",
-    )
-
-    assert context.current_state.effective_as_of_date is None
-    assert context.current_state.effective_reporting_currency == "USD"
-    assert context.current_state.supportability == "PARTIAL"
-    assert context.current_state.reason_code == "SOURCE_AS_OF_UNAVAILABLE"
-
-
 def test_valuation_context_restricts_unhonored_requested_date_and_currency() -> None:
-    context = build_proposal_valuation_context(
-        portfolio=_portfolio(),
-        before=_state("EUR"),
-        simulated=_state("EUR"),
+    context = _context(
+        currency="EUR",
         source_provenance=_provenance(portfolio_as_of="2026-03-26"),
         requested_as_of_date="2026-03-25",
         requested_reporting_currency="USD",
-        input_mode="stateful",
     )
 
     assert context.current_state.supportability == "RESTRICTED"
@@ -103,19 +96,28 @@ def test_valuation_context_restricts_unhonored_requested_date_and_currency() -> 
 
 
 def test_valuation_context_reports_source_date_mismatch_without_inference() -> None:
-    context = build_proposal_valuation_context(
-        portfolio=_portfolio(),
-        before=_state("USD"),
-        simulated=_state("USD"),
+    context = _context(
         source_provenance=_provenance(portfolio_as_of="2026-03-25", market_as_of="2026-03-26"),
         requested_as_of_date="2026-03-25",
         requested_reporting_currency="USD",
-        input_mode="stateful",
     )
 
     assert context.current_state.effective_as_of_date is None
     assert context.current_state.supportability == "PARTIAL"
     assert context.current_state.reason_code == "SOURCE_AS_OF_MISMATCH"
+
+
+def test_valuation_context_preserves_missing_source_and_omitted_request_posture() -> None:
+    missing_source = _context(requested_reporting_currency="USD")
+    omitted_request = _context(source_provenance=_provenance())
+
+    assert missing_source.current_state.effective_as_of_date is None
+    assert missing_source.current_state.effective_reporting_currency == "USD"
+    assert missing_source.current_state.supportability == "PARTIAL"
+    assert missing_source.current_state.reason_code == "SOURCE_AS_OF_UNAVAILABLE"
+    assert omitted_request.current_state.requested_reporting_currency is None
+    assert omitted_request.current_state.effective_reporting_currency == "USD"
+    assert omitted_request.current_state.supportability == "READY"
 
 
 def test_openapi_publishes_typed_valuation_context_fields() -> None:
@@ -138,6 +140,13 @@ def test_openapi_publishes_typed_valuation_context_fields() -> None:
         "current_state",
         "simulated_state",
     }
+    assert (
+        "not authoritative valuation evidence"
+        in schemas["WorkspaceResolvedContext"]["properties"]["as_of"]["description"]
+    )
+    assert (
+        "date reason takes precedence" in state_schema["properties"]["reason_code"]["description"]
+    )
     assert "valuation_context" in schemas["ProposalResult"]["properties"]
 
 

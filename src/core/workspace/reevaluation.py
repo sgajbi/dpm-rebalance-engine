@@ -31,7 +31,6 @@ def build_workspace_evaluation_context(
     proposal_resolved_context = build_workspace_proposal_context(
         resolved_context=session.resolved_context,
         stateful_input=session.stateful_input,
-        simulate_request=simulate_request,
     )
     resolved_request = ResolvedSimulationContext(
         input_mode=session.input_mode,

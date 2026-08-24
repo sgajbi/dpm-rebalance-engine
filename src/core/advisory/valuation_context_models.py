@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -63,8 +61,10 @@ class ProposalValuationContextState(BaseModel):
     reason_code: ValuationContextReasonCode | None = Field(
         default=None,
         description=(
-            "Stable reason for partial, restricted, or unavailable evidence. Null means the "
-            "requested and effective evidence agree."
+            "Stable primary reason for partial, restricted, or unavailable evidence. When both "
+            "requested date and currency are not honored, the date reason takes precedence; "
+            "this field is not a complete list of all mismatches. Null means the requested and "
+            "effective evidence agree."
         ),
         examples=["REQUESTED_AS_OF_NOT_HONORED"],
     )
@@ -102,11 +102,3 @@ class ProposalValuationContext(BaseModel):
             reason_code="VALUATION_CONTEXT_UNAVAILABLE",
         )
         return cls(current_state=state, simulated_state=state.model_copy(deep=True))
-
-
-__all__ = [
-    "ProposalValuationContext",
-    "ProposalValuationContextState",
-    "ValuationContextReasonCode",
-    "ValuationContextSupportability",
-]

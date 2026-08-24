@@ -28405,6 +28405,11 @@
   - Contract tests cover ready source evidence, missing-source non-inference, source-date
     mismatch, requested-date/currency mismatch, OpenAPI publication, stateful resolution, and
     direct/workspace calculation parity.
+  - Review fix-forward coverage keeps omitted reporting currency absent instead of synthesizing a
+    request from portfolio base currency, and documents `ProposalResolvedContext.as_of` as a
+    lifecycle routing/replay value rather than authoritative valuation evidence.
+  - The v1 single `reason_code` is explicitly a primary reason with date-before-currency precedence
+    when both requested dimensions are not honored; it is not presented as a complete mismatch list.
   - The duplicate-code gate remains strict with zero new findings; the two historical overlapping
     state-context fingerprints were removed from the reviewed baseline after consolidation.
 - Consequence:
