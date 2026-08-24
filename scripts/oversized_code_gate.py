@@ -332,6 +332,12 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
             if finding.fingerprint in baseline_by_fingerprint
             and finding.lines > baseline_by_fingerprint[finding.fingerprint]["max_lines"]
         ]
+        shrunken_findings = [
+            finding
+            for finding in findings
+            if finding.fingerprint in baseline_by_fingerprint
+            and finding.lines < baseline_by_fingerprint[finding.fingerprint]["max_lines"]
+        ]
         resolved = [
             baseline_by_fingerprint[fingerprint]
             for fingerprint in sorted(set(baseline_by_fingerprint) - set(observed))
@@ -368,6 +374,13 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
             for finding in grown_findings
         )
         failures.extend(
+            "Shrunken oversized-code baseline must be ratcheted: "
+            f"{finding.path}:{finding.symbol} has {finding.lines} lines; "
+            f"baseline_max={baseline_by_fingerprint[finding.fingerprint]['max_lines']}. "
+            "Update max_lines to the measured value and bump the baseline/policy fingerprints."
+            for finding in shrunken_findings
+        )
+        failures.extend(
             "Resolved oversized-code baseline must be removed from the baseline and its "
             f"policy/baseline fingerprints refreshed: {entry['fingerprint']}"
             for entry in resolved
@@ -383,6 +396,7 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
                 "findings": [finding.as_dict() for finding in findings],
                 "new_findings": [finding.as_dict() for finding in new_findings],
                 "grown_findings": [finding.as_dict() for finding in grown_findings],
+                "shrunken_findings": [finding.as_dict() for finding in shrunken_findings],
                 "resolved_baseline_findings": resolved,
                 "expired_baseline_findings": expired_baseline,
                 "counts": {
@@ -390,6 +404,7 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
                     "baseline": len(baseline),
                     "new": len(new_findings),
                     "grown": len(grown_findings),
+                    "shrunken": len(shrunken_findings),
                     "resolved": len(resolved),
                     "expired": len(expired_baseline),
                     "modules": sum(finding.kind == "module" for finding in findings),
