@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-24T18:08:10.348921+00:00`
+- Generated At: `2026-08-24T18:23:06.517016+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1078`
 - Packages: `42`
 - Modules: `1036`
-- Total Python lines: `194772`
+- Total Python lines: `194765`
 
 ## Largest Files
 
@@ -25,16 +25,16 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
-| 10 | `scripts/quality_baseline_report.py` | 1635 |
+| 10 | `scripts/quality_baseline_report.py` | 1636 |
 
 ## Largest Functions And Maintainability Hotspots
 
 | Rank | Function | File | Line | Lines |
 | ---: | --- | --- | ---: | ---: |
 | 1 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 63 | 508 |
-| 2 | `render_refactor_health_report` | `scripts/quality_baseline_report.py` | 817 | 494 |
+| 2 | `render_refactor_health_report` | `scripts/quality_baseline_report.py` | 818 | 494 |
 | 3 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 405 |
-| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 93 | 310 |
+| 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 92 | 310 |
 | 5 | `validate_live_cross_service_parity` | `scripts/validate_cross_service_parity_live.py` | 3695 | 274 |
 | 6 | `_assert_persisted_read_surfaces` | `scripts/validate_cross_service_parity_live.py` | 3422 | 271 |
 | 7 | `_assert_live_policy_evaluation_flow` | `scripts/validate_cross_service_parity_live.py` | 2491 | 252 |
@@ -128,8 +128,9 @@
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
 - Interrogate docstring inventory: `total=5659, missing=5586, covered=73, coverage=1.3%`
-- Interrogate remains report-only until public API and module ownership thresholds
-  are classified.
+- Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;
+  absolute public API and module-ownership thresholds remain report-only until
+  classified.
 
 ## Observability Gaps
 

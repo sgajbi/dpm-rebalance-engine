@@ -767,8 +767,9 @@ def _documentation_section(context: QualityContext) -> list[str]:
         f"missing={_optional_count(context.interrogate_missing_count)}, "
         f"covered={_optional_count(context.interrogate_covered_count)}, "
         f"coverage={context.interrogate_coverage_percent or 'not run'}`",
-        "- Interrogate remains report-only until public API and module ownership thresholds",
-        "  are classified.",
+        "- Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;",
+        "  absolute public API and module-ownership thresholds remain report-only until",
+        "  classified.",
         "",
     ]
 
