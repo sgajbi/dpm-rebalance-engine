@@ -41,7 +41,8 @@ multi-instance recovery drills remain staged hardening work.
 - Existing gates include ruff, mypy, OpenAPI quality, no-alias, API vocabulary, data-product
   declarations, dependency health, security audit, coverage, migration smoke, and runtime smoke
   checks.
-- New architecture-boundary rules are documented in `quality/architecture_rules.md` and configured
-  in `.importlinter` for report-only rollout.
+- Architecture-boundary rules are documented in `quality/architecture_rules.md`, configured in
+  `.importlinter`, and enforced by `make architecture-boundaries` through `make lint`; absolute
+  architecture thresholds remain a separately classified follow-up.
 - This document does not claim final bank certification, external compliance approval, or full
   enterprise-readiness closure.

@@ -1,5 +1,36 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-CONTROL-TRUTH
+
+- Scope: Architecture-boundary and complexity-enforcement wording in the repository architecture
+  guide, quality rules, and generated quality reports.
+- Pattern: Durable documentation had drifted behind executable controls: import-linter was
+  described as report-only even though `make lint` runs `make architecture-boundaries`, and the
+  scorecard described the C/D/E/F Radon gate as absent even though `make lint` runs the
+  `make complexity-regression-gate` target configured with `--fail-rank C`.
+- Status: Corrected in this bounded #495 documentation/evidence slice; enforcement behavior and
+  thresholds are unchanged.
+- Finding Class: CI control truth, architecture governance, and maintainability evidence.
+- Summary: Current documentation now distinguishes blocking regression controls from remaining
+  calibration work for B-ranked Radon/Xenon and absolute architecture thresholds.
+- Evidence:
+  - `quality/architecture_rules.md` and `docs/architecture.md` describe the enforced
+    import-linter and C/D/E/F Radon controls and their remaining calibration boundary.
+  - `scripts/quality_baseline_report.py` regenerates matching architecture, scorecard, and
+    refactor-health wording; `quality/baseline_report.md`, `quality/quality_scorecard.md`, and
+    `quality/refactor_health_report.md` are refreshed with no unrelated control changes.
+  - `tests/unit/test_quality_documentation_contracts.py` derives the required control names from
+    the Make targets and rejects the stale report-only wording; report tests preserve generated
+    evidence assertions.
+- Compatibility: Documentation and CI-evidence truth only. No workflow behavior, threshold,
+  runtime, API/OpenAPI, persistence, migration, dependency, calculation, or downstream contract
+  change is intended.
+- Documentation decision: Updated repository architecture docs and generated quality evidence;
+  `wiki/Validation-and-CI.md` already states the enforced posture accurately, so no wiki source
+  change or publication is needed.
+- Follow-Up: #495 still owns threshold/rate ratcheting, remaining report-only calibration, and
+  quality/live validation hotspot decomposition.
+
 ## LA-REV-495-SCORECARD-HOTSPOT-DECOMPOSITION
 
 - Scope: `scripts/quality_baseline_report.py::render_quality_scorecard` and its generated

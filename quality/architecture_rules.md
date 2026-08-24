@@ -2,8 +2,10 @@
 
 ## Enforcement Phase
 
-- Current phase: baseline/report-only.
-- Direction: move from report-only to fail-on-new-regression, then enforce agreed thresholds.
+- Current phase: regression-enforced for the configured architecture contracts and complexity
+  rank boundary.
+- Direction: preserve fail-on-new-regression controls while classifying stricter B-ranked Radon,
+  Xenon, and absolute architecture thresholds.
 
 ## Boundary Rules
 
@@ -18,13 +20,16 @@
 
 ## Current Evidence
 
-- `.importlinter` defines report-only contracts for API-to-infrastructure, core-to-FastAPI, and
-  infrastructure-to-API dependency boundaries.
-- `quality/baseline_report.md` records architecture-boundary status as a current report-only gap
-  until import-linter is installed and calibrated.
+- `.importlinter` defines the API-to-infrastructure, core-to-FastAPI, and infrastructure-to-API
+  dependency boundaries; `make architecture-boundaries` executes those contracts through
+  `make lint`.
+- `make complexity-regression-gate` fails C/D/E/F-ranked Radon blocks through `make lint`.
+- `quality/baseline_report.md` records the executable import-linter inventory and the current
+  C/D/E/F complexity enforcement evidence.
 
-## Next Gate
+## Remaining Calibration
 
-- Install and run import-linter in CI as report-only.
-- Baseline current violations, if any.
-- Move to fail-on-new-regression before enforcing absolute architecture thresholds.
+- Classify current B-ranked helpers before tightening Radon or introducing stricter Xenon
+  thresholds.
+- Classify absolute architecture thresholds separately from the already enforced contract
+  regression checks.
