@@ -33,6 +33,14 @@ def test_architecture_documentation_matches_enforced_quality_controls() -> None:
     assert "report-only rollout" not in architecture
     lint_targets = _make_invocations(_make_recipe(makefile, "lint"))
     assert "architecture-boundaries" in lint_targets
-    complexity_targets = {target for target in lint_targets if target.endswith("complexity-gate")}
+    complexity_targets = {
+        target for target in lint_targets if "complexity" in target and target.endswith("-gate")
+    }
     assert complexity_targets
     assert complexity_targets <= _documented_make_targets(rules)
+    assert "importlinter" in _make_recipe(makefile, "architecture-boundaries")
+    assert all(
+        "radon_complexity_gate.py" in _make_recipe(makefile, target)
+        for target in complexity_targets
+    )
+    assert "--fail-rank C" in _make_recipe(makefile, "complexity-regression-gate")
