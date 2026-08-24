@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-08-24T05:25:22.090052+00:00",
+  "generatedAt": "2026-08-24T07:45:51.599468+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -9802,7 +9802,9 @@
       "canonicalTerm": "resolved_context",
       "preferredName": "resolved_context",
       "description": "Normalized resolved advisory context captured by the replayable evidence.",
-      "example": "resolved_context_value",
+      "example": {
+        "portfolio_id": "PB_SG_GLOBAL_BAL_001"
+      },
       "type": "AdvisoryReplayResolvedContext",
       "locations": [
         "body"
