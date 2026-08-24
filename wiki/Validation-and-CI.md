@@ -67,9 +67,10 @@ in Interrogate coverage. Any reviewed exception must name the metric, justificat
 and expiry date; policy content changes require a matching content-fingerprint version. Feature
 Lane supplies `origin/main`, PR Merge Gate supplies the pull request base/head SHAs, and Main
 Releasability supplies `HEAD^` with `HEAD`; all comparisons resolve and record the merge base so
-unrelated mainline merges cannot erase branch growth. Evidence records the requested base SHA and
-resolved merge-base SHA. The gate is CI/developer evidence only and does not change runtime, API,
-persistence, migration, or data-model behavior.
+unrelated mainline merges cannot erase branch growth. Evidence records the supplied base ref,
+effective base ref, explicit fallback state, requested base SHA, and resolved merge-base SHA. The
+gate is CI/developer evidence only and does not change runtime, API, persistence, migration, or
+data-model behavior.
 
 ## Reader Map
 
@@ -196,8 +197,9 @@ The current blocking posture is intentionally high-signal:
    blocks stale committed quality report and scorecard truth.
    `make quality-trend-gate` resolves the merge base of committed base/head revisions, then blocks
    policy-defined regressions in Python-line growth, Radon B-ranked blocks, worst Radon complexity,
-   or Interrogate coverage. It emits `output/quality-trend-gate.json` with requested and resolved
-   revision SHAs, metric deltas, thresholds, policy fingerprint, and any exception provenance.
+   or Interrogate coverage. It emits `output/quality-trend-gate.json` with supplied and effective
+   base refs, explicit fallback state, requested and resolved revision SHAs, metric deltas,
+   thresholds, policy fingerprint, and any exception provenance.
    This is a CI/developer quality gate and does not alter product behavior or contracts.
 11. `make duplicate-code-gate`
    runs strict jscpd against `src` and `scripts`, compares normalized clone fingerprints with
