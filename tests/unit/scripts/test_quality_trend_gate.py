@@ -133,7 +133,9 @@ def test_load_policy_rejects_expired_reviewed_exception(tmp_path: Path) -> None:
         quality_trend_gate.load_policy(policy_path)
 
 
-def test_run_gate_compares_quality_reports_at_committed_revisions(tmp_path: Path) -> None:
+def test_run_gate_compares_reports_and_preserves_failure_provenance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     quality_dir = tmp_path / "quality"
     quality_dir.mkdir()
     policy_path = quality_dir / "quality-trend-policy.v1.json"
@@ -200,3 +202,24 @@ def test_run_gate_compares_quality_reports_at_committed_revisions(tmp_path: Path
     assert fallback_evidence["supplied_base_ref"] == "feature"
     assert fallback_evidence["base_ref"] == "HEAD^"
     assert fallback_evidence["base_ref_fallback"] is True
+
+    def malformed_baseline(_repo_root: Path, _ref: str, _path: str) -> str:
+        return "- Total Python lines: `100`"
+
+    monkeypatch.setattr(quality_trend_gate, "_git_file", malformed_baseline)
+    failure_output_path = tmp_path / "output" / "quality-trend-gate-failure.json"
+    failure_result = quality_trend_gate.run_gate(
+        repo_root=tmp_path,
+        policy_path=policy_path,
+        output_path=failure_output_path,
+        base_ref="feature",
+        head_ref="HEAD",
+    )
+    failure_evidence = json.loads(failure_output_path.read_text(encoding="utf-8"))
+
+    assert failure_result == 1
+    assert failure_evidence["status"] == "failed"
+    assert failure_evidence["supplied_base_ref"] == "feature"
+    assert failure_evidence["base_ref"] == "HEAD^"
+    assert failure_evidence["base_ref_fallback"] is True
+    assert "missing metric" in failure_evidence["failures"][0]

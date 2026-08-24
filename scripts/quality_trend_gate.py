@@ -241,6 +241,12 @@ def run_gate(
         if base_sha == head_sha:
             effective_base_ref = "HEAD^"
             base_ref_fallback = True
+            report.update(
+                {
+                    "base_ref": effective_base_ref,
+                    "base_ref_fallback": base_ref_fallback,
+                }
+            )
             base_sha = _git_sha(repo_root, effective_base_ref)
         merge_base_sha = _git_merge_base(repo_root, effective_base_ref, head_ref)
         report_path = policy["report_path"]
