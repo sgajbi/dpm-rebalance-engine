@@ -22,6 +22,15 @@ def _active_make_commands(recipe: str) -> tuple[str, ...]:
     )
 
 
+def _active_python_commands(recipe: str) -> tuple[str, ...]:
+    commands = []
+    for command in _active_make_commands(recipe):
+        normalized = re.sub(r"^[+@-]\s*", "", command)
+        if re.match(r"^python(?:\.exe)?(?:\s|$)", normalized, re.IGNORECASE):
+            commands.append(normalized)
+    return tuple(commands)
+
+
 def _documented_make_targets(document: str) -> set[str]:
     return set(re.findall(r"`make (?P<target>[a-z0-9-]+)`", document))
 
@@ -46,17 +55,31 @@ def test_architecture_documentation_matches_enforced_quality_controls() -> None:
     }
     assert complexity_targets
     assert complexity_targets <= _documented_make_targets(rules)
-    assert any(
-        "importlinter" in command
-        for command in _active_make_commands(_make_recipe(makefile, "architecture-boundaries"))
+    architecture_commands = _active_python_commands(
+        _make_recipe(makefile, "architecture-boundaries")
     )
+    assert any("importlinter" in command for command in architecture_commands)
     assert all(
         any(
-            "python scripts/radon_complexity_gate.py" in command
-            for command in _active_make_commands(_make_recipe(makefile, target))
+            command.startswith("python scripts/radon_complexity_gate.py ")
+            for command in _active_python_commands(_make_recipe(makefile, target))
         )
         for target in complexity_targets
     )
-    assert "python scripts/radon_complexity_gate.py --fail-rank C" in _active_make_commands(
+    assert "python scripts/radon_complexity_gate.py --fail-rank C" in _active_python_commands(
         _make_recipe(makefile, "complexity-regression-gate")
+    )
+
+
+def test_quality_control_command_parser_rejects_comments_and_echoes() -> None:
+    recipe = "\n".join(
+        (
+            "\t# python scripts/radon_complexity_gate.py --fail-rank C",
+            "\t@echo python scripts/radon_complexity_gate.py --fail-rank C",
+            "\t@python scripts/radon_complexity_gate.py --fail-rank C",
+        )
+    )
+
+    assert _active_python_commands(recipe) == (
+        "python scripts/radon_complexity_gate.py --fail-rank C",
     )
