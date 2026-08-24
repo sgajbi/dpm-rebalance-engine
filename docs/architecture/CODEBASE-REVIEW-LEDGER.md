@@ -1,5 +1,33 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-MANUAL-PR-GATE-REFS
+
+- Scope: Manual `workflow_dispatch` execution of the GitHub Pull Request Merge Gate.
+- Pattern: The workflow exposed manual dispatch without pull-request event fields, while the
+  quality-trend gate read `github.event.pull_request.base.sha` and `.head.sha` unconditionally and
+  changed-source coverage skipped every non-`pull_request` event. A manual run could therefore fail
+  unclearly or omit a hard quality check instead of measuring the selected checkout.
+- Status: Hardened on `main` in bounded issue #495 follow-up work; other #495 follow-ups remain
+  separately open.
+- Finding Class: CI reference binding, quality-gate completeness, actionable operator evidence.
+- Summary: PR-triggered runs retain their explicit base/head SHAs. Manual dispatches now compare
+  `origin/main` with the selected `github.sha`, resolve both revisions before the trend gate, log
+  event/ref/checkout provenance, and run changed-source coverage against the same deterministic
+  comparison.
+- Evidence:
+  - `.github/workflows/pr-merge-gate.yml` uses event-aware base/head expressions and fails with an
+    explicit error when either revision is empty or unresolvable.
+  - `tests/unit/test_ci_workflow_contracts.py` asserts manual dispatch binding and prevents a
+    regression to unconditional pull-request fields or skipped changed-source coverage.
+- Compatibility: CI/operator behavior only. No runtime, API/OpenAPI, persistence, migration,
+  calculation, data-model, or dependency-version contract changes are intended.
+- Documentation decision: Updated `REPOSITORY-ENGINEERING-CONTEXT.md`, the operations runbook,
+  this ledger, and `wiki/Validation-and-CI.md` because manual validation semantics and operator
+  evidence changed. No platform-wide context change is needed.
+- Follow-Up: #495 still owns PR/SHA-bound exception design, mandatory-control wording,
+  threshold/rate ratcheting, hotspot decomposition, and manual dispatch evidence review beyond
+  this ref-binding slice.
+
 ## LA-REV-495-QUALITY-TREND-INTERROGATE-PRECISION
 
 - Scope: Exact Interrogate documentation-coverage comparison in the machine-readable quality trend
