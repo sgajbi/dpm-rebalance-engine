@@ -1,3 +1,5 @@
+"""Support helpers for governed live policy-evaluation parity certification."""
+
 from __future__ import annotations
 
 import uuid
@@ -8,6 +10,8 @@ import httpx
 
 
 class PolicyParityScenario(Protocol):
+    """Minimum scenario fields required to build deterministic parity evidence."""
+
     portfolio_id: str
     reporting_currency: str
 
