@@ -13,17 +13,17 @@
 - Finding Class: CI quality gate, maintainability regression prevention, review evidence.
 - Summary: The slice adds a versioned policy and comparator that reports the effective comparison
   base ref, merge-base SHA, head SHA, measured deltas, thresholds, and reviewed exception
-  provenance. It
-  keeps `src`, `scripts`, and `tests` in one visible Python-growth budget so test-only bulk cannot
-  hide from review, while preserving the existing aggregate coverage and complexity controls.
+  provenance, while keeping `src`, `scripts`, and `tests` in one visible Python-growth budget so
+  test-only bulk cannot hide from review and preserving the existing aggregate coverage and
+  complexity controls.
 - Evidence:
   - `quality/quality-trend-policy.v1.json` defines a default `500`-line growth allowance,
     zero-growth Radon B/worst-complexity and interrogate-decrease limits, content-fingerprint
     protection, and one explicitly approved `525`-line exception expiring `2026-09-30`.
   - `scripts/quality_trend_gate.py` resolves `git merge-base` before reading the comparison
-    report, records supplied and effective provenance, validates the policy fingerprint and report
-    metrics, and fails closed on malformed, expired, or unexplained evidence. The surrounding
-    quality-baseline check owns committed-report freshness.
+    report, records the effective base ref, supplied head ref, and comparison provenance, validates
+    the policy fingerprint and report metrics, and fails closed on malformed, expired, or
+    unexplained evidence. The surrounding quality-baseline check owns committed-report freshness.
   - Regression tests include a genuinely divergent fork where the feature changes from 100 to 104
     while main independently changes to 103; the gate proves it compares from the fork point and
     reports delta 4 rather than the wrong tip-based delta.
