@@ -106,7 +106,6 @@ class WorkspaceApplicationService:
     ) -> WorkspaceSessionCreateResponse:
         resolved_context, draft_state = self._source_context_resolver.build_initial_context(
             request=request,
-            fallback_as_of=self._current_business_date_iso(),
         )
         workspace = build_workspace_session(
             request=request,
@@ -297,6 +296,3 @@ class WorkspaceApplicationService:
 
     def _utc_now_iso(self) -> str:
         return self._clock().isoformat()
-
-    def _current_business_date_iso(self) -> str:
-        return self._clock().date().isoformat()

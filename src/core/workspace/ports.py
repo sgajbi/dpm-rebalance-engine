@@ -40,7 +40,6 @@ class WorkspaceSourceContextResolver(Protocol):
         self,
         *,
         request: WorkspaceSessionCreateRequest,
-        fallback_as_of: str,
     ) -> tuple[WorkspaceResolvedContext, WorkspaceDraftState]: ...
 
 

@@ -283,7 +283,7 @@ def _to_replay_resolved_context(
         data = raw_context
     else:
         return None
-    if data.get("portfolio_id") is None or data.get("as_of") is None:
+    if data.get("portfolio_id") is None:
         return None
     context: AdvisoryReplayResolvedContext = AdvisoryReplayResolvedContext.model_validate(data)
     return context

@@ -9,7 +9,6 @@ from src.core.workspace.session_models import WorkspaceSession, WorkspaceSession
 def build_stateless_workspace_resolved_context(
     *,
     stateless_input: WorkspaceStatelessInput,
-    fallback_as_of: str,
 ) -> WorkspaceResolvedContext:
     simulate_request = stateless_input.simulate_request
     return WorkspaceResolvedContext(
@@ -17,7 +16,12 @@ def build_stateless_workspace_resolved_context(
         as_of=(
             simulate_request.reference_model.as_of
             if simulate_request.reference_model is not None
-            else fallback_as_of
+            else None
+        ),
+        requested_as_of=(
+            simulate_request.reference_model.as_of
+            if simulate_request.reference_model is not None
+            else None
         ),
         portfolio_snapshot_id=simulate_request.portfolio_snapshot.snapshot_id,
         market_data_snapshot_id=simulate_request.market_data_snapshot.snapshot_id,

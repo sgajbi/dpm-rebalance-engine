@@ -82,7 +82,6 @@ class _FakeWorkspaceSourceContextResolver:
         self,
         *,
         request: WorkspaceSessionCreateRequest,
-        fallback_as_of: str,
     ) -> tuple[WorkspaceResolvedContext, WorkspaceDraftState]:
         self.initial_context_requests.append(request)
         if request.stateful_input is not None:
@@ -94,7 +93,7 @@ class _FakeWorkspaceSourceContextResolver:
         return (
             WorkspaceResolvedContext(
                 portfolio_id=portfolio_id,
-                as_of=fallback_as_of,
+                as_of="2026-07-11",
                 portfolio_snapshot_id="ps_fake_context_001",
             ),
             WorkspaceDraftState(),

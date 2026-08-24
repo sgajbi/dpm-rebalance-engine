@@ -33,6 +33,10 @@ class LotusCoreWorkspaceSourceContextResolver:
                     "WORKSPACE_STATEFUL_CONTEXT_RESOLUTION_UNAVAILABLE"
                 ) from exc
             session.resolved_context = resolved_stateful_context.resolved_context
+            if session.resolved_context.as_of is None:
+                raise WorkspaceEvaluationUnavailableError(
+                    "WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING"
+                )
             return enrich_stateful_simulate_request_for_trade_drafts(
                 simulate_request=apply_workspace_draft_state(
                     base_request=resolved_stateful_context.simulate_request,
@@ -53,7 +57,6 @@ class LotusCoreWorkspaceSourceContextResolver:
         self,
         *,
         request: WorkspaceSessionCreateRequest,
-        fallback_as_of: str,
     ) -> tuple[WorkspaceResolvedContext, WorkspaceDraftState]:
         if request.input_mode == "stateless":
             if request.stateless_input is None:
@@ -61,7 +64,6 @@ class LotusCoreWorkspaceSourceContextResolver:
             return (
                 build_stateless_workspace_resolved_context(
                     stateless_input=request.stateless_input,
-                    fallback_as_of=fallback_as_of,
                 ),
                 build_draft_state_from_simulate_request(request.stateless_input.simulate_request),
             )

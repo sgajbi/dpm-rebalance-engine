@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from typing import cast
 
 from src.core.advisory.policy_context import ProposalPolicySelectors
@@ -195,18 +194,16 @@ def _require_legacy_simulate_request(
     return cast(ProposalSimulateRequest, simulate_request.model_copy(deep=True))
 
 
-def _current_business_date_iso() -> str:
-    return datetime.now(timezone.utc).date().isoformat()
-
-
 def _build_resolved_context_from_simulate_request(
     simulate_request: ProposalSimulateRequest,
 ) -> ProposalResolvedContext:
     return ProposalResolvedContext(
         portfolio_id=simulate_request.portfolio_snapshot.portfolio_id,
-        as_of=simulate_request.reference_model.as_of
-        if simulate_request.reference_model is not None
-        else _current_business_date_iso(),
+        as_of=(
+            simulate_request.reference_model.as_of
+            if simulate_request.reference_model is not None
+            else None
+        ),
         requested_as_of=(
             simulate_request.reference_model.as_of
             if simulate_request.reference_model is not None

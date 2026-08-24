@@ -47,8 +47,13 @@ class AdvisoryReplayResolvedContext(BaseModel):
         description="Resolved portfolio identifier used by the replayable advisory evaluation.",
         examples=["PB_SG_GLOBAL_BAL_001"],
     )
-    as_of: str = Field(
-        description="Resolved business date or timestamp used by the replayable evaluation.",
+    as_of: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional resolved lifecycle date or timestamp preserved by replay evidence. It is "
+            "null when the direct/stateless source context has no explicit date; valuation "
+            "consumers must use nested valuation-context effective dates."
+        ),
         examples=["2026-03-25"],
     )
     portfolio_snapshot_id: Optional[str] = Field(

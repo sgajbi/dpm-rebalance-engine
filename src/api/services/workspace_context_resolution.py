@@ -17,12 +17,10 @@ def build_workspace_simulate_request(session: WorkspaceSession) -> ProposalSimul
 def build_initial_workspace_context(
     *,
     request: WorkspaceSessionCreateRequest,
-    fallback_as_of: str,
 ) -> tuple[WorkspaceResolvedContext, WorkspaceDraftState]:
     return cast(
         tuple[WorkspaceResolvedContext, WorkspaceDraftState],
         _SOURCE_CONTEXT_RESOLVER.build_initial_context(
             request=request,
-            fallback_as_of=fallback_as_of,
         ),
     )

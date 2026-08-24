@@ -144,6 +144,7 @@ def test_openapi_publishes_typed_valuation_context_fields() -> None:
         "not authoritative valuation evidence"
         in schemas["WorkspaceResolvedContext"]["properties"]["as_of"]["description"]
     )
+    assert "as_of" not in schemas["WorkspaceResolvedContext"].get("required", [])
     assert (
         "date reason takes precedence" in state_schema["properties"]["reason_code"]["description"]
     )
