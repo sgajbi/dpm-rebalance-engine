@@ -23,8 +23,9 @@
     continued commands, derives all complexity-gate target names from the `lint` recipe, and
     verifies normalized active Python commands without Make's error-ignoring prefix or unquoted
     shell masking for the architecture and Radon targets; it requires the exact import-linter
-    invocation and those controls in the architecture rules, and rejects stale report-only
-    wording. Report tests preserve generated evidence assertions.
+    invocation, the complete expected B-ranked command set, and those controls in the architecture
+    rules, and rejects stale report-only wording. Report tests preserve generated evidence
+    assertions.
 - Compatibility: Documentation and CI-evidence truth only. No workflow behavior, threshold,
   runtime, API/OpenAPI, persistence, migration, dependency, calculation, or downstream contract
   change is intended.

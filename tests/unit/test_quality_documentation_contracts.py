@@ -3,6 +3,39 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+REFACTORED_COMPLEXITY_PATHS = (
+    "src/integrations/lotus_risk/enrichment.py",
+    "src/core/tactical_house_view.py",
+    "src/core/policy_packs/workflow_projection.py",
+    "src/core/advisory/narrative_ai.py",
+    "src/core/proposals/execution_status.py",
+    "src/integrations/lotus_core/stateful_context_translation.py",
+    "src/core/proposals/async_operations.py",
+    "src/core/proposals/async_operation_runner.py",
+    "src/core/proposals/async_payloads.py",
+    "src/core/proposals/command_validation.py",
+    "src/integrations/lotus_core/stateful_context_market_data.py",
+    "src/core/bank_demo_proof/artifact_refs.py",
+    "src/core/proposals/async_replay.py",
+    "src/core/common/canonical.py",
+    "src/core/proposals/idempotency.py",
+    "src/core/common/intent_dependencies.py",
+    "src/core/advisory_copilot/record_text.py",
+    "src/core/advisory_copilot/run_replay_policy.py",
+    "src/integrations/lotus_ai/runtime_config.py",
+    "src/core/advisory/artifact_evidence.py",
+    "src/core/advisory/artifact_portfolio.py",
+    "src/core/advisory/artifact_trades.py",
+    "src/core/advisory/alternatives_projection.py",
+    "src/core/advisory/decision_requirements.py",
+    "src/core/advisory/decision_material_changes.py",
+    "src/core/advisory/narrative_policy.py",
+    "src/core/advisory/decision_summary.py",
+    "src/core/proposals/memo_builder.py",
+    "src/core/proposals/memo_persistence.py",
+    "src/core/proposals/memo_response_projection.py",
+)
+
 
 def _make_recipe(makefile: str, target: str) -> str:
     match = re.search(rf"(?m)^{re.escape(target)}:\n(?P<recipe>(?:\t.*\n)+)", makefile)
@@ -14,6 +47,12 @@ def _make_invocations(recipe: str) -> set[str]:
     return set(re.findall(r"^\t\$\(MAKE\) (?P<target>[a-z0-9-]+)\s*$", recipe, re.MULTILINE))
 
 
+def _normalize_make_command(command: str) -> str:
+    while command[:1] in {"+", "@"}:
+        command = command[1:].lstrip()
+    return command
+
+
 def _active_make_commands(recipe: str) -> tuple[str, ...]:
     commands = []
     continued = ""
@@ -23,19 +62,35 @@ def _active_make_commands(recipe: str) -> tuple[str, ...]:
             continued = command[:-1].rstrip() + " "
         else:
             if command:
-                commands.append(command)
+                normalized = _normalize_make_command(command)
+                if not normalized.startswith("#"):
+                    commands.append(normalized)
             continued = ""
     if continued:
-        commands.append(continued.rstrip())
+        normalized = _normalize_make_command(continued.rstrip())
+        if not normalized.startswith("#"):
+            commands.append(normalized)
     return tuple(commands)
 
 
 def _contains_unquoted_shell_operator(command: str) -> bool:
     quote = None
+    escaped = False
     for character in command:
         if quote:
-            if character == quote:
+            if quote == "'":
+                if character == quote:
+                    quote = None
+            elif escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
                 quote = None
+        elif escaped:
+            escaped = False
+        elif character == "\\":
+            escaped = True
         elif character in {"'", '"'}:
             quote = character
         elif character in {";", "|", "&"}:
@@ -46,13 +101,10 @@ def _contains_unquoted_shell_operator(command: str) -> bool:
 def _active_python_commands(recipe: str) -> tuple[str, ...]:
     commands = []
     for command in _active_make_commands(recipe):
-        normalized = command
-        while normalized[:1] in {"+", "@"}:
-            normalized = normalized[1:].lstrip()
         if re.match(
-            r"^python(?:\.exe)?(?:\s|$)", normalized, re.IGNORECASE
-        ) and not _contains_unquoted_shell_operator(normalized):
-            commands.append(normalized)
+            r"^python(?:\.exe)?(?:\s|$)", command, re.IGNORECASE
+        ) and not _contains_unquoted_shell_operator(command):
+            commands.append(command)
     return tuple(commands)
 
 
@@ -98,6 +150,13 @@ def test_architecture_documentation_matches_enforced_quality_controls() -> None:
     assert "python scripts/radon_complexity_gate.py --fail-rank C" in _active_python_commands(
         _make_recipe(makefile, "complexity-regression-gate")
     )
+    refactored_commands = _active_python_commands(
+        _make_recipe(makefile, "refactored-complexity-gate")
+    )
+    assert set(refactored_commands) == {
+        f"python scripts/radon_complexity_gate.py --source-path {path} --fail-rank B"
+        for path in REFACTORED_COMPLEXITY_PATHS
+    }
 
 
 def test_quality_control_command_parser_rejects_comments_and_echoes() -> None:
@@ -111,6 +170,7 @@ def test_quality_control_command_parser_rejects_comments_and_echoes() -> None:
             "\tpython scripts/radon_complexity_gate.py --fail-rank C || true",
             "\tpython scripts/radon_complexity_gate.py --fail-rank C \\",
             "\t  || true",
+            '\tpython scripts/radon_complexity_gate.py --fail-rank C \\" || true',
             "\tpython -c \"print('quoted; semicolon')\"",
         )
     )
