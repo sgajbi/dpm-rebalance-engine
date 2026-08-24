@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-24T17:49:27.523747+00:00`
+- Generated At: `2026-08-24T18:08:10.348921+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1078`
 - Packages: `42`
 - Modules: `1036`
-- Total Python lines: `194773`
+- Total Python lines: `194772`
 
 ## Largest Files
 
@@ -25,7 +25,7 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
-| 10 | `scripts/quality_baseline_report.py` | 1636 |
+| 10 | `scripts/quality_baseline_report.py` | 1635 |
 
 ## Largest Functions And Maintainability Hotspots
 
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5659, missing=5587, covered=72, coverage=1.3%`
+- Interrogate docstring inventory: `total=5659, missing=5586, covered=73, coverage=1.3%`
 - Interrogate remains report-only until public API and module ownership thresholds
   are classified.
 
