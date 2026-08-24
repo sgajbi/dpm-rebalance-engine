@@ -1311,6 +1311,7 @@ def render_refactor_health_report(context: QualityContext) -> str:
 
 
 def _scorecard_before_after_rows(context: QualityContext) -> list[tuple[str, str, str, str]]:
+    """Build the scorecard's dynamic before/after evidence rows."""
     radon_rank_inventory = (
         ", ".join(f"{rank}={count}" for rank, count in context.radon_rank_counts.items())
         or "not run"
@@ -1320,8 +1321,6 @@ def _scorecard_before_after_rows(context: QualityContext) -> list[tuple[str, str
         if context.radon_worst_rank is not None and context.radon_worst_complexity is not None
         else "not run"
     )
-    interrogate_coverage_percent = context.interrogate_coverage_percent or "not run"
-    deptry_issue_count = _optional_count(context.deptry_issue_count)
     return [
         (
             "Complexity",
@@ -1430,8 +1429,8 @@ def _scorecard_before_after_rows(context: QualityContext) -> list[tuple[str, str
             "Dependency hygiene",
             "Dependency audit and deptry inventory were measured without a regression gate.",
             f"Deptry `0.25.1` no-new-regression gate passes with current inventory `"
-            f"{deptry_issue_count}`; 13 reviewed baseline entries carry owner/reason/expiry "
-            "provenance and local/CI evidence is emitted.",
+            f"{_optional_count(context.deptry_issue_count)}`; 13 reviewed baseline entries carry "
+            "owner/reason/expiry provenance and local/CI evidence is emitted.",
             "New, resolved, malformed, expired, or tool-drifted dependency findings are blocked.",
         ),
         (
@@ -1446,7 +1445,7 @@ def _scorecard_before_after_rows(context: QualityContext) -> list[tuple[str, str
             "Requested docs were present; docstring inventory was not calibrated; CI wiki "
             "guidance was thinner than the actual repo-native gate surface.",
             "Requested docs remain present; Interrogate inventory executable at "
-            f"`{interrogate_coverage_percent}`; "
+            f"`{context.interrogate_coverage_percent or 'not run'}`; "
             "scorecard, baseline, and refactor-health reports are generated; wiki validation "
             "guidance now maps local, Feature Lane, PR Merge Gate, Main Releasability, "
             "remaining report-only, demo-assurance, live-certification, async polling, and "
