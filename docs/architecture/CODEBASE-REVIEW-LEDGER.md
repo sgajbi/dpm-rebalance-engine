@@ -9,13 +9,14 @@
 - Status: Hardened in the bounded #495 implementation slice; merge authority and exact-mainline
   closure evidence remain governed by the PR and issue lifecycle.
 - Finding Class: CI quality-gate exception scope, fail-closed policy governance, evidence integrity.
-- Summary: Each exception now requires a 40-character lowercase effective `base_sha` and `head_sha`
-  in addition to metric, allowance, justification, approver, and expiry. The comparator applies an
-  exception only when all three identity fields match; otherwise the normal policy limit remains in
-  force.
+- Summary: Each exception now requires a 40-character lowercase effective comparison `base_sha`
+  (the measured merge base) and `head_sha` in addition to metric, allowance, justification,
+  approver, and expiry. The comparator applies an exception only when all three identity fields
+  match; otherwise the normal policy limit remains in force.
 - Evidence:
   - `scripts/quality_trend_gate.py` validates exception SHA bindings, permits multiple bindings for
-    distinct revisions, rejects duplicate identities, and selects only an exact revision match.
+    distinct revisions, rejects duplicate identities, selects only an exact comparison-pair match,
+    and emits both the resolved base-ref SHA and measured merge-base SHA.
   - `tests/unit/scripts/test_quality_trend_gate.py` proves matching application, non-matching
     revision rejection, and malformed/unbound SHA rejection.
   - `quality/quality-trend-policy.v1.json` publishes the binding schema and a refreshed content
