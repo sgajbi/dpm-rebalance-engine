@@ -55,6 +55,7 @@ def _number(candidate: object, *, field: str) -> float:
 
 
 def _sha(candidate: object, *, field: str) -> str:
+    """Validate and return a policy-bound lowercase full-object SHA."""
     value = quality_gate_common.non_empty_string(candidate, field=field)
     if _SHA.fullmatch(value) is None:
         raise ValueError(f"Quality-trend field {field!r} must be a 40-character lowercase SHA.")
