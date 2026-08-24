@@ -4,6 +4,7 @@ from src.core.advisory.decision_summary_models import (
     ProposalDecisionNextAction,
     ProposalDecisionStatus,
 )
+from src.core.common.workflow_gate_vocabulary import workflow_gate_vocabulary
 from src.core.proposal_result_models import ProposalResult
 
 _GATE_DECISION_STATUS: dict[str, ProposalDecisionStatus] = {
@@ -124,6 +125,17 @@ def _validate_published_pairings() -> None:
         published_insufficient_gates
     ) != len(set(published_insufficient_gates)):
         raise RuntimeError("INSUFFICIENT_EVIDENCE workflow gates drifted from runtime review gates")
+
+    known_workflow_gates = set(workflow_gate_vocabulary())
+    published_workflow_gates = {
+        gate for gates in _DECISION_STATUS_WORKFLOW_GATES.values() for gate in gates
+    }
+    unknown_workflow_gates = sorted(published_workflow_gates - known_workflow_gates)
+    if unknown_workflow_gates:
+        raise RuntimeError(
+            "decision vocabulary contains unknown workflow gates: "
+            + ", ".join(unknown_workflow_gates)
+        )
 
 
 def derive_decision_status(
