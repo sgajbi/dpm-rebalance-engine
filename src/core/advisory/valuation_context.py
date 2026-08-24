@@ -121,10 +121,9 @@ def _supportability(
     effective_reporting_currency: str | None,
     reason_code: ValuationContextReasonCode | None,
 ) -> ValuationContextSupportability:
-    missing_evidence = sum(
-        value is None for value in (effective_as_of_date, effective_reporting_currency)
-    )
-    if missing_evidence == 2:
+    evidence = (effective_as_of_date, effective_reporting_currency)
+    missing_evidence = sum(value is None for value in evidence)
+    if missing_evidence == len(evidence):
         return "UNAVAILABLE"
     if missing_evidence:
         return "PARTIAL"
