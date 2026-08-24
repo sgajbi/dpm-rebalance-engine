@@ -6,6 +6,7 @@ import pytest
 
 from scripts import dependency_hygiene_gate
 from scripts.dependency_hygiene_gate import DependencyFinding
+from scripts.quality_gate_common import expected_policy_version
 
 
 def _entry(module: str, *, expires_on: str = "2099-01-01") -> dict[str, str]:
@@ -47,7 +48,7 @@ def _write_policy(tmp_path: Path, *, modules: list[str]) -> tuple[Path, Path]:
         },
         "exceptions": {"allowed": False, "entries": []},
     }
-    policy["policy_version"] = dependency_hygiene_gate.expected_policy_version(policy)
+    policy["policy_version"] = expected_policy_version(policy)
     policy_path = tmp_path / "policy.json"
     policy_path.write_text(json.dumps(policy), encoding="utf-8")
     return policy_path, baseline_path
@@ -190,7 +191,7 @@ def test_gate_fails_on_expired_baseline_entry(tmp_path: Path) -> None:
     policy = json.loads(policy_path.read_text(encoding="utf-8"))
     policy["baseline"]["sha256"] = dependency_hygiene_gate.baseline_content_fingerprint(baseline)
     policy["baseline"]["path"] = "baseline.json"
-    policy["policy_version"] = dependency_hygiene_gate.expected_policy_version(policy)
+    policy["policy_version"] = expected_policy_version(policy)
     policy_path.write_text(json.dumps(policy), encoding="utf-8")
     output_path = tmp_path / "gate.json"
 
