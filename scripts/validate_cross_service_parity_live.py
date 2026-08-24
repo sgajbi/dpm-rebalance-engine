@@ -2499,6 +2499,7 @@ def _create_live_policy_evaluation(
     advise_base_url: str,
     scenario: PortfolioParityScenario,
 ) -> tuple[dict[str, Any], dict[str, Any], str, str]:
+    """Create a policy evaluation and return its creation body, record, and hashes."""
     ensure_sg_policy_pack_active(
         client,
         advise_base_url=advise_base_url,
@@ -2544,6 +2545,7 @@ def _assert_live_policy_read_surfaces(
     evaluation_id: str,
     evaluation_hash: str,
 ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Verify persisted policy evaluation, queue, workflow, and sign-off read surfaces."""
     read_body = _get_json(
         client,
         url=f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}",
@@ -2591,6 +2593,7 @@ def _assert_live_policy_pre_sign_off_guards(
     evaluation_hash: str,
     scenario: PortfolioParityScenario,
 ) -> tuple[str, str]:
+    """Verify stale-hash and client-ready publication requests remain blocked."""
     stale_hash_response = client.post(
         f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/sign-off-decisions",
         json={
@@ -2635,6 +2638,7 @@ def _sign_off_live_policy_evaluation(
     evaluation_hash: str,
     record: dict[str, Any],
 ) -> dict[str, Any]:
+    """Sign off the policy evaluation after satisfying its recorded requirements."""
     sign_off_body = _post_json(
         client,
         url=f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/sign-off-decisions",
@@ -2664,6 +2668,7 @@ def _request_live_policy_ai_evidence(
     evaluation_id: str,
     evaluation_hash: str,
 ) -> tuple[str, dict[str, Any]]:
+    """Verify forbidden policy AI actions are blocked and bounded evidence is non-authoritative."""
     forbidden_ai_response = client.post(
         f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/ai-evidence",
         json={
@@ -2723,6 +2728,7 @@ def _assert_live_policy_lineage_and_replay(
     policy_content_hash: str,
     scenario: PortfolioParityScenario,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Verify hash-backed lineage and deterministic replay continuity."""
     lineage_body = _get_json(
         client,
         url=f"{advise_base_url}/advisory/policy-evaluations/{evaluation_id}/lineage",
