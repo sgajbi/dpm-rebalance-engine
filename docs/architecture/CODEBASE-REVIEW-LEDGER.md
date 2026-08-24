@@ -95,8 +95,8 @@
   drift while retaining its anti-corruption runtime validation.
 - Issue evidence: GitHub issue #508 records the bounded objective, CI coverage correction,
   downstream handoff, both implementation merges, exact-mainline validation, wiki publication and
-  parity, runtime health, and final closure evidence. The final bookkeeping action is issue
-  verification and closure after this ledger evidence is on `main`.
+  parity, runtime health, and final closure evidence. Issue #508 is verified closed with
+  `stateReason=COMPLETED` and `qa_passed` evidence from Main Releasability run `32682113783`.
 
 ## LA-REV-495-CI-OVERSIZED-CODE
 
