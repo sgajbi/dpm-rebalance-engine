@@ -79,6 +79,28 @@ def test_decision_vocabulary_fails_when_rule_maps_do_not_cover_same_statuses(mon
         decision_summary_status_rules.proposal_decision_vocabulary()
 
 
+def test_decision_vocabulary_fails_when_evidence_action_branches_drift(monkeypatch) -> None:
+    monkeypatch.setitem(
+        decision_summary_status_rules._INSUFFICIENT_EVIDENCE_ACTION_BY_REASON,
+        "MISSING_CLIENT_CONTEXT",
+        "REVISE_PROPOSAL",
+    )
+
+    with pytest.raises(RuntimeError, match="next actions drifted from evidence-gap branches"):
+        decision_summary_status_rules.proposal_decision_vocabulary()
+
+
+def test_decision_vocabulary_fails_when_runtime_gate_inverse_drifts(monkeypatch) -> None:
+    monkeypatch.setitem(
+        decision_summary_status_rules._GATE_DECISION_STATUS,
+        "CLIENT_CONSENT_REQUIRED",
+        "REQUIRES_RISK_REVIEW",
+    )
+
+    with pytest.raises(RuntimeError, match="REQUIRES_RISK_REVIEW workflow gates drifted"):
+        decision_summary_status_rules.proposal_decision_vocabulary()
+
+
 def test_workflow_vocabulary_fails_on_conflicting_rule_outcomes(monkeypatch) -> None:
     conflicting_rule = GateOutcomeRule(lambda _context: False, ("BLOCKED", "EXECUTE"))
     monkeypatch.setattr(

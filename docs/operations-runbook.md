@@ -55,7 +55,10 @@
 - `make proposal-decision-vocabulary-gate`: validates the checked-in versioned proposal decision
   vocabulary against `decision_summary_status_rules.py`, `workflow_gates.py`, and the dedicated
   `workflow_gate_vocabulary.py` contract owner; pairing drift fails with the affected decision
-  status or workflow gate.
+  status or workflow gate. Workflow-gate pairings are cross-checked against the runtime gate
+  inverse, and insufficient-evidence next actions are derived from the evidence-gap branch map.
+  The legacy `READY`/`PENDING_REVIEW`/`BLOCKED` projections remain an explicit reviewed
+  compatibility declaration because no separate runtime producer owns that status family.
 
 ## Required Runtime Identity
 

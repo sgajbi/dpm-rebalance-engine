@@ -22,8 +22,9 @@ CONTRACT_VERSION = "proposal-decision-vocabulary.v1"
 SOURCE_OWNER = {
     "service": "lotus-advise",
     "authority": (
-        "Advise owns proposal decision statuses, top-level status pairings, recommended next "
-        "actions, workflow gates, and gate next-step mappings."
+        "Advise owns proposal decision statuses, reviewed top-level status compatibility "
+        "declarations, recommended next actions, runtime-checked workflow gates, and gate "
+        "next-step mappings."
     ),
     "rule_modules": [
         "src/core/advisory/decision_summary_status_rules.py",

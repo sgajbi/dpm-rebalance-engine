@@ -62,13 +62,26 @@ _DECISION_STATUS_TOP_LEVELS: dict[ProposalDecisionStatus, tuple[str, ...]] = {
     "INSUFFICIENT_EVIDENCE": ("READY", "PENDING_REVIEW"),
     "REVISION_RECOMMENDED": ("PENDING_REVIEW",),
 }
+# The proposal result contract owns READY/PENDING_REVIEW/BLOCKED. Advise intentionally
+# publishes these decision-status projections as a reviewed compatibility declaration:
+# there is no separate runtime producer from which this legacy status family can be derived.
+_INSUFFICIENT_EVIDENCE_ACTION_BY_REASON: dict[str, ProposalDecisionNextAction] = {
+    "MISSING_CLIENT_CONTEXT": "REQUEST_CLIENT_CONTEXT",
+    "MISSING_CLIENT_PRODUCT_COMPLEXITY_EVIDENCE": "REQUEST_CLIENT_CONTEXT",
+    "MISSING_MANDATE_CONTEXT": "REQUEST_MANDATE_CONTEXT",
+    "MISSING_MANDATE_RESTRICTED_PRODUCT_EVIDENCE": "REQUEST_MANDATE_CONTEXT",
+}
+
+
+def _insufficient_evidence_allowed_next_actions() -> tuple[str, ...]:
+    return tuple(
+        dict.fromkeys((*_INSUFFICIENT_EVIDENCE_ACTION_BY_REASON.values(), "REVISE_PROPOSAL"))
+    )
+
+
 _DECISION_STATUS_ALLOWED_NEXT_ACTIONS: dict[ProposalDecisionStatus, tuple[str, ...]] = {
     **{status: (next_action,) for status, next_action in _DECISION_STATUS_NEXT_ACTIONS.items()},
-    "INSUFFICIENT_EVIDENCE": (
-        "REQUEST_CLIENT_CONTEXT",
-        "REQUEST_MANDATE_CONTEXT",
-        "REVISE_PROPOSAL",
-    ),
+    "INSUFFICIENT_EVIDENCE": _insufficient_evidence_allowed_next_actions(),
 }
 _DECISION_STATUS_WORKFLOW_GATES: dict[ProposalDecisionStatus, tuple[str, ...]] = {
     "READY_FOR_CLIENT_REVIEW": ("EXECUTION_READY", "NONE"),
@@ -84,14 +97,33 @@ _DECISION_STATUS_WORKFLOW_GATES: dict[ProposalDecisionStatus, tuple[str, ...]] =
     "REVISION_RECOMMENDED": ("EXECUTION_READY", "NONE"),
 }
 
-_CLIENT_CONTEXT_EVIDENCE_GAPS = {
-    "MISSING_CLIENT_CONTEXT",
-    "MISSING_CLIENT_PRODUCT_COMPLEXITY_EVIDENCE",
-}
-_MANDATE_CONTEXT_EVIDENCE_GAPS = {
-    "MISSING_MANDATE_CONTEXT",
-    "MISSING_MANDATE_RESTRICTED_PRODUCT_EVIDENCE",
-}
+
+def _runtime_gate_inverse() -> dict[ProposalDecisionStatus, tuple[str, ...]]:
+    inverse: dict[ProposalDecisionStatus, list[str]] = {}
+    for gate, decision_status in _GATE_DECISION_STATUS.items():
+        inverse.setdefault(decision_status, []).append(gate)
+    return {status: tuple(gates) for status, gates in inverse.items()}
+
+
+def _validate_published_pairings() -> None:
+    if _DECISION_STATUS_ALLOWED_NEXT_ACTIONS["INSUFFICIENT_EVIDENCE"] != (
+        _insufficient_evidence_allowed_next_actions()
+    ):
+        raise RuntimeError("INSUFFICIENT_EVIDENCE next actions drifted from evidence-gap branches")
+
+    runtime_inverse = _runtime_gate_inverse()
+    for decision_status, runtime_gates in runtime_inverse.items():
+        published_gates = _DECISION_STATUS_WORKFLOW_GATES.get(decision_status)
+        if published_gates != runtime_gates:
+            raise RuntimeError(
+                f"{decision_status} workflow gates drifted from runtime gate inverse"
+            )
+
+    published_insufficient_gates = _DECISION_STATUS_WORKFLOW_GATES["INSUFFICIENT_EVIDENCE"]
+    if set(published_insufficient_gates) != set(_GATE_DECISION_STATUS) or len(
+        published_insufficient_gates
+    ) != len(set(published_insufficient_gates)):
+        raise RuntimeError("INSUFFICIENT_EVIDENCE workflow gates drifted from runtime review gates")
 
 
 def derive_decision_status(
@@ -176,10 +208,8 @@ def _insufficient_evidence_next_action(
     missing_evidence: list[ProposalDecisionMissingEvidence],
 ) -> ProposalDecisionNextAction:
     for item in missing_evidence:
-        if item.reason_code in _CLIENT_CONTEXT_EVIDENCE_GAPS:
-            return "REQUEST_CLIENT_CONTEXT"
-        if item.reason_code in _MANDATE_CONTEXT_EVIDENCE_GAPS:
-            return "REQUEST_MANDATE_CONTEXT"
+        if next_action := _INSUFFICIENT_EVIDENCE_ACTION_BY_REASON.get(item.reason_code):
+            return next_action
     return "REVISE_PROPOSAL"
 
 
@@ -191,6 +221,7 @@ def proposal_decision_vocabulary() -> dict[str, dict[str, tuple[str, ...]]]:
         _DECISION_STATUS_WORKFLOW_GATES
     ):
         raise RuntimeError("decision vocabulary maps do not cover the same statuses")
+    _validate_published_pairings()
     return {
         status: {
             "allowed_top_level_statuses": _DECISION_STATUS_TOP_LEVELS[status],
