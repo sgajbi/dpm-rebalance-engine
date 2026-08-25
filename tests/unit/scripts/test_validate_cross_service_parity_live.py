@@ -1,8 +1,11 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from scripts import validate_cross_service_parity_live as parity
 from scripts.live_parity_orchestration import run_live_parity
+from scripts.live_report_delivery import ReportDeliveryPrimitives, assert_report_delivery
 
 
 def test_changed_state_workspace_parity_checks_each_selected_security(
@@ -129,3 +132,90 @@ def test_live_parity_orchestration_preserves_order_and_result_assembly(monkeypat
     assert result.non_held_security_id == "NON_HELD"
     assert result.proposal_memo == "MEMO"
     assert result.proposal_policy == "POLICY"
+
+
+def test_lifecycle_delivery_flow_preserves_phase_order_and_result(monkeypatch) -> None:
+    scenario = parity.PortfolioParityScenario("PORTFOLIO", "2026-04-10", "USD", "complete", True)
+    calls: list[str] = []
+
+    monkeypatch.setattr(
+        parity,
+        "_assert_synchronous_lifecycle_flow",
+        lambda *_args, **_kwargs: (calls.append("sync"), ("PROPOSAL", 2))[1],
+    )
+    monkeypatch.setattr(
+        parity,
+        "_assert_asynchronous_lifecycle_flow",
+        lambda *_args, **_kwargs: calls.append("async"),
+    )
+    monkeypatch.setattr(
+        parity,
+        "_assert_execution_flow",
+        lambda *_args, **_kwargs: (calls.append("execution"), {"handoff_status": "EXECUTED"})[1],
+    )
+    monkeypatch.setattr(
+        parity,
+        "assert_report_delivery",
+        lambda *_args, **_kwargs: (calls.append("report"), "READY")[1],
+    )
+
+    result = parity._assert_lifecycle_and_delivery_flow(
+        object(),
+        advise_base_url="http://advise",
+        scenario=scenario,
+    )
+
+    assert calls == ["sync", "async", "execution", "report"]
+    assert result == ("PORTFOLIO", 2, "EXECUTED", "EXECUTED", "READY")
+
+
+@pytest.mark.parametrize(
+    ("operational_ready", "status_code", "response_body", "expected_status"),
+    [
+        (True, 200, {"report_service": "lotus-report", "status": "READY"}, "READY"),
+        (False, 503, {"detail": "LOTUS_REPORT_REQUEST_UNAVAILABLE"}, "UNAVAILABLE"),
+    ],
+)
+def test_report_delivery_preserves_ready_and_degraded_outcomes(
+    monkeypatch,
+    operational_ready: bool,
+    status_code: int,
+    response_body: dict[str, str],
+    expected_status: str,
+) -> None:
+    response = MagicMock(status_code=status_code, text="report response")
+    response.json.return_value = response_body
+    client = MagicMock()
+    client.post.return_value = response
+    persisted_statuses: list[str] = []
+    scenario = parity.PortfolioParityScenario("PORTFOLIO", "2026-04-10", "USD", "complete", True)
+
+    monkeypatch.setattr(parity, "_get_json", lambda *_args, **_kwargs: {})
+    monkeypatch.setattr(
+        parity,
+        "_feature_by_key",
+        lambda *_args, **_kwargs: {"operational_ready": operational_ready},
+    )
+    monkeypatch.setattr(
+        parity,
+        "_assert_persisted_read_surfaces",
+        lambda *_args, **kwargs: persisted_statuses.append(kwargs["expected_report_status"]),
+    )
+
+    result = assert_report_delivery(
+        client,
+        primitives=ReportDeliveryPrimitives(
+            get_json=parity._get_json,
+            feature_by_key=parity._feature_by_key,
+            assertion=parity._assert,
+            assert_persisted_read_surfaces=parity._assert_persisted_read_surfaces,
+        ),
+        advise_base_url="http://advise",
+        proposal_id="PROPOSAL",
+        related_version_no=2,
+        expected_portfolio_id=scenario.portfolio_id,
+    )
+
+    assert result == expected_status
+    assert persisted_statuses == [expected_status]
+    assert client.post.call_args.kwargs["json"]["related_version_no"] == 2
