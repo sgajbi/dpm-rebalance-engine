@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 ProposalReviewEvidenceSupportability = Literal[
     "READY", "PARTIAL", "RESTRICTED", "UNAVAILABLE", "NOT_SUPPORTED"
 ]
-BenchmarkAssignmentReasonCode = Literal["BENCHMARK_ASSIGNMENT_EVIDENCE_UNAVAILABLE"]
+BenchmarkAssignmentReasonCode = Literal["BENCHMARK_EVIDENCE_UNAVAILABLE"]
 MandateLimitReasonCode = Literal["MANDATE_LIMIT_EVIDENCE_UNAVAILABLE"]
 MandateLimitOutcome = Literal["WITHIN_LIMIT", "BREACH", "PENDING_REVIEW", "UNAVAILABLE"]
 MandateLimitSeverity = Literal["INFO", "WARNING", "BLOCKING"]
@@ -31,7 +31,7 @@ class BenchmarkAssignmentEvidence(_StrictModel):
     source_references: list[str] = _field("Evidence references.", ["ref"], default_factory=list)
     supportability: ProposalReviewEvidenceSupportability = _field("Supportability.", "UNAVAILABLE")
     reason_code: BenchmarkAssignmentReasonCode | None = _field(
-        "Evidence reason.", "BENCHMARK_ASSIGNMENT_EVIDENCE_UNAVAILABLE", default=None
+        "Evidence reason.", "BENCHMARK_EVIDENCE_UNAVAILABLE", default=None
     )
 
 
@@ -82,8 +82,7 @@ class ProposalReviewEvidence(_StrictModel):
         }
         return cls(
             benchmark_assignment=BenchmarkAssignmentEvidence(
-                supportability="UNAVAILABLE",
-                reason_code="BENCHMARK_ASSIGNMENT_EVIDENCE_UNAVAILABLE",
+                reason_code="BENCHMARK_EVIDENCE_UNAVAILABLE"
             ),
             current_mandate_limits=unavailable_mandate,
             simulated_mandate_limits=unavailable_mandate,
