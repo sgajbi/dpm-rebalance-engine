@@ -130,6 +130,56 @@ class LiveParityResult:
     restricted_product_alternatives: LiveProposalAlternativesSnapshot
 
 
+@dataclass(frozen=True)
+class LiveParityConfiguration:
+    advise_base_url: str
+    core_query_base_url: str
+    core_control_base_url: str
+    risk_base_url: str
+    candidate_portfolios: tuple[str, ...]
+
+
+def _resolve_live_parity_configuration(
+    *,
+    advise_base_url: str | None,
+    core_query_base_url: str | None,
+    core_control_base_url: str | None,
+    risk_base_url: str | None,
+    candidate_portfolios: tuple[str, ...] | None,
+    environ: dict[str, str] | None = None,
+) -> LiveParityConfiguration:
+    environment = os.environ if environ is None else environ
+
+    def _base_url(value: str | None, environment_name: str, default: str) -> str:
+        return (value or environment.get(environment_name) or default).rstrip("/")
+
+    candidates = candidate_portfolios or tuple(
+        value.strip()
+        for value in environment.get(
+            "LOTUS_PARITY_PORTFOLIOS",
+            ",".join(_DEFAULT_PORTFOLIO_CANDIDATES),
+        ).split(",")
+        if value.strip()
+    )
+    return LiveParityConfiguration(
+        advise_base_url=_base_url(
+            advise_base_url, "LOTUS_ADVISE_BASE_URL", _DEFAULT_ADVISE_BASE_URL
+        ),
+        core_query_base_url=_base_url(
+            core_query_base_url,
+            "LOTUS_CORE_QUERY_BASE_URL",
+            _DEFAULT_CORE_QUERY_BASE_URL,
+        ),
+        core_control_base_url=_base_url(
+            core_control_base_url,
+            "LOTUS_CORE_BASE_URL",
+            _DEFAULT_CORE_CONTROL_BASE_URL,
+        ),
+        risk_base_url=_base_url(risk_base_url, "LOTUS_RISK_BASE_URL", _DEFAULT_RISK_BASE_URL),
+        candidate_portfolios=candidates,
+    )
+
+
 def _assert(condition: bool, message: str) -> None:
     if not condition:
         raise LiveParityValidationError(message)
@@ -3040,6 +3090,65 @@ def _assert_workspace_flow(
     )
 
 
+def _validate_live_scenario_parity(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    core_query_base_url: str,
+    risk_base_url: str,
+    scenarios: tuple[PortfolioParityScenario, ...],
+) -> None:
+    for scenario in scenarios:
+        proposal_body = _simulate_stateful_noop(
+            client,
+            advise_base_url=advise_base_url,
+            portfolio_id=scenario.portfolio_id,
+            as_of_date=scenario.as_of_date,
+        )
+        direct_allocation = _query_live_allocation(
+            client,
+            core_query_base_url=core_query_base_url,
+            portfolio_id=scenario.portfolio_id,
+            as_of_date=scenario.as_of_date,
+            reporting_currency=scenario.reporting_currency,
+        )
+        _assert_allocation_parity(
+            scenario=scenario,
+            direct_allocation=direct_allocation,
+            proposal_body=proposal_body,
+        )
+        if scenario.risk_available:
+            _assert_authority_posture(scenario=scenario, proposal_body=proposal_body)
+            direct_risk = _query_direct_concentration(
+                client,
+                risk_base_url=risk_base_url,
+                portfolio_id=scenario.portfolio_id,
+                as_of_date=scenario.as_of_date,
+                reporting_currency=scenario.reporting_currency,
+            )
+            _assert_risk_parity(
+                scenario=scenario,
+                direct_risk=direct_risk,
+                proposal_body=proposal_body,
+            )
+            continue
+
+        authority_resolution = proposal_body.get("explanation", {}).get("authority_resolution")
+        _assert(
+            isinstance(authority_resolution, dict)
+            and authority_resolution.get("risk_authority") == "unavailable"
+            and authority_resolution.get("degraded") is True,
+            (
+                f"{scenario.portfolio_id}: expected degraded risk-unavailable posture, got "
+                f"{authority_resolution}"
+            ),
+        )
+        _assert(
+            "risk_lens" not in proposal_body.get("explanation", {}),
+            (f"{scenario.portfolio_id}: degraded risk-unavailable scenario exposed risk_lens"),
+        )
+
+
 def _assert_changed_state_workspace_risk_parity(
     client: httpx.Client,
     *,
@@ -3260,6 +3369,98 @@ def _assert_persisted_read_surfaces(
     )
 
 
+def _assert_changed_state_workspace_parity_for_security(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    core_query_base_url: str,
+    core_control_base_url: str,
+    risk_base_url: str,
+    scenario: PortfolioParityScenario,
+    security_id: str,
+) -> None:
+    _assert_changed_state_workspace_risk_parity(
+        client,
+        advise_base_url=advise_base_url,
+        core_query_base_url=core_query_base_url,
+        risk_base_url=risk_base_url,
+        scenario=scenario,
+        security_id=security_id,
+    )
+    _assert_changed_state_workspace_allocation_parity(
+        client,
+        advise_base_url=advise_base_url,
+        core_query_base_url=core_query_base_url,
+        core_control_base_url=core_control_base_url,
+        scenario=scenario,
+        security_id=security_id,
+    )
+
+
+def _validate_changed_state_workspace_parity(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    core_query_base_url: str,
+    core_control_base_url: str,
+    risk_base_url: str,
+    scenario: PortfolioParityScenario,
+) -> tuple[str, str, str]:
+    changed_state_security_id = _assert_changed_state_workspace_risk_parity(
+        client,
+        advise_base_url=advise_base_url,
+        core_query_base_url=core_query_base_url,
+        risk_base_url=risk_base_url,
+        scenario=scenario,
+    )
+    _assert_changed_state_workspace_allocation_parity(
+        client,
+        advise_base_url=advise_base_url,
+        core_query_base_url=core_query_base_url,
+        core_control_base_url=core_control_base_url,
+        scenario=scenario,
+        security_id=changed_state_security_id,
+    )
+
+    cross_currency_security_id = _select_cross_currency_changed_state_security(
+        _query_live_positions(
+            client,
+            core_query_base_url=core_query_base_url,
+            portfolio_id=scenario.portfolio_id,
+            as_of_date=scenario.as_of_date,
+        ),
+        base_currency=scenario.reporting_currency,
+    )
+    _assert_changed_state_workspace_parity_for_security(
+        client,
+        advise_base_url=advise_base_url,
+        core_query_base_url=core_query_base_url,
+        core_control_base_url=core_control_base_url,
+        risk_base_url=risk_base_url,
+        scenario=scenario,
+        security_id=cross_currency_security_id,
+    )
+
+    non_held_security_id = _select_non_held_changed_state_security(
+        _query_live_positions(
+            client,
+            core_query_base_url=core_query_base_url,
+            portfolio_id=scenario.portfolio_id,
+            as_of_date=scenario.as_of_date,
+        )
+    )
+    _assert_changed_state_workspace_parity_for_security(
+        client,
+        advise_base_url=advise_base_url,
+        core_query_base_url=core_query_base_url,
+        core_control_base_url=core_control_base_url,
+        risk_base_url=risk_base_url,
+        scenario=scenario,
+        security_id=non_held_security_id,
+    )
+    return changed_state_security_id, cross_currency_security_id, non_held_security_id
+
+
 def validate_live_cross_service_parity(
     *,
     advise_base_url: str | None = None,
@@ -3268,271 +3469,15 @@ def validate_live_cross_service_parity(
     risk_base_url: str | None = None,
     candidate_portfolios: tuple[str, ...] | None = None,
 ) -> LiveParityResult:
-    advise_base_url = (
-        advise_base_url or os.getenv("LOTUS_ADVISE_BASE_URL") or _DEFAULT_ADVISE_BASE_URL
-    ).rstrip("/")
-    core_query_base_url = (
-        core_query_base_url
-        or os.getenv("LOTUS_CORE_QUERY_BASE_URL")
-        or _DEFAULT_CORE_QUERY_BASE_URL
-    ).rstrip("/")
-    core_control_base_url = (
-        core_control_base_url or os.getenv("LOTUS_CORE_BASE_URL") or _DEFAULT_CORE_CONTROL_BASE_URL
-    ).rstrip("/")
-    risk_base_url = (
-        risk_base_url or os.getenv("LOTUS_RISK_BASE_URL") or _DEFAULT_RISK_BASE_URL
-    ).rstrip("/")
-    candidates = candidate_portfolios or tuple(
-        value.strip()
-        for value in os.getenv(
-            "LOTUS_PARITY_PORTFOLIOS",
-            ",".join(_DEFAULT_PORTFOLIO_CANDIDATES),
-        ).split(",")
-        if value.strip()
-    )
+    from scripts.live_parity_orchestration import run_live_parity
 
-    with httpx.Client(timeout=httpx.Timeout(30.0)) as client:
-        complete, degraded = _select_scenarios(
-            client,
-            advise_base_url=advise_base_url,
-            core_query_base_url=core_query_base_url,
-            candidates=candidates,
-        )
-
-        for scenario in (complete, degraded):
-            proposal_body = _simulate_stateful_noop(
-                client,
-                advise_base_url=advise_base_url,
-                portfolio_id=scenario.portfolio_id,
-                as_of_date=scenario.as_of_date,
-            )
-            direct_allocation = _query_live_allocation(
-                client,
-                core_query_base_url=core_query_base_url,
-                portfolio_id=scenario.portfolio_id,
-                as_of_date=scenario.as_of_date,
-                reporting_currency=scenario.reporting_currency,
-            )
-            _assert_allocation_parity(
-                scenario=scenario,
-                direct_allocation=direct_allocation,
-                proposal_body=proposal_body,
-            )
-            if scenario.risk_available:
-                _assert_authority_posture(
-                    scenario=scenario,
-                    proposal_body=proposal_body,
-                )
-                direct_risk = _query_direct_concentration(
-                    client,
-                    risk_base_url=risk_base_url,
-                    portfolio_id=scenario.portfolio_id,
-                    as_of_date=scenario.as_of_date,
-                    reporting_currency=scenario.reporting_currency,
-                )
-                _assert_risk_parity(
-                    scenario=scenario,
-                    direct_risk=direct_risk,
-                    proposal_body=proposal_body,
-                )
-            else:
-                authority_resolution = proposal_body.get("explanation", {}).get(
-                    "authority_resolution"
-                )
-                _assert(
-                    isinstance(authority_resolution, dict)
-                    and authority_resolution.get("risk_authority") == "unavailable"
-                    and authority_resolution.get("degraded") is True,
-                    (
-                        f"{scenario.portfolio_id}: expected degraded risk-unavailable posture, got "
-                        f"{authority_resolution}"
-                    ),
-                )
-                _assert(
-                    "risk_lens" not in proposal_body.get("explanation", {}),
-                    (
-                        f"{scenario.portfolio_id}: degraded risk-unavailable scenario "
-                        "exposed risk_lens"
-                    ),
-                )
-
-        cold_ms, warm_ms = _measure_warm_cache(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        ready_decision, review_decision, blocked_decision = _validate_live_decision_paths(
-            client,
-            advise_base_url=advise_base_url,
-            complete_scenario=complete,
-        )
-        (
-            noop_alternatives,
-            concentration_alternatives,
-            cash_raise_alternatives,
-            cross_currency_alternatives,
-            restricted_product_alternatives,
-        ) = _validate_live_proposal_alternatives_paths(
-            client,
-            advise_base_url=advise_base_url,
-            complete_scenario=complete,
-            warm_duration_ms=warm_ms,
-        )
-        (
-            lifecycle_portfolio,
-            lifecycle_latest_version_no,
-            lifecycle_current_state,
-            handoff_status,
-            report_status,
-        ) = _assert_lifecycle_and_delivery_flow(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        proposal_narrative = _assert_live_proposal_narrative_flow(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        proposal_memo = _assert_live_proposal_memo_flow(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        proposal_policy = _assert_live_policy_evaluation_flow(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        (
-            async_lifecycle_portfolio,
-            async_lifecycle_latest_version_no,
-            async_lifecycle_current_state,
-        ) = _assert_async_lifecycle_read_surfaces(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        _assert_new_version_requires_fresh_approvals(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        _assert_mixed_approval_routes_remain_version_scoped(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        (
-            workspace_rationale_initial_run_id,
-            workspace_rationale_replacement_run_id,
-            workspace_rationale_review_state,
-            workspace_rationale_supportability_status,
-        ) = _assert_workspace_flow(
-            client,
-            advise_base_url=advise_base_url,
-            scenario=complete,
-        )
-        changed_state_security_id = _assert_changed_state_workspace_risk_parity(
-            client,
-            advise_base_url=advise_base_url,
-            core_query_base_url=core_query_base_url,
-            risk_base_url=risk_base_url,
-            scenario=complete,
-        )
-        _assert_changed_state_workspace_allocation_parity(
-            client,
-            advise_base_url=advise_base_url,
-            core_query_base_url=core_query_base_url,
-            core_control_base_url=core_control_base_url,
-            scenario=complete,
-            security_id=changed_state_security_id,
-        )
-        cross_currency_security_id = _select_cross_currency_changed_state_security(
-            _query_live_positions(
-                client,
-                core_query_base_url=core_query_base_url,
-                portfolio_id=complete.portfolio_id,
-                as_of_date=complete.as_of_date,
-            ),
-            base_currency=complete.reporting_currency,
-        )
-        _assert_changed_state_workspace_risk_parity(
-            client,
-            advise_base_url=advise_base_url,
-            core_query_base_url=core_query_base_url,
-            risk_base_url=risk_base_url,
-            scenario=complete,
-            security_id=cross_currency_security_id,
-        )
-        _assert_changed_state_workspace_allocation_parity(
-            client,
-            advise_base_url=advise_base_url,
-            core_query_base_url=core_query_base_url,
-            core_control_base_url=core_control_base_url,
-            scenario=complete,
-            security_id=cross_currency_security_id,
-        )
-        non_held_security_id = _select_non_held_changed_state_security(
-            _query_live_positions(
-                client,
-                core_query_base_url=core_query_base_url,
-                portfolio_id=complete.portfolio_id,
-                as_of_date=complete.as_of_date,
-            )
-        )
-        _assert_changed_state_workspace_risk_parity(
-            client,
-            advise_base_url=advise_base_url,
-            core_query_base_url=core_query_base_url,
-            risk_base_url=risk_base_url,
-            scenario=complete,
-            security_id=non_held_security_id,
-        )
-        _assert_changed_state_workspace_allocation_parity(
-            client,
-            advise_base_url=advise_base_url,
-            core_query_base_url=core_query_base_url,
-            core_control_base_url=core_control_base_url,
-            scenario=complete,
-            security_id=non_held_security_id,
-        )
-
-    return LiveParityResult(
-        complete_issuer_portfolio=complete.portfolio_id,
-        degraded_issuer_portfolio=degraded.portfolio_id,
-        degraded_issuer_coverage_status=degraded.issuer_coverage_status,
-        cold_duration_ms=cold_ms,
-        warm_duration_ms=warm_ms,
-        changed_state_portfolio=complete.portfolio_id,
-        changed_state_security_id=changed_state_security_id,
-        cross_currency_security_id=cross_currency_security_id,
-        non_held_security_id=non_held_security_id,
-        workspace_handoff_portfolio=complete.portfolio_id,
-        workspace_rationale_initial_run_id=workspace_rationale_initial_run_id,
-        workspace_rationale_replacement_run_id=workspace_rationale_replacement_run_id,
-        workspace_rationale_review_state=workspace_rationale_review_state,
-        workspace_rationale_supportability_status=workspace_rationale_supportability_status,
-        lifecycle_portfolio=lifecycle_portfolio,
-        lifecycle_latest_version_no=lifecycle_latest_version_no,
-        lifecycle_current_state=lifecycle_current_state,
-        async_lifecycle_portfolio=async_lifecycle_portfolio,
-        async_lifecycle_latest_version_no=async_lifecycle_latest_version_no,
-        async_lifecycle_current_state=async_lifecycle_current_state,
-        execution_handoff_status=handoff_status,
-        execution_terminal_status="EXECUTED",
-        report_status=report_status,
-        proposal_narrative=proposal_narrative,
-        proposal_memo=proposal_memo,
-        proposal_policy=proposal_policy,
-        ready_decision=ready_decision,
-        review_decision=review_decision,
-        blocked_decision=blocked_decision,
-        noop_alternatives=noop_alternatives,
-        concentration_alternatives=concentration_alternatives,
-        cash_raise_alternatives=cash_raise_alternatives,
-        cross_currency_alternatives=cross_currency_alternatives,
-        restricted_product_alternatives=restricted_product_alternatives,
+    return run_live_parity(
+        sys.modules[__name__],
+        advise_base_url=advise_base_url,
+        core_query_base_url=core_query_base_url,
+        core_control_base_url=core_control_base_url,
+        risk_base_url=risk_base_url,
+        candidate_portfolios=candidate_portfolios,
     )
 
 
