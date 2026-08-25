@@ -15,7 +15,7 @@
 - Summary: Stateful workspace create and version handoffs now retain explicit requested as-of date
   and reporting currency in both current and simulated valuation-context states. The fix does not
   normalize away workspace draft trades, cash flows, options, or other simulation input.
-- Evidence: focused context, handoff, and workspace-service tests pass 27 tests. Regression
+- Evidence: focused context, handoff, and workspace-service tests pass 33 tests. Regression
   coverage asserts create and version handoffs preserve both requested dimensions and the edited
   simulation. Malformed internal context overrides fail closed with a stable domain error.
 - Compatibility: Intentional correctness correction within the existing additive valuation-context
