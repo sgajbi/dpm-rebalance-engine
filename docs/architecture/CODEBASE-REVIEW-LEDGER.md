@@ -1,5 +1,41 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-945-LIVE-MEMO-CERTIFICATION-BOUNDARY
+
+- Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
+  `scripts/live_memo_flow.py`, focused live-parity tests, and the oversized-code and generated
+  quality evidence for memo certification.
+- Pattern: `_assert_live_proposal_memo_flow` combined memo creation and projection, hash-continuous
+  review controls, client-ready report blocking, report success/degraded handling, AI commentary,
+  lineage, replay proof, and persisted snapshot assembly in one 228-line helper.
+- Status: Implemented in the bounded #495 maintainability slice. The validator now retains only a
+  compatibility adapter while the extracted module owns named memo-artifact, review-control,
+  report-package, AI/replay, and snapshot-assembly phases.
+- Finding Class: CI/live-certification maintainability, advisory evidence-boundary ownership,
+  typed seam quality, and oversized-code regression prevention.
+- Summary: The targeted helper is removed from the validator and the validator is ratcheted to its
+  measured 3,271-line baseline. The extracted module remains below the 1,000-line module ceiling;
+  the oversized-code gate reports two existing findings, zero new findings, and zero resolved
+  findings. Python growth is exactly the hard-policy allowance: 197,878 lines versus the 197,678
+  line base (+200), with no quality-trend regression.
+- Compatibility: Live-certification tooling only. Proposal/version creation, memo hash continuity,
+  advisor projection blocking, stale-hash and client-ready rejection, advisor-use review,
+  report READY/503-unavailable behavior, AI review-required posture, lineage/replay checks,
+  persisted snapshot shape, timeout/error diagnostics, and CLI behavior remain unchanged. No
+  product API/OpenAPI, persistence, migration, calculation, runtime, Workbench, or downstream
+  contract changes are in scope.
+- Design decision: The extracted boundary receives a frozen `LiveMemoFlowPrimitives` callback
+  object and typed evidence records rather than importing or passing the validator module. This
+  keeps HTTP/configuration primitives owned by the validator while making phase ownership explicit,
+  statically checkable, and unit-testable.
+- Evidence: Focused phase-order and snapshot-assembly regression coverage passes 6 tests. Ruff,
+  format, configured mypy, quality-baseline freshness, and the oversized-code gate remain merge
+  prerequisites; exact full native gates are required before merge. No wiki publication is needed
+  because no operator workflow or consumer contract changed.
+- Follow-Up: #495 continues with the next separately bounded quality hotspot or fitness-function
+  calibration slice; this entry does not claim to resolve the remaining open product/evidence
+  issues.
+
 ## LA-REV-944-LIVE-LIFECYCLE-DELIVERY-BOUNDARY
 
 - Scope: `scripts/validate_cross_service_parity_live.py`, the typed
