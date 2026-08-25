@@ -135,3 +135,17 @@ mapping must supply source authority, effective dates, and stable references bef
 move beyond the unavailable posture. The existing Core route is a named revisit point; Advise must
 not silently leave the published unavailable posture in place after adding that route to its Core
 client.
+
+### Memo report-package source-date handoff
+
+The reviewed-memo report-package request maps its Lotus Report `as_of_date` from the typed
+`valuation_context.current_state.effective_as_of_date` and
+`valuation_context.simulated_state.effective_as_of_date` source evidence. Advise submits the
+request only when those supported source values resolve to exactly one normalized date. Missing
+or conflicting current/simulated dates fail closed before the downstream call; Advise never uses
+the current clock date, a request-body fallback, or a guessed portfolio date.
+
+If source mapping or the Lotus Report provider is unavailable, the API returns the documented
+503 unavailable contract and does not leak an unhandled 500. Idempotent replay remains owned by
+the memo event operation and does not create a downstream report job after a replayed event is
+found.
