@@ -163,6 +163,17 @@ Persistence note:
 - In-memory persistence remains a test-only helper and is not part of the active advisory runtime
   posture.
 
+## Proposal-Review Evidence Boundary
+
+`ProposalResult.proposal_review_evidence` is an additive, versioned envelope for downstream review
+consumers. It separates requested benchmark/mandate context from effective source-owned evidence
+for the current and simulated states. The current source stack does not provide effective benchmark
+assignment or mandate-limit observations, so the projection remains `UNAVAILABLE` with null
+effective values and stable reason codes. Advise must not parse generic `rule_results`, calculate
+benchmark or limit outcomes, or turn a requested selector into an applied source fact. A future
+upstream producer must provide authoritative references and effective as-of dates before this
+posture can become ready.
+
 ## Pipeline (`run_proposal_simulation`)
 
 Authority note:

@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-08-24T07:45:51.599468+00:00",
+  "generatedAt": "2026-08-25T08:50:06.838570+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -1478,6 +1478,22 @@
       ]
     },
     {
+      "semanticId": "lotus.benchmark_assignment",
+      "canonicalTerm": "benchmark_assignment",
+      "preferredName": "benchmark_assignment",
+      "description": "Source-owned benchmark assignment evidence for proposal review.",
+      "example": {
+        "supportability": "READY"
+      },
+      "type": "BenchmarkAssignmentEvidence",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "BenchmarkAssignmentEvidence"
+      ]
+    },
+    {
       "semanticId": "lotus.block_on_missing_fx",
       "canonicalTerm": "block_on_missing_fx",
       "preferredName": "block_on_missing_fx",
@@ -2687,6 +2703,22 @@
       ]
     },
     {
+      "semanticId": "lotus.current_mandate_limits",
+      "canonicalTerm": "current_mandate_limits",
+      "preferredName": "current_mandate_limits",
+      "description": "Current or simulated source-owned mandate-limit evidence state.",
+      "example": {
+        "supportability": "READY"
+      },
+      "type": "MandateLimitEvidenceState",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "MandateLimitEvidenceState"
+      ]
+    },
+    {
       "semanticId": "lotus.current_narrative_id",
       "canonicalTerm": "current_narrative_id",
       "preferredName": "current_narrative_id",
@@ -3493,6 +3525,20 @@
       "preferredName": "effective_as_of_date",
       "description": "Effective source valuation/as-of date or timestamp. Null means the source did not provide one that can be trusted for this state.",
       "example": "2026-03-02",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.effective_benchmark_id",
+      "canonicalTerm": "effective_benchmark_id",
+      "preferredName": "effective_benchmark_id",
+      "description": "Source-owned benchmark identifier actually applied to the proposal state.",
+      "example": "EFFECTIVE_BENCHMARK_001",
       "type": "string",
       "locations": [
         "body"
@@ -6116,6 +6162,34 @@
       ]
     },
     {
+      "semanticId": "lotus.limit_code",
+      "canonicalTerm": "limit_code",
+      "preferredName": "limit_code",
+      "description": "Stable source-owned mandate-limit code.",
+      "example": "ADVISORY_REVIEW_REQUIRED",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.limit_name",
+      "canonicalTerm": "limit_name",
+      "preferredName": "limit_name",
+      "description": "Human-readable source-owned mandate-limit name.",
+      "example": "advisory_review_context",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.limitation_refs",
       "canonicalTerm": "limitation_refs",
       "preferredName": "limitation_refs",
@@ -6655,6 +6729,20 @@
       ]
     },
     {
+      "semanticId": "lotus.maximum",
+      "canonicalTerm": "maximum",
+      "preferredName": "maximum",
+      "description": "Inclusive upper bound supplied by the authoritative limit source.",
+      "example": "0.125",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.measured",
       "canonicalTerm": "measured",
       "preferredName": "measured",
@@ -6867,6 +6955,20 @@
       ],
       "observedTypes": [
         "Money-Output"
+      ]
+    },
+    {
+      "semanticId": "lotus.minimum",
+      "canonicalTerm": "minimum",
+      "preferredName": "minimum",
+      "description": "Inclusive lower bound supplied by the authoritative limit source.",
+      "example": "0.125",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
       ]
     },
     {
@@ -7096,6 +7198,22 @@
       ]
     },
     {
+      "semanticId": "lotus.observations",
+      "canonicalTerm": "observations",
+      "preferredName": "observations",
+      "description": "Source-owned mandate-limit observations for this proposal state.",
+      "example": [
+        "observations_item_value"
+      ],
+      "type": "array",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "array"
+      ]
+    },
+    {
       "semanticId": "lotus.observed_correlation_id_hash",
       "canonicalTerm": "observed_correlation_id_hash",
       "preferredName": "observed_correlation_id_hash",
@@ -7127,13 +7245,14 @@
       "semanticId": "lotus.observed_value",
       "canonicalTerm": "observed_value",
       "preferredName": "observed_value",
-      "description": "Observed bounded value used for claim review.",
-      "example": "observed_value_example",
-      "type": "object",
+      "description": "Observed value supplied by the authoritative limit source.",
+      "example": "0.125",
+      "type": "string",
       "locations": [
         "body"
       ],
       "observedTypes": [
+        "string",
         "object"
       ]
     },
@@ -7247,6 +7366,20 @@
       "preferredName": "ordering_policy",
       "description": "Execution ordering policy used when rendering the package.",
       "example": "advisory_review_context",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.outcome",
+      "canonicalTerm": "outcome",
+      "preferredName": "outcome",
+      "description": "Source-owned outcome for this limit.",
+      "example": "WITHIN_LIMIT",
       "type": "string",
       "locations": [
         "body"
@@ -8309,6 +8442,24 @@
       "observedTypes": [
         "ProposalResult",
         "object"
+      ]
+    },
+    {
+      "semanticId": "lotus.proposal_review_evidence",
+      "canonicalTerm": "proposal_review_evidence",
+      "preferredName": "proposal_review_evidence",
+      "description": "Versioned benchmark and mandate-limit evidence envelope for proposal consumers.",
+      "example": {
+        "benchmark_assignment": "benchmark_assignment_value",
+        "current_mandate_limits": "current_mandate_limits_value",
+        "simulated_mandate_limits": "simulated_mandate_limits_value"
+      },
+      "type": "ProposalReviewEvidence",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "ProposalReviewEvidence"
       ]
     },
     {
@@ -9480,6 +9631,20 @@
       ]
     },
     {
+      "semanticId": "lotus.requested_benchmark_id",
+      "canonicalTerm": "requested_benchmark_id",
+      "preferredName": "requested_benchmark_id",
+      "description": "Benchmark identifier requested by the proposal context. This is not evidence that the benchmark was applied.",
+      "example": "REQUESTED_BENCHMARK_001",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
       "semanticId": "lotus.requested_by",
       "canonicalTerm": "requested_by",
       "preferredName": "requested_by",
@@ -10537,8 +10702,8 @@
       "semanticId": "lotus.scope",
       "canonicalTerm": "scope",
       "preferredName": "scope",
-      "description": "Replay-evidence scope being described.",
-      "example": "WORKSPACE_SAVED_VERSION",
+      "description": "Scope to which the limit applies.",
+      "example": "advisory_review_context",
       "type": "string",
       "locations": [
         "body"
@@ -10839,6 +11004,22 @@
       ],
       "observedTypes": [
         "ProposalSimulateRequest-Input"
+      ]
+    },
+    {
+      "semanticId": "lotus.simulated_mandate_limits",
+      "canonicalTerm": "simulated_mandate_limits",
+      "preferredName": "simulated_mandate_limits",
+      "description": "Current or simulated source-owned mandate-limit evidence state.",
+      "example": {
+        "supportability": "READY"
+      },
+      "type": "MandateLimitEvidenceState",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "MandateLimitEvidenceState"
       ]
     },
     {
@@ -12325,6 +12506,20 @@
       "preferredName": "type",
       "description": "Artifact trade entry type.",
       "example": "SECURITY_TRADE",
+      "type": "string",
+      "locations": [
+        "body"
+      ],
+      "observedTypes": [
+        "string"
+      ]
+    },
+    {
+      "semanticId": "lotus.unit",
+      "canonicalTerm": "unit",
+      "preferredName": "unit",
+      "description": "Unit of the observed value and bounds.",
+      "example": "advisory_review_context",
       "type": "string",
       "locations": [
         "body"
@@ -18787,6 +18982,438 @@
             "attributeRef": "#/attributeCatalog/lotus.reason_code"
           },
           {
+            "name": "version.proposal_result.proposal_review_evidence",
+            "location": "body",
+            "required": false,
+            "type": "ProposalReviewEvidence",
+            "semanticId": "lotus.proposal_review_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_review_evidence"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment",
+            "location": "body",
+            "required": true,
+            "type": "BenchmarkAssignmentEvidence",
+            "semanticId": "lotus.benchmark_assignment",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.requested_benchmark_id"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.effective_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.effective_benchmark_id"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.current_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.current_mandate_limits"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.simulated_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_mandate_limits"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
             "name": "version.proposal_result.lineage",
             "location": "body",
             "required": true,
@@ -22121,6 +22748,438 @@
             "attributeRef": "#/attributeCatalog/lotus.reason_code"
           },
           {
+            "name": "current_version.proposal_result.proposal_review_evidence",
+            "location": "body",
+            "required": false,
+            "type": "ProposalReviewEvidence",
+            "semanticId": "lotus.proposal_review_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_review_evidence"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment",
+            "location": "body",
+            "required": true,
+            "type": "BenchmarkAssignmentEvidence",
+            "semanticId": "lotus.benchmark_assignment",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.requested_benchmark_id"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.effective_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.effective_benchmark_id"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.current_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.current_mandate_limits"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.simulated_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_mandate_limits"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
             "name": "current_version.proposal_result.lineage",
             "location": "body",
             "required": true,
@@ -25089,6 +26148,438 @@
           },
           {
             "name": "proposal_result.valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence",
+            "location": "body",
+            "required": false,
+            "type": "ProposalReviewEvidence",
+            "semanticId": "lotus.proposal_review_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_review_evidence"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment",
+            "location": "body",
+            "required": true,
+            "type": "BenchmarkAssignmentEvidence",
+            "semanticId": "lotus.benchmark_assignment",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.requested_benchmark_id"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.effective_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.effective_benchmark_id"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.current_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.current_mandate_limits"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.simulated_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_mandate_limits"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.reason_code",
             "location": "body",
             "required": false,
             "type": "string",
@@ -28208,6 +29699,438 @@
           },
           {
             "name": "version.proposal_result.valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence",
+            "location": "body",
+            "required": false,
+            "type": "ProposalReviewEvidence",
+            "semanticId": "lotus.proposal_review_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_review_evidence"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment",
+            "location": "body",
+            "required": true,
+            "type": "BenchmarkAssignmentEvidence",
+            "semanticId": "lotus.benchmark_assignment",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.requested_benchmark_id"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.effective_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.effective_benchmark_id"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.current_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.current_mandate_limits"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.simulated_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_mandate_limits"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.reason_code",
             "location": "body",
             "required": false,
             "type": "string",
@@ -52199,6 +54122,438 @@
             "attributeRef": "#/attributeCatalog/lotus.reason_code"
           },
           {
+            "name": "proposal_review_evidence",
+            "location": "body",
+            "required": false,
+            "type": "ProposalReviewEvidence",
+            "semanticId": "lotus.proposal_review_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_review_evidence"
+          },
+          {
+            "name": "proposal_review_evidence.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment",
+            "location": "body",
+            "required": true,
+            "type": "BenchmarkAssignmentEvidence",
+            "semanticId": "lotus.benchmark_assignment",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.requested_benchmark_id"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.effective_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.effective_benchmark_id"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal_review_evidence.benchmark_assignment.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.current_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.current_mandate_limits"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal_review_evidence.current_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.simulated_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_mandate_limits"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal_review_evidence.simulated_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
             "name": "lineage",
             "location": "body",
             "required": true,
@@ -65708,6 +68063,438 @@
           },
           {
             "name": "proposal.version.proposal_result.valuation_context.simulated_state.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence",
+            "location": "body",
+            "required": false,
+            "type": "ProposalReviewEvidence",
+            "semanticId": "lotus.proposal_review_evidence",
+            "attributeRef": "#/attributeCatalog/lotus.proposal_review_evidence"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment",
+            "location": "body",
+            "required": true,
+            "type": "BenchmarkAssignmentEvidence",
+            "semanticId": "lotus.benchmark_assignment",
+            "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.schema_version",
+            "attributeRef": "#/attributeCatalog/lotus.schema_version"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.requested_benchmark_id"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.effective_benchmark_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_benchmark_id",
+            "attributeRef": "#/attributeCatalog/lotus.effective_benchmark_id"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.current_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.current_mandate_limits"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.reason_code",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.reason_code",
+            "attributeRef": "#/attributeCatalog/lotus.reason_code"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits",
+            "location": "body",
+            "required": true,
+            "type": "MandateLimitEvidenceState",
+            "semanticId": "lotus.simulated_mandate_limits",
+            "attributeRef": "#/attributeCatalog/lotus.simulated_mandate_limits"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.mandate_id",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.mandate_id",
+            "attributeRef": "#/attributeCatalog/lotus.mandate_id"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.requested_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.requested_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.requested_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.effective_as_of_date",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.effective_as_of_date",
+            "attributeRef": "#/attributeCatalog/lotus.effective_as_of_date"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.observations",
+            "attributeRef": "#/attributeCatalog/lotus.observations"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_code",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_code",
+            "attributeRef": "#/attributeCatalog/lotus.limit_code"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].limit_name",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.limit_name",
+            "attributeRef": "#/attributeCatalog/lotus.limit_name"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].dimension",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.dimension",
+            "attributeRef": "#/attributeCatalog/lotus.dimension"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].scope",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.scope",
+            "attributeRef": "#/attributeCatalog/lotus.scope"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].observed_value",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.observed_value",
+            "attributeRef": "#/attributeCatalog/lotus.observed_value"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].minimum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.minimum",
+            "attributeRef": "#/attributeCatalog/lotus.minimum"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].maximum",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.maximum",
+            "attributeRef": "#/attributeCatalog/lotus.maximum"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].unit",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.unit",
+            "attributeRef": "#/attributeCatalog/lotus.unit"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].currency",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.currency",
+            "attributeRef": "#/attributeCatalog/lotus.currency"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].outcome",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.outcome",
+            "attributeRef": "#/attributeCatalog/lotus.outcome"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].severity",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.severity",
+            "attributeRef": "#/attributeCatalog/lotus.severity"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.observations[].source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_service",
+            "location": "body",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.source_service",
+            "attributeRef": "#/attributeCatalog/lotus.source_service"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
+            "location": "body",
+            "required": false,
+            "type": "array",
+            "semanticId": "lotus.source_references",
+            "attributeRef": "#/attributeCatalog/lotus.source_references"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.supportability",
+            "attributeRef": "#/attributeCatalog/lotus.supportability"
+          },
+          {
+            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.reason_code",
             "location": "body",
             "required": false,
             "type": "string",

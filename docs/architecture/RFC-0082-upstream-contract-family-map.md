@@ -46,6 +46,7 @@ match versus mismatch for migration review without treating Core as decision aut
 | Field family | Authority | Advise handling |
 | --- | --- | --- |
 | before-state, after-state, intents, reconciliation, rule results, allocation lens, typed requested/effective valuation context, source lineage | `lotus-core` source-effects authority | Accepted through `CoreProjectedTransactionEffects` after contract-version validation; Advise preserves source dates/currencies as typed evidence and never infers missing valuation facts. |
+| requested benchmark/mandate selectors and proposal-review evidence envelope | Requested selectors: Advise context; effective benchmark/mandate-limit evidence: authoritative upstream producer, currently not supplied | Advise preserves requested selectors and emits typed `UNAVAILABLE` effective evidence with null effective values; it must not treat selectors or generic `rule_results` as applied benchmark or mandate-limit evidence. |
 | suitability issues, recommended suitability gate, workflow gate, proposal decision summary, proposal alternatives, advisory next step, consent posture | `lotus-advise` advisory-decision authority | Recomputed by Advise policy modules; any Core-returned values are retained only under `non_authoritative_core_decisions` and classified under `core_decision_parity` for migration review. |
 | risk-lens enrichment and concentration methodology | `lotus-risk` risk authority | Attached by the risk adapter; missing risk authority remains degraded evidence, not a local risk calculation. |
 
