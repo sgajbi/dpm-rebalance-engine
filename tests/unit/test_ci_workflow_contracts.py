@@ -90,7 +90,7 @@ def test_quality_trend_gate_is_hard_versioned_and_present_across_ci_lanes() -> N
     )
     assert "python -m scripts.quality_trend_gate" in makefile
     assert '"schema_version": "lotus.advise.quality-trend-policy.v1"' in policy
-    assert '"allowed_delta": 250' in policy
+    assert '"allowed_delta": 200' in policy
     assert policy.count('"allowed_delta": 0') == 3
     assert '"exceptions"' in policy
     assert '"base_sha"' in policy
