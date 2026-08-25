@@ -1,5 +1,37 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-MONETARY-FLOAT-REVIEW-FRESHNESS
+
+- Scope: scripts/check_monetary_float_usage.py, its focused regression tests, and
+  docs/standards/monetary-float-allowlist.json.
+- Pattern: The fail-closed monetary-float gate correctly rejected six still-observed solver
+  bridge findings after their explicit review_by date passed, while a line-number-drift
+  fixture used the same fixed date and became invalid for an unrelated reason.
+- Status: Corrected in this bounded #495 fix-forward slice. The six reviewed solver-bridge
+  findings remain present with owner, justification, and renewed expiry metadata; expiry
+  enforcement remains unchanged.
+- Finding Class: CI quality-gate freshness, numerical-boundary exception governance, and
+  deterministic regression protection.
+- Summary: The current target-generation solver bridge was re-reviewed as an intentional
+  Decimal-to-solver float boundary and its six existing allowlist entries were renewed through
+  2026-10-05. The line-drift matching test now uses a deterministic far-future fixture date,
+  and a separate regression test proves a past review_by remains reported as stale.
+- Evidence:
+  - python scripts/check_monetary_float_usage.py passes with seven observed findings and no
+    unapproved finding; the committed inventory and its approval metadata remain intact.
+  - tests/unit/scripts/test_check_monetary_float_usage.py passes four focused tests, including
+    line-number-only matching and explicit stale-entry detection.
+  - The six findings are solver-bridge conversions in src/core/target_generation.py; no
+    runtime behavior or numeric threshold was changed by this freshness repair.
+- Compatibility: CI/evidence and test-fixture behavior only. Product runtime, APIs/OpenAPI,
+  persistence, migrations, dependencies, and downstream contracts are unchanged.
+- Documentation decision: Updated this review ledger and the governed allowlist data. The
+  existing wiki/Validation-and-CI.md already accurately documents monetary-float expiry
+  enforcement and no operator workflow changed, so no wiki source update or publication is
+  needed for this slice.
+- Follow-Up: #495 continues to own the remaining quality-gate work; no actionable freshness
+  repair is left only in chat.
+
 ## LA-REV-541-OVERSIZED-CODE-SHRINK-RATCHET
 
 - Scope: `scripts/oversized_code_gate.py` baseline classification and focused regression tests.

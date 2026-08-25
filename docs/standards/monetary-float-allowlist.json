@@ -1,7 +1,7 @@
 {
   "description": "Approved baseline monetary-float findings. New findings fail CI.",
   "policy_version": "1.1.0",
-  "generated_at": "2026-04-08T01:55:26Z",
+  "generated_at": "2026-08-25T00:07:50Z",
   "allowlist": [
     {
       "finding": "scripts/validate_cross_service_parity_live.py:1748:any(abs(float(risk_proxy[key])) > 0.0 for key in (\"hhi_current\", \"hhi_proposed\"))",
@@ -25,37 +25,37 @@
       "finding": "src/core/target_generation.py:210:w_model = np.array([float(model_weights.get(i_id, Decimal(\"0.0\"))) for i_id in tradeable_ids])",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-08-24"
+      "review_by": "2026-10-05"
     },
     {
       "finding": "src/core/target_generation.py:222:constraints.append(w <= float(options.single_position_max_weight))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-08-24"
+      "review_by": "2026-10-05"
     },
     {
       "finding": "src/core/target_generation.py:251:constraints.append(group_expr <= float(constraint.max_weight))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-08-24"
+      "review_by": "2026-10-05"
     },
     {
       "finding": "src/core/target_generation.py:272:solved_weight = Decimal(str(max(float(w.value[idx]), 0.0))).quantize(Decimal(\"0.0001\"))",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-08-24"
+      "review_by": "2026-10-05"
     },
     {
       "finding": "src/core/target_generation.py:278:) + float(group_locked_weight)",
       "justification": "Temporary approved monetary float usage for cvxpy solver bridge; migrate to Decimal where supported.",
       "owner": "platform-governance",
-      "review_by": "2026-08-24"
+      "review_by": "2026-10-05"
     },
     {
       "finding": "src/core/target_generation.py:294:[float(model_weights.get(i_id, Decimal(\"0.0\"))) for i_id in solver_index.tradeable_ids]",
       "justification": "Temporary approved monetary float usage for cvxpy solver bridge; migrate to Decimal where supported.",
       "owner": "platform-governance",
-      "review_by": "2026-08-24"
+      "review_by": "2026-10-05"
     },
     {
       "finding": "src/integrations/lotus_core/runtime_config.py:13:parsed = float(raw_value)",

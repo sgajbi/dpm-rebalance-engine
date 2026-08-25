@@ -41,7 +41,7 @@ def test_scan_repo_finding_matches_allowlist_when_only_line_number_moves(tmp_pat
       "finding": "src/core/target_generation.py:1:w_model = float(model_weight)",
       "justification": "Temporary approved monetary float usage; migrate to Decimal.",
       "owner": "platform-governance",
-      "review_by": "2026-08-24"
+      "review_by": "2099-12-31"
     }
   ]
 }
@@ -57,3 +57,29 @@ def test_scan_repo_finding_matches_allowlist_when_only_line_number_moves(tmp_pat
     assert stale == []
     assert len(findings) == 1
     assert finding_code_key(findings[0]) in allowlisted_code_keys
+
+
+def test_load_allowlist_reports_expired_review(tmp_path: Path) -> None:
+    allowlist_path = tmp_path / "docs" / "standards" / "monetary-float-allowlist.json"
+    allowlist_path.parent.mkdir(parents=True)
+    allowlist_path.write_text(
+        """
+{
+  "allowlist": [
+    {
+      "finding": "src/core/target_generation.py:1:w_model = float(model_weight)",
+      "justification": "Temporary approved monetary float usage; migrate to Decimal.",
+      "owner": "platform-governance",
+      "review_by": "2020-01-01"
+    }
+  ]
+}
+""",
+        encoding="utf-8",
+    )
+
+    entries, errors, stale = load_allowlist(allowlist_path)
+
+    assert errors == []
+    assert list(entries) == ["src/core/target_generation.py:1:w_model = float(model_weight)"]
+    assert stale == ["src/core/target_generation.py:1:w_model = float(model_weight)"]
