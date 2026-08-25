@@ -5,12 +5,17 @@ from typing import Any
 
 import pytest
 
+import scripts.live_proposal_alternatives_validation as alternatives_validation
+import scripts.validate_cross_service_parity_live as live_parity
 from scripts.live_policy_evaluation_support import (
     ensure_sg_policy_pack_active,
     request_live_policy_report,
 )
 from scripts.live_runtime_persisted_read_surfaces import assert_persisted_read_surfaces
-from scripts.live_runtime_proposal_alternatives import extract_live_proposal_alternatives_snapshot
+from scripts.live_runtime_proposal_alternatives import (
+    LiveProposalAlternativesSnapshot,
+    extract_live_proposal_alternatives_snapshot,
+)
 from scripts.validate_cross_service_parity_live import (
     PortfolioParityScenario,
     _assert_workspace_flow,
@@ -521,6 +526,123 @@ def test_collect_alternative_statuses_groups_statuses_by_objective() -> None:
         "REDUCE_CONCENTRATION": {"REJECTED_POLICY_BLOCKED"},
         "IMPROVE_CURRENCY_ALIGNMENT": {"FEASIBLE_WITH_REVIEW"},
     }
+
+
+def test_simulate_live_alternatives_path_preserves_stateful_request_and_snapshot_contract(
+    monkeypatch,
+) -> None:
+    proposal_body = {
+        "proposal_alternatives": {
+            "requested_objectives": ["RAISE_CASH"],
+            "alternatives": [],
+            "rejected_candidates": [{"reason_code": "ALTERNATIVE_CASH_ALREADY_SUFFICIENT"}],
+        }
+    }
+    calls: list[dict[str, Any]] = []
+
+    def _fake_simulate(_client, **kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        return proposal_body, 42.0
+
+    monkeypatch.setattr(live_parity, "_simulate_stateful_alternatives", _fake_simulate)
+
+    body, snapshot = live_parity._simulate_live_alternatives_path(
+        object(),
+        advise_base_url="http://advise.dev.lotus",
+        complete_scenario=PortfolioParityScenario(
+            portfolio_id="PB_SG_GLOBAL_BAL_001",
+            as_of_date="2026-05-22",
+            reporting_currency="USD",
+            issuer_coverage_status="complete",
+            risk_available=True,
+        ),
+        idempotency_prefix="live-alt-test",
+        path_name="cash_raise_path",
+        objectives=["RAISE_CASH"],
+        max_alternatives=1,
+        constraints={"cash_floor": {"amount": "25000", "currency": "USD"}},
+    )
+
+    assert body is proposal_body
+    assert snapshot.path_name == "cash_raise_path"
+    assert snapshot.requested_objectives == ("RAISE_CASH",)
+    assert snapshot.rejected_reason_codes == ("ALTERNATIVE_CASH_ALREADY_SUFFICIENT",)
+    assert calls[0]["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
+    assert calls[0]["as_of_date"] == "2026-05-22"
+    assert calls[0]["alternatives_request"] == {
+        "objectives": ["RAISE_CASH"],
+        "max_alternatives": 1,
+        "constraints": {"cash_floor": {"amount": "25000", "currency": "USD"}},
+    }
+    assert calls[0]["idempotency_key"].startswith("live-alt-test-")
+
+
+def test_live_noop_alternatives_path_rejects_missing_policy_evidence() -> None:
+    objectives = [
+        "REDUCE_CONCENTRATION",
+        "RAISE_CASH",
+        "IMPROVE_CURRENCY_ALIGNMENT",
+        "AVOID_RESTRICTED_PRODUCTS",
+    ]
+    proposal_body = {
+        "proposal_alternatives": {
+            "requested_objectives": objectives,
+            "alternatives": [
+                {"objective": "REDUCE_CONCENTRATION", "status": "REJECTED_POLICY_BLOCKED"},
+                {
+                    "objective": "IMPROVE_CURRENCY_ALIGNMENT",
+                    "status": "REJECTED_POLICY_BLOCKED",
+                },
+            ],
+            "rejected_candidates": [
+                {"reason_code": "ALTERNATIVE_CASH_ALREADY_SUFFICIENT"},
+                {"reason_code": "ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE"},
+            ],
+        }
+    }
+    snapshot = extract_live_proposal_alternatives_snapshot(
+        proposal_body,
+        path_name="no_op_path",
+        latency_ms=10.0,
+    )
+    scenario = PortfolioParityScenario(
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        as_of_date="2026-05-22",
+        reporting_currency="USD",
+        issuer_coverage_status="complete",
+        risk_available=True,
+    )
+
+    def _simulate_path(snapshot_to_return: LiveProposalAlternativesSnapshot):
+        return lambda *args, **kwargs: (proposal_body, snapshot_to_return)
+
+    assert (
+        alternatives_validation._validate_live_noop_alternatives_path(
+            object(),
+            advise_base_url="http://advise.dev.lotus",
+            complete_scenario=scenario,
+            simulate_path=_simulate_path(snapshot),
+            collect_statuses=_collect_alternative_statuses,
+            assert_condition=live_parity._assert,
+        )
+        is snapshot
+    )
+
+    incomplete_snapshot = LiveProposalAlternativesSnapshot(
+        **{**snapshot.__dict__, "rejected_reason_codes": ("ALTERNATIVE_CASH_ALREADY_SUFFICIENT",)}
+    )
+    with pytest.raises(
+        live_parity.LiveParityValidationError,
+        match="restricted-product deferred evidence",
+    ):
+        alternatives_validation._validate_live_noop_alternatives_path(
+            object(),
+            advise_base_url="http://advise.dev.lotus",
+            complete_scenario=scenario,
+            simulate_path=_simulate_path(incomplete_snapshot),
+            collect_statuses=_collect_alternative_statuses,
+            assert_condition=live_parity._assert,
+        )
 
 
 def test_json_safe_value_serializes_decimals_for_http_payloads() -> None:
