@@ -1,5 +1,37 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-943-LIVE-PARITY-ORCHESTRATION-BOUNDARY
+
+- Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
+  `scripts/live_parity_orchestration.py`, focused live-parity tests, and the oversized-code
+  policy/baseline evidence for live cross-service certification.
+- Pattern: The top-level certification function mixed environment/configuration resolution,
+  scenario selection, scenario parity, changed-state workspace checks, ordered lifecycle and
+  delivery assertions, and `LiveParityResult` assembly. That made the live proof contract harder
+  to read and left a 274-line orchestration function above the governed 200-line ceiling.
+- Status: Implemented in the bounded #495 maintainability slice. Configuration resolution,
+  scenario validation, and changed-state workspace parity now have named boundaries; ordered
+  orchestration and result assembly now live in a dedicated 166-line module. The validator entry
+  point is an 18-line compatibility wrapper.
+- Finding Class: CI/live-certification maintainability, script/module ownership, and
+  architecture-drift prevention.
+- Summary: The validator module shrinks from 3,578 to 3,523 lines, the targeted function shrinks
+  from 274 to 18 lines, and the oversized-code gate records four findings with zero new findings.
+  The live validation order, timeout, scenario selection, request construction, parity assertions,
+  changed-state security checks, result shape, CLI behavior, and failure diagnostics remain under
+  test and review.
+- Compatibility: Validation-tooling structure only. No product/API/OpenAPI/persistence,
+  migration, runtime, Workbench, downstream, or advisory decision behavior changes.
+- Tests: Focused configuration and changed-state selection tests pass; the live E2E test remains
+  environment-gated and skipped when canonical services are unavailable. Full repository gates
+  are required before merge.
+- Documentation decision: Updated this ledger and the quality scorecard because the reviewed
+  maintainability finding and its measurable gate evidence are repository engineering truth. No
+  operator workflow or consumer contract changed, so no wiki publication is required.
+- Follow-Up: The remaining `_assert_lifecycle_and_delivery_flow` and
+  `_assert_live_proposal_memo_flow` hotspots are separate bounded #495 slices; this change does
+  not claim to resolve them.
+
 ## LA-REV-942-EXTENSION-SAFE-VALUATION-EVIDENCE-COUNT
 
 - Scope: `src/core/advisory/valuation_context.py`, its proposal valuation-context contract tests,
