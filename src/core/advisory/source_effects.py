@@ -31,7 +31,7 @@ _CORE_DECISION_PAYLOAD_FIELDS = (
     "proposal_alternatives",
     "drift_analysis",
 )
-_ADVISE_DERIVED_PAYLOAD_FIELDS = ("valuation_context",)
+_ADVISE_DERIVED_PAYLOAD_FIELDS = ("proposal_review_evidence", "valuation_context")
 
 
 class CoreDecisionCompatibilitySnapshot(BaseModel):

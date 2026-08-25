@@ -99,6 +99,8 @@ def _normalize_business_result_for_cross_mode_parity(body: dict[str, Any]) -> di
     normalized.pop("proposal_run_id", None)
     normalized.pop("lineage", None)
     normalized.pop("explanation", None)
+    # These fields describe the request/context envelope, not the evaluated business result.
+    normalized.pop("proposal_review_evidence", None)
     normalized.pop("valuation_context", None)
     return normalized
 
