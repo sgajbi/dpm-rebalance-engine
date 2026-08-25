@@ -17,7 +17,7 @@
       "path": "scripts/validate_cross_service_parity_live.py",
       "symbol": "__module__",
       "fingerprint": "oversized-code.v1|module|scripts/validate_cross_service_parity_live.py",
-      "max_lines": 3753,
+      "max_lines": 3578,
       "owner": "lotus-advise-quality-governance",
       "reason": "Live parity certification remains a large transitional orchestration module; split work is tracked in the CI quality issue and this baseline prevents further growth.",
       "expires_on": "2027-08-24"
@@ -30,16 +30,6 @@
       "max_lines": 249,
       "owner": "lotus-advise-quality-governance",
       "reason": "Live lifecycle certification flow remains a transitional orchestration helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
-      "expires_on": "2027-08-24"
-    },
-    {
-      "kind": "function",
-      "path": "scripts/validate_cross_service_parity_live.py",
-      "symbol": "_validate_live_proposal_alternatives_paths",
-      "fingerprint": "oversized-code.v1|function|scripts/validate_cross_service_parity_live.py|_validate_live_proposal_alternatives_paths",
-      "max_lines": 230,
-      "owner": "lotus-advise-quality-governance",
-      "reason": "Live alternatives certification flow remains a transitional orchestration helper; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
       "expires_on": "2027-08-24"
     },
     {

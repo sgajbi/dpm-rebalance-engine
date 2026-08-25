@@ -1,5 +1,36 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-941-LIVE-PROPOSAL-ALTERNATIVES-VALIDATION-BOUNDARY
+
+- Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
+  `scripts/live_proposal_alternatives_validation.py`, focused live-parity tests, and the
+  oversized-code policy/baseline evidence for proposal-alternatives certification.
+- Pattern: `_validate_live_proposal_alternatives_paths` combined five stateful alternatives
+  requests, policy/status assertions, evidence extraction, and latency enforcement in one
+  230-line orchestration helper.
+- Status: Implemented in the bounded #495 live-certification maintainability slice. Request /
+  snapshot plumbing remains in the validator, while no-op, concentration, cash, currency,
+  restricted-product, and latency proof responsibilities now have named helpers in a focused
+  validation module.
+- Finding Class: CI/live-certification maintainability, advisory evidence-boundary readability,
+  and oversized-code regression prevention.
+- Summary: The targeted function fingerprint is removed from the reviewed oversized-code
+  baseline. The main validator shrinks from 3,753 to 3,578 lines; the new validation module is
+  below the 1,000-line module ceiling. No path order, idempotency-key prefix, request payload,
+  policy status, rejection reason, latency bound, or returned snapshot shape changes.
+- Evidence: Focused live-parity tests cover stateful request construction and the canonical no-op
+  policy evidence contract, including failure when restricted-product evidence is absent. The
+  oversized-code gate removes only the resolved target finding, ratchets the shrunken module
+  baseline to 3,578 lines, and must report no new or grown findings.
+- Compatibility: CI/live-certification maintainability only. No product runtime, API/OpenAPI,
+  persistence, migration, dependency, calculation, endpoint order/status, Workbench, or
+  downstream contract changes.
+- Documentation decision: Updated this ledger and machine-readable oversized-code evidence.
+  No wiki/operator workflow change occurred; command names, runtime probes, and remediation
+  behavior remain unchanged, so no wiki publication is required.
+- Follow-Up: #495 continues to own the next separately bounded live-validation hotspot or
+  quality-fitness calibration slice.
+
 ## LA-REV-939-PRESERVED-PROPOSAL-REPLAY-HASH-DOMAINS
 
 - Scope: proposal-create legacy replay matching, focused idempotency regressions, the PostgreSQL
