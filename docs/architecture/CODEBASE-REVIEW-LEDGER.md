@@ -23,6 +23,12 @@
   test and review.
 - Compatibility: Validation-tooling structure only. No product/API/OpenAPI/persistence,
   migration, runtime, Workbench, downstream, or advisory decision behavior changes.
+- Design decision: The orchestration module receives the already-loaded validator module deliberately
+  so the executable `__main__` path does not import a second copy of the validator; this keeps the
+  existing proof primitives in one owner while the final-head ordering test protects the seam.
+  This is a controlled script-boundary tradeoff, not a pattern to copy into product modules:
+  future extractions must use a typed Protocol/shared primitive module or record an explicit
+  re-justification on #495.
 - Tests: Focused changed-state selection, orchestration-order, and result-assembly tests pass;
   the live E2E test remains environment-gated and skipped when canonical services are unavailable.
   Full repository gates are required before merge.
