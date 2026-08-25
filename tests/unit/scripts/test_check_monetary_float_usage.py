@@ -65,6 +65,19 @@ def test_scan_repo_finding_matches_allowlist_when_only_line_number_moves(tmp_pat
     assert finding_code_key(findings[0]) in allowlisted_code_keys
 
 
+def test_scan_repo_inventories_the_named_solver_boundary_conversion(tmp_path: Path) -> None:
+    source_path = tmp_path / "src" / "core" / "target_solver_boundary.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text(
+        "solver_scalar = float(decimal_input)\n",
+        encoding="utf-8",
+    )
+
+    assert scan_repo(tmp_path) == [
+        "src/core/target_solver_boundary.py:1:solver_scalar = float(decimal_input)"
+    ]
+
+
 def test_load_allowlist_reports_expired_review(tmp_path: Path) -> None:
     allowlist_path = tmp_path / "docs" / "standards" / "monetary-float-allowlist.json"
     allowlist_path.parent.mkdir(parents=True)
