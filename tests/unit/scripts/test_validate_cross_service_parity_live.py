@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 from scripts import validate_cross_service_parity_live as parity
 from scripts.live_parity_orchestration import run_live_parity
@@ -76,93 +77,48 @@ def test_changed_state_workspace_parity_checks_each_selected_security(
 
 
 def test_live_parity_orchestration_preserves_order_and_result_assembly(monkeypatch) -> None:
-    complete = parity.PortfolioParityScenario(
-        portfolio_id="COMPLETE",
-        as_of_date="2026-04-10",
-        reporting_currency="USD",
-        issuer_coverage_status="complete",
-        risk_available=True,
-    )
-    degraded = parity.PortfolioParityScenario(
-        portfolio_id="DEGRADED",
-        as_of_date="2026-04-10",
-        reporting_currency="USD",
-        issuer_coverage_status="partial",
-        risk_available=False,
-    )
+    complete = parity.PortfolioParityScenario("COMPLETE", "2026-04-10", "USD", "complete", True)
+    degraded = parity.PortfolioParityScenario("DEGRADED", "2026-04-10", "USD", "partial", False)
     calls: list[str] = []
-
-    class FakeClient:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args) -> None:
-            return None
-
+    client = MagicMock()
+    client.__enter__.return_value = client
+    client.__exit__.return_value = None
     monkeypatch.setattr(
         parity,
         "httpx",
-        SimpleNamespace(
-            Client=lambda **_kwargs: FakeClient(),
-            Timeout=lambda _seconds: object(),
-        ),
+        SimpleNamespace(Client=MagicMock(return_value=client), Timeout=MagicMock()),
     )
 
     def record(name: str, result=None):
-        def _record(*_args, **_kwargs):
-            calls.append(name)
-            return result
+        return MagicMock(side_effect=lambda *_args, **_kwargs: (calls.append(name), result)[1])
 
-        return _record
-
-    monkeypatch.setattr(parity, "_select_scenarios", record("select", (complete, degraded)))
-    monkeypatch.setattr(parity, "_validate_live_scenario_parity", record("scenarios"))
-    monkeypatch.setattr(parity, "_measure_warm_cache", record("warm_cache", (10.0, 2.0)))
-    monkeypatch.setattr(
-        parity,
-        "_validate_live_decision_paths",
-        record("decision", ("READY", "REVIEW", "BLOCKED")),
-    )
-    monkeypatch.setattr(
-        parity,
-        "_validate_live_proposal_alternatives_paths",
-        record("alternatives", ("NOOP", "CONCENTRATION", "CASH", "CURRENCY", "RESTRICTED")),
-    )
-    monkeypatch.setattr(
-        parity,
-        "_assert_lifecycle_and_delivery_flow",
-        record("lifecycle", ("COMPLETE", 2, "APPROVED", "HANDED_OFF", "REPORT_READY")),
-    )
-    monkeypatch.setattr(
-        parity, "_assert_live_proposal_narrative_flow", record("narrative", "NARRATIVE")
-    )
-    monkeypatch.setattr(parity, "_assert_live_proposal_memo_flow", record("memo", "MEMO"))
-    monkeypatch.setattr(parity, "_assert_live_policy_evaluation_flow", record("policy", "POLICY"))
-    monkeypatch.setattr(
-        parity,
-        "_assert_async_lifecycle_read_surfaces",
-        record("async_lifecycle", ("COMPLETE", 2, "APPROVED")),
-    )
-    monkeypatch.setattr(
-        parity,
-        "_assert_new_version_requires_fresh_approvals",
-        record("fresh_approvals"),
-    )
-    monkeypatch.setattr(
-        parity,
-        "_assert_mixed_approval_routes_remain_version_scoped",
-        record("version_scoped_approvals"),
-    )
-    monkeypatch.setattr(
-        parity,
-        "_assert_workspace_flow",
-        record("workspace", ("RUN-1", "RUN-2", "REVIEW", "READY")),
-    )
-    monkeypatch.setattr(
-        parity,
-        "_validate_changed_state_workspace_parity",
-        record("changed_state", ("CHANGED", "CROSS", "NON_HELD")),
-    )
+    steps = {
+        "_select_scenarios": ("select", (complete, degraded)),
+        "_validate_live_scenario_parity": ("scenarios", None),
+        "_measure_warm_cache": ("warm_cache", (10.0, 2.0)),
+        "_validate_live_decision_paths": ("decision", ("READY", "REVIEW", "BLOCKED")),
+        "_validate_live_proposal_alternatives_paths": (
+            "alternatives",
+            ("NOOP", "CONCENTRATION", "CASH", "CURRENCY", "RESTRICTED"),
+        ),
+        "_assert_lifecycle_and_delivery_flow": (
+            "lifecycle",
+            ("COMPLETE", 2, "APPROVED", "HANDED_OFF", "REPORT_READY"),
+        ),
+        "_assert_live_proposal_narrative_flow": ("narrative", "NARRATIVE"),
+        "_assert_live_proposal_memo_flow": ("memo", "MEMO"),
+        "_assert_live_policy_evaluation_flow": ("policy", "POLICY"),
+        "_assert_async_lifecycle_read_surfaces": ("async_lifecycle", ("COMPLETE", 2, "APPROVED")),
+        "_assert_new_version_requires_fresh_approvals": ("fresh_approvals", None),
+        "_assert_mixed_approval_routes_remain_version_scoped": ("version_scoped_approvals", None),
+        "_assert_workspace_flow": ("workspace", ("RUN-1", "RUN-2", "REVIEW", "READY")),
+        "_validate_changed_state_workspace_parity": (
+            "changed_state",
+            ("CHANGED", "CROSS", "NON_HELD"),
+        ),
+    }
+    for attribute, (name, result) in steps.items():
+        monkeypatch.setattr(parity, attribute, record(name, result))
 
     result = run_live_parity(
         parity,
