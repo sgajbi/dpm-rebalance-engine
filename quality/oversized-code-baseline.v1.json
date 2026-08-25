@@ -7,7 +7,7 @@
       "path": "scripts/quality_baseline_report.py",
       "symbol": "__module__",
       "fingerprint": "oversized-code.v1|module|scripts/quality_baseline_report.py",
-      "max_lines": 1636,
+      "max_lines": 1151,
       "owner": "lotus-advise-quality-governance",
       "reason": "Quality evidence generation remains a large transitional module; split work is tracked in the CI quality issue and this baseline prevents further growth.",
       "expires_on": "2027-08-24"
@@ -20,16 +20,6 @@
       "max_lines": 3753,
       "owner": "lotus-advise-quality-governance",
       "reason": "Live parity certification remains a large transitional orchestration module; split work is tracked in the CI quality issue and this baseline prevents further growth.",
-      "expires_on": "2027-08-24"
-    },
-    {
-      "kind": "function",
-      "path": "scripts/quality_baseline_report.py",
-      "symbol": "render_refactor_health_report",
-      "fingerprint": "oversized-code.v1|function|scripts/quality_baseline_report.py|render_refactor_health_report",
-      "max_lines": 494,
-      "owner": "lotus-advise-quality-governance",
-      "reason": "Refactor-health report rendering is a transitional formatter; decomposition is tracked in the CI quality issue and this baseline prevents further growth.",
       "expires_on": "2027-08-24"
     },
     {

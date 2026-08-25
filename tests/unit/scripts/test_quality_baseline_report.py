@@ -11,6 +11,7 @@ from scripts.quality_baseline_report import (
     render_quality_scorecard,
     render_refactor_health_report,
 )
+from scripts.refactor_health_report import build_refactor_health_lines
 
 
 def test_radon_inventory_counts_nested_blocks_and_worst_complexity() -> None:
@@ -400,6 +401,20 @@ def test_quality_baseline_report_captures_required_quality_sections(tmp_path: Pa
     assert "wiki validation guidance now maps local, Feature Lane, PR Merge Gate" in scorecard
     assert "agent-facing CI guidance is pinned by a deterministic wiki contract test" in scorecard
     assert "Review ledger includes `LA-REV-611` through `LA-REV-896`" in scorecard
+
+
+def test_refactor_health_sections_preserve_committed_report_order_and_content() -> None:
+    lines = build_refactor_health_lines()
+    rendered = "\n".join(lines)
+    committed = Path("quality/refactor_health_report.md").read_text(encoding="utf-8")
+
+    assert lines[0] == "# Lotus Advise Refactor Health Report"
+    assert lines.count("## Current Progress Signals") == 1
+    assert lines.count("## Remaining Enterprise-Readiness Work") == 1
+    assert lines.index("## Current Progress Signals") < lines.index(
+        "## Remaining Enterprise-Readiness Work"
+    )
+    assert rendered == committed
 
 
 def test_quality_baseline_report_cli_writes_requested_reports(tmp_path: Path) -> None:
