@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-23T05:50:42Z",
-  "git_commit_sha": "f0648c53d2256726ab1520daeb47c9cc818986a1",
+  "generated_at_utc": "2026-08-25T13:44:49Z",
+  "git_commit_sha": "928c1f958e0fde35a92b3ba607f3da321bd3cfcd",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -492,6 +492,24 @@
       "version": "1.0.9"
     },
     {
+      "declared_name": "httpcore2",
+      "dependency_groups": [
+        "development"
+      ],
+      "exception_expires_on": null,
+      "exception_id": null,
+      "exception_owner": null,
+      "installed_version": "2.12.0",
+      "license_term": "BSD-3-Clause",
+      "metadata_available": true,
+      "metadata_matches_requirement_pin": true,
+      "name": "httpcore2",
+      "policy_classification": "ALLOWED",
+      "relationship": "transitive",
+      "source_files": [],
+      "version": "2.12.0"
+    },
+    {
       "declared_name": "httpx",
       "dependency_groups": [
         "development",
@@ -511,6 +529,26 @@
         "requirements-prod.txt"
       ],
       "version": "0.28.1"
+    },
+    {
+      "declared_name": "httpx2",
+      "dependency_groups": [
+        "development"
+      ],
+      "exception_expires_on": null,
+      "exception_id": null,
+      "exception_owner": null,
+      "installed_version": "2.12.0",
+      "license_term": "BSD-3-Clause",
+      "metadata_available": true,
+      "metadata_matches_requirement_pin": true,
+      "name": "httpx2",
+      "policy_classification": "ALLOWED",
+      "relationship": "direct",
+      "source_files": [
+        "requirements-dev.txt"
+      ],
+      "version": "2.12.0"
     },
     {
       "declared_name": "idna",
@@ -1616,6 +1654,24 @@
       "version": "1.2.0"
     },
     {
+      "declared_name": "truststore",
+      "dependency_groups": [
+        "development"
+      ],
+      "exception_expires_on": null,
+      "exception_id": null,
+      "exception_owner": null,
+      "installed_version": "0.10.4",
+      "license_term": "MIT",
+      "metadata_available": true,
+      "metadata_matches_requirement_pin": true,
+      "name": "truststore",
+      "policy_classification": "ALLOWED",
+      "relationship": "transitive",
+      "source_files": [],
+      "version": "0.10.4"
+    },
+    {
       "declared_name": "typing_extensions",
       "dependency_groups": [
         "development",
@@ -1767,11 +1823,11 @@
   "service_name": "lotus-advise",
   "summary": {
     "classifications": {
-      "ALLOWED": 89,
+      "ALLOWED": 92,
       "APPROVED_EXCEPTION": 2
     },
-    "direct_package_count": 36,
-    "package_count": 91,
-    "transitive_package_count": 55
+    "direct_package_count": 37,
+    "package_count": 94,
+    "transitive_package_count": 57
   }
 }

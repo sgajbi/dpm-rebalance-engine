@@ -4,12 +4,12 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "50dc4f5b6f1389bce878d5346ce3519329b1197e58f09d4fca0b1d6baf78456f"
+license-inventory-sha256 = "32e3b7283174483b0c29cdd07471ab8b74746b3a2427e9d3805e6d81412de08d"
 
 [[requirement-files]]
 group = "development"
 path = "requirements-dev.txt"
-sha256 = "a4b9261df0cfc48ac05a61ff43573d5f3eac57ed617ff03a1f35b6a7190f0086"
+sha256 = "1ce9ba32f64a1ff0d5ed5c5a49900c3f24bf947e00add0138ac561bed9a65288"
 
 [[requirement-files]]
 group = "install"
@@ -247,6 +247,15 @@ extras = []
 requirement-hashes = ["12edfedc871c35f1b6b7f031d9cc2ef6060b6583db297b688a1c169c38a04e65"]
 
 [[package]]
+name = "httpcore2"
+version = "2.12.0"
+direct = false
+groups = ["development"]
+requirement-files = []
+extras = []
+requirement-hashes = []
+
+[[package]]
 name = "httpx"
 version = "0.28.1"
 direct = true
@@ -254,6 +263,15 @@ groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
 requirement-hashes = ["5fadf5f6ea5bd1b141ea05745cb52449bdccde939c22e76231e7993c2afc91d0"]
+
+[[package]]
+name = "httpx2"
+version = "2.12.0"
+direct = true
+groups = ["development"]
+requirement-files = ["requirements-dev.txt"]
+extras = []
+requirement-hashes = ["77d44a246547b415d694aaa63169da53104da157584639a9ae9f5d7ee4ed175e"]
 
 [[package]]
 name = "idna"
@@ -778,6 +796,15 @@ extras = []
 requirement-hashes = []
 
 [[package]]
+name = "truststore"
+version = "0.10.4"
+direct = false
+groups = ["development"]
+requirement-files = []
+extras = []
+requirement-hashes = []
+
+[[package]]
 name = "typing-extensions"
 version = "4.16.0"
 direct = true
@@ -841,6 +868,6 @@ extras = []
 requirement-hashes = ["312b48ce4834462cf1bd1153fd8f235eef6d2d3f12f87b943472c91c6b0e57b5"]
 
 [summary]
-package-count = 91
-direct-package-count = 36
-transitive-package-count = 55
+package-count = 94
+direct-package-count = 37
+transitive-package-count = 57
