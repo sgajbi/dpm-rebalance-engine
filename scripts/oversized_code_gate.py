@@ -292,6 +292,192 @@ def scan_repository(
     return sorted(findings, key=lambda finding: finding.fingerprint)
 
 
+@dataclass(frozen=True)
+class _GateInputs:
+    policy: dict[str, Any]
+    thresholds: dict[str, int]
+    scan_paths: tuple[str, ...]
+    baseline_path: Path
+    baseline: list[dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class _FindingGroups:
+    baseline_by_fingerprint: dict[str, dict[str, Any]]
+    new: list[OversizedFinding]
+    grown: list[OversizedFinding]
+    shrunken: list[OversizedFinding]
+    resolved: list[dict[str, Any]]
+    expired: list[dict[str, Any]]
+    provenance_expired: bool
+
+
+def _classify_live_findings(
+    findings: list[OversizedFinding], baseline_by_fingerprint: dict[str, dict[str, Any]]
+) -> tuple[list[OversizedFinding], list[OversizedFinding], list[OversizedFinding]]:
+    new: list[OversizedFinding] = []
+    grown: list[OversizedFinding] = []
+    shrunken: list[OversizedFinding] = []
+    for finding in findings:
+        baseline_entry = baseline_by_fingerprint.get(finding.fingerprint)
+        if baseline_entry is None:
+            new.append(finding)
+        elif finding.lines > baseline_entry["max_lines"]:
+            grown.append(finding)
+        elif finding.lines < baseline_entry["max_lines"]:
+            shrunken.append(finding)
+    return new, grown, shrunken
+
+
+def _classify_baseline_state(
+    *, baseline: list[dict[str, Any]], observed: set[str], policy: dict[str, Any]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], bool]:
+    baseline_by_fingerprint = {entry["fingerprint"]: entry for entry in baseline}
+    resolved = [
+        baseline_by_fingerprint[fingerprint]
+        for fingerprint in sorted(set(baseline_by_fingerprint) - observed)
+    ]
+    today = date.today()
+    expired = [entry for entry in baseline if date.fromisoformat(entry["expires_on"]) < today]
+    provenance_expired = date.fromisoformat(policy["baseline"]["expires_on"]) < today
+    return resolved, expired, provenance_expired
+
+
+def _load_gate_inputs(*, repo_root: Path, policy_path: Path) -> _GateInputs:
+    policy = load_policy(policy_path)
+    thresholds = policy["thresholds"]
+    scan_paths = tuple(policy["scan_paths"])
+    baseline_relative_path = _validate_relative_policy_path(
+        policy["baseline"]["path"], field="baseline.path"
+    )
+    baseline_path = repo_root / baseline_relative_path
+    baseline = load_baseline(
+        baseline_path,
+        repo_root=repo_root,
+        expected_sha256=policy["baseline"]["sha256"],
+        thresholds=thresholds,
+        scan_paths=scan_paths,
+    )
+    return _GateInputs(
+        policy=policy,
+        thresholds=thresholds,
+        scan_paths=scan_paths,
+        baseline_path=baseline_path,
+        baseline=baseline,
+    )
+
+
+def _classify_findings(
+    *, findings: list[OversizedFinding], baseline: list[dict[str, Any]], policy: dict[str, Any]
+) -> _FindingGroups:
+    observed = {finding.fingerprint: finding for finding in findings}
+    if len(observed) != len(findings):
+        raise ValueError("Oversized-code scanner produced duplicate fingerprints.")
+    baseline_by_fingerprint = {entry["fingerprint"]: entry for entry in baseline}
+    new, grown, shrunken = _classify_live_findings(findings, baseline_by_fingerprint)
+    resolved, expired, provenance_expired = _classify_baseline_state(
+        baseline=baseline,
+        observed=set(observed),
+        policy=policy,
+    )
+    return _FindingGroups(
+        baseline_by_fingerprint=baseline_by_fingerprint,
+        new=new,
+        grown=grown,
+        shrunken=shrunken,
+        resolved=resolved,
+        expired=expired,
+        provenance_expired=provenance_expired,
+    )
+
+
+def _build_failures(*, policy: dict[str, Any], groups: _FindingGroups) -> list[str]:
+    failures: list[str] = []
+    if groups.provenance_expired:
+        failures.append(
+            "Expired oversized-code baseline provenance: "
+            f"owner={policy['baseline']['owner']}, "
+            f"expires_on={policy['baseline']['expires_on']}"
+        )
+    failures.extend(
+        "Expired oversized-code baseline finding: "
+        f"{entry['fingerprint']} (owner={entry['owner']}, expires_on={entry['expires_on']})"
+        for entry in groups.expired
+    )
+    failures.extend(
+        "New oversized-code finding: "
+        f"{finding.path}:{finding.symbol} has {finding.lines} lines; "
+        f"threshold={finding.threshold}, fingerprint={finding.fingerprint}. "
+        "Refactor it or add a reviewed owner/reason/expiry baseline entry."
+        for finding in groups.new
+    )
+    failures.extend(
+        "Oversized-code baseline finding grew: "
+        f"{finding.path}:{finding.symbol} has {finding.lines} lines; "
+        f"baseline_max={groups.baseline_by_fingerprint[finding.fingerprint]['max_lines']}. "
+        "Refactor it or refresh the reviewed baseline with evidence."
+        for finding in groups.grown
+    )
+    failures.extend(
+        "Shrunken oversized-code baseline must be ratcheted: "
+        f"{finding.path}:{finding.symbol} has {finding.lines} lines; "
+        f"baseline_max={groups.baseline_by_fingerprint[finding.fingerprint]['max_lines']}. "
+        "Update max_lines to the measured value and bump the baseline/policy fingerprints."
+        for finding in groups.shrunken
+    )
+    failures.extend(
+        "Resolved oversized-code baseline must be removed from the baseline and its "
+        f"policy/baseline fingerprints refreshed: {entry['fingerprint']}"
+        for entry in groups.resolved
+    )
+    return failures
+
+
+def _build_report_payload(
+    *,
+    inputs: _GateInputs,
+    findings: list[OversizedFinding],
+    groups: _FindingGroups,
+    failures: list[str],
+) -> dict[str, Any]:
+    policy = inputs.policy
+    return {
+        "policy_version": policy["policy_version"],
+        "policy_content_fingerprint": quality_gate_common.policy_content_fingerprint(policy),
+        "scan_paths": inputs.scan_paths,
+        "thresholds": inputs.thresholds,
+        "findings": [finding.as_dict() for finding in findings],
+        "new_findings": [finding.as_dict() for finding in groups.new],
+        "grown_findings": [finding.as_dict() for finding in groups.grown],
+        "shrunken_findings": [finding.as_dict() for finding in groups.shrunken],
+        "resolved_baseline_findings": groups.resolved,
+        "expired_baseline_findings": groups.expired,
+        "counts": {
+            "findings": len(findings),
+            "baseline": len(inputs.baseline),
+            "new": len(groups.new),
+            "grown": len(groups.grown),
+            "shrunken": len(groups.shrunken),
+            "resolved": len(groups.resolved),
+            "expired": len(groups.expired),
+            "modules": sum(finding.kind == "module" for finding in findings),
+            "functions": sum(finding.kind == "function" for finding in findings),
+        },
+        "baseline_provenance": {
+            **policy["baseline"],
+            "content_fingerprint": baseline_content_fingerprint(
+                quality_gate_common.load_json_object(
+                    inputs.baseline_path, description="oversized-code baseline"
+                )
+            ),
+            "findings": inputs.baseline,
+        },
+        "exception_provenance": policy["exceptions"],
+        "failures": failures,
+        "status": "failed" if failures else "passed",
+    }
+
+
 def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
     report: dict[str, Any] = {
         "schema_version": "lotus.advise.oversized-code-gate.v1",
@@ -300,129 +486,25 @@ def run_gate(*, repo_root: Path, policy_path: Path, output_path: Path) -> int:
         "failures": [],
     }
     try:
-        policy = load_policy(policy_path)
-        thresholds = policy["thresholds"]
-        scan_paths = tuple(policy["scan_paths"])
-        baseline_relative_path = _validate_relative_policy_path(
-            policy["baseline"]["path"], field="baseline.path"
-        )
-        baseline_path = repo_root / baseline_relative_path
-        baseline = load_baseline(
-            baseline_path,
-            repo_root=repo_root,
-            expected_sha256=policy["baseline"]["sha256"],
-            thresholds=thresholds,
-            scan_paths=scan_paths,
-        )
+        inputs = _load_gate_inputs(repo_root=repo_root, policy_path=policy_path)
         findings = scan_repository(
             repo_root=repo_root,
-            scan_paths=scan_paths,
-            thresholds=thresholds,
+            scan_paths=inputs.scan_paths,
+            thresholds=inputs.thresholds,
         )
-        observed = {finding.fingerprint: finding for finding in findings}
-        if len(observed) != len(findings):
-            raise ValueError("Oversized-code scanner produced duplicate fingerprints.")
-        baseline_by_fingerprint = {entry["fingerprint"]: entry for entry in baseline}
-        new_findings = [
-            finding for finding in findings if finding.fingerprint not in baseline_by_fingerprint
-        ]
-        grown_findings = [
-            finding
-            for finding in findings
-            if finding.fingerprint in baseline_by_fingerprint
-            and finding.lines > baseline_by_fingerprint[finding.fingerprint]["max_lines"]
-        ]
-        shrunken_findings = [
-            finding
-            for finding in findings
-            if finding.fingerprint in baseline_by_fingerprint
-            and finding.lines < baseline_by_fingerprint[finding.fingerprint]["max_lines"]
-        ]
-        resolved = [
-            baseline_by_fingerprint[fingerprint]
-            for fingerprint in sorted(set(baseline_by_fingerprint) - set(observed))
-        ]
-        today = date.today()
-        expired_baseline = [
-            entry for entry in baseline if date.fromisoformat(entry["expires_on"]) < today
-        ]
-        provenance_expired = date.fromisoformat(policy["baseline"]["expires_on"]) < today
-        failures: list[str] = []
-        if provenance_expired:
-            failures.append(
-                "Expired oversized-code baseline provenance: "
-                f"owner={policy['baseline']['owner']}, "
-                f"expires_on={policy['baseline']['expires_on']}"
-            )
-        failures.extend(
-            "Expired oversized-code baseline finding: "
-            f"{entry['fingerprint']} (owner={entry['owner']}, expires_on={entry['expires_on']})"
-            for entry in expired_baseline
+        groups = _classify_findings(
+            findings=findings,
+            baseline=inputs.baseline,
+            policy=inputs.policy,
         )
-        failures.extend(
-            "New oversized-code finding: "
-            f"{finding.path}:{finding.symbol} has {finding.lines} lines; "
-            f"threshold={finding.threshold}, fingerprint={finding.fingerprint}. "
-            "Refactor it or add a reviewed owner/reason/expiry baseline entry."
-            for finding in new_findings
-        )
-        failures.extend(
-            "Oversized-code baseline finding grew: "
-            f"{finding.path}:{finding.symbol} has {finding.lines} lines; "
-            f"baseline_max={baseline_by_fingerprint[finding.fingerprint]['max_lines']}. "
-            "Refactor it or refresh the reviewed baseline with evidence."
-            for finding in grown_findings
-        )
-        failures.extend(
-            "Shrunken oversized-code baseline must be ratcheted: "
-            f"{finding.path}:{finding.symbol} has {finding.lines} lines; "
-            f"baseline_max={baseline_by_fingerprint[finding.fingerprint]['max_lines']}. "
-            "Update max_lines to the measured value and bump the baseline/policy fingerprints."
-            for finding in shrunken_findings
-        )
-        failures.extend(
-            "Resolved oversized-code baseline must be removed from the baseline and its "
-            f"policy/baseline fingerprints refreshed: {entry['fingerprint']}"
-            for entry in resolved
-        )
+        failures = _build_failures(policy=inputs.policy, groups=groups)
         report.update(
-            {
-                "policy_version": policy["policy_version"],
-                "policy_content_fingerprint": quality_gate_common.policy_content_fingerprint(
-                    policy
-                ),
-                "scan_paths": scan_paths,
-                "thresholds": thresholds,
-                "findings": [finding.as_dict() for finding in findings],
-                "new_findings": [finding.as_dict() for finding in new_findings],
-                "grown_findings": [finding.as_dict() for finding in grown_findings],
-                "shrunken_findings": [finding.as_dict() for finding in shrunken_findings],
-                "resolved_baseline_findings": resolved,
-                "expired_baseline_findings": expired_baseline,
-                "counts": {
-                    "findings": len(findings),
-                    "baseline": len(baseline),
-                    "new": len(new_findings),
-                    "grown": len(grown_findings),
-                    "shrunken": len(shrunken_findings),
-                    "resolved": len(resolved),
-                    "expired": len(expired_baseline),
-                    "modules": sum(finding.kind == "module" for finding in findings),
-                    "functions": sum(finding.kind == "function" for finding in findings),
-                },
-                "baseline_provenance": {
-                    **policy["baseline"],
-                    "content_fingerprint": baseline_content_fingerprint(
-                        quality_gate_common.load_json_object(
-                            baseline_path, description="oversized-code baseline"
-                        )
-                    ),
-                    "findings": baseline,
-                },
-                "exception_provenance": policy["exceptions"],
-                "failures": failures,
-                "status": "failed" if failures else "passed",
-            }
+            _build_report_payload(
+                inputs=inputs,
+                findings=findings,
+                groups=groups,
+                failures=failures,
+            )
         )
     except (OSError, SyntaxError, ValueError, KeyError, TypeError) as exc:
         report["failures"] = [str(exc)]

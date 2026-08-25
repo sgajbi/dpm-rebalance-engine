@@ -105,6 +105,25 @@ def test_gate_passes_reviewed_baseline_and_reports_exact_inventory(tmp_path: Pat
     }
 
 
+def test_gate_report_preserves_policy_and_baseline_provenance(tmp_path: Path) -> None:
+    repo_root, policy_path, output_path = _fixture(tmp_path)
+
+    report = _run(repo_root, policy_path, output_path)
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+
+    assert report["status"] == "passed"
+    assert report["policy_version"] == policy["policy_version"]
+    assert report["scan_paths"] == ["src"]
+    assert report["thresholds"] == {"module_max_lines": 100, "function_max_lines": 10}
+    assert report["baseline_provenance"]["findings"] == []
+    assert report["exception_provenance"] == {"allowed": False, "entries": []}
+    assert report["new_findings"] == []
+    assert report["grown_findings"] == []
+    assert report["shrunken_findings"] == []
+    assert report["resolved_baseline_findings"] == []
+    assert report["expired_baseline_findings"] == []
+
+
 def test_gate_rejects_new_oversized_module_with_actionable_fingerprint(tmp_path: Path) -> None:
     repo_root, policy_path, output_path = _fixture(tmp_path, module_max_lines=3)
     _write_source(repo_root, "src/new.py", ["a = 1", "b = 2", "c = 3", "d = 4"])
