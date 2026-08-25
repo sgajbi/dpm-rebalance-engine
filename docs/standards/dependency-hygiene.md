@@ -59,6 +59,13 @@ policy-classification changes, dependency-group changes, and exception changes r
 print the affected package plus current/expected evidence. Direct requirement and policy changes
 still require the committed inventory and lock evidence to be regenerated deliberately.
 
+The Starlette TestClient posture is explicit: development and CI installs include the stable,
+directly pinned `httpx2` compatibility client because Starlette 1.6 deprecates its fallback to
+`httpx`. Production adapters remain on the separately governed `httpx` runtime dependency; this
+test-only compatibility dependency must not be used to imply a production HTTP-client migration.
+The dependency regression test runs a real FastAPI TestClient probe with deprecation warnings
+treated as errors.
+
 `make dependency-lock-gate` is blocking. `uv.lock` is the generated dependency-lock mirror for the
 requirements install strategy. It records requirement-file hashes, the license/IP inventory hash, and
 the package closure used for local/CI/release evidence. Regenerate it with `make dependency-lock`
