@@ -35,7 +35,12 @@ fail-under = 0
 verbose = 1
 
 [tool.deptry]
-known_first_party = ["ci_local_compose_project", "engineering_health_report", "refactor_health_report"]
+known_first_party = [
+  "ci_local_compose_project",
+  "engineering_health_report",
+  "quality_scorecard",
+  "refactor_health_report",
+]
 per_rule_ignores = { DEP002 = [
   "coverage",
   "iniconfig",
