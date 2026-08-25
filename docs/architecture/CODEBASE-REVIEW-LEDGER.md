@@ -1,5 +1,40 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-947-LIVE-POLICY-EVALUATION-FLOW-BOUNDARY
+
+- Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
+  `scripts/live_policy_evaluation_flow.py`, focused live-parity tests, and the oversized-code
+  policy/baseline evidence for policy-evaluation certification.
+- Pattern: `_assert_live_policy_evaluation_flow` combined policy-evaluation creation, persisted
+  read surfaces, stale-hash and client-ready guards, sign-off, report-package handling, bounded AI
+  evidence, lineage/replay proof, and snapshot projection in one validator-owned orchestration
+  boundary.
+- Status: Implemented in the bounded #495 maintainability slice. The validator now retains a
+  compatibility adapter while the extracted module owns the ordered policy-evaluation proof flow;
+  the adapter passes a frozen typed primitive bundle rather than a validator-module seam.
+- Finding Class: CI/live-certification maintainability, advisory evidence-boundary ownership,
+  typed seam quality, and oversized-code regression prevention.
+- Summary: The validator decreases from 3,271 to its measured 2,957 source lines, while the new
+  policy-flow module is 424 lines. The oversized-code baseline is ratcheted to 2,957 with one
+  explicitly inventoried finding, zero new findings, and zero resolved findings; thresholds and
+  unreviewed exceptions remain unchanged.
+- Compatibility: Live-certification tooling only. Policy creation, review/read surfaces,
+  stale-hash and client-ready blocking, sign-off, report READY/UNAVAILABLE behavior, AI
+  non-authoritative evidence, lineage/replay checks, snapshot shape, diagnostics, and CLI behavior
+  remain unchanged. No product API/OpenAPI, persistence, migration, runtime, Workbench, or
+  downstream contract changes are in scope.
+- Design decision: The extracted boundary receives a frozen `LivePolicyEvaluationPrimitives`
+  dataclass whose protocols describe HTTP, policy-pack, evidence-bundle, report, assertion, and
+  snapshot operations. This keeps validator-owned environment/configuration primitives in their
+  existing owner, gives the policy flow an explicit statically checkable seam, and prevents another
+  untyped module-object extraction.
+- Evidence: Focused live-parity tests cover adapter wiring and ordered phase projection; Ruff,
+  format, and configured mypy checks for the new boundary pass. Full native gates, quality-baseline
+  freshness, quality trend, and exact-mainline coverage remain merge prerequisites. No wiki
+  publication is needed because no operator workflow or consumer contract changed.
+- Follow-Up: #495 continues with the next separately bounded CI fitness or maintainability slice;
+  product/evidence issues #481, #485, #491, #554, and #557 remain outside this scope.
+
 ## LA-REV-946-QUALITY-SCORECARD-REPORT-BOUNDARY
 
 - Scope: `scripts/quality_baseline_report.py`, the extracted
