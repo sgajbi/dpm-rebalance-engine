@@ -1,23 +1,23 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-25T21:53:09.244978+00:00`
+- Generated At: `2026-08-25T22:27:07.402766+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
 
 ## Code Size
 
-- Python files: `1094`
+- Python files: `1095`
 - Packages: `42`
-- Modules: `1052`
-- Total Python lines: `197922`
+- Modules: `1053`
+- Total Python lines: `198122`
 
 ## Largest Files
 
 | Rank | File | Lines |
 | ---: | --- | ---: |
 | 1 | `tests/unit/advisory/api/test_api_advisory_proposal_lifecycle.py` | 4043 |
-| 2 | `scripts/validate_cross_service_parity_live.py` | 3271 |
+| 2 | `scripts/validate_cross_service_parity_live.py` | 2957 |
 | 3 | `tests/unit/advisory/engine/test_engine_proposal_workflow_service.py` | 2691 |
 | 4 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2675 |
 | 5 | `tests/unit/advisory/api/test_api_workspace.py` | 2568 |
@@ -40,7 +40,7 @@
 | 7 | `test_lifecycle_endpoints_use_separate_request_and_response_objects` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 469 | 185 |
 | 8 | `test_openapi_enrichment_adds_operation_docs_tags_errors_and_schema_examples` | `tests/unit/advisory/api/test_openapi_enrichment.py` | 6 | 179 |
 | 9 | `_current_progress_model_and_domain` | `scripts/refactor_health_report.py` | 17 | 178 |
-| 10 | `_assert_live_proposal_narrative_flow` | `scripts/validate_cross_service_parity_live.py` | 1876 | 174 |
+| 10 | `_assert_live_proposal_narrative_flow` | `scripts/validate_cross_service_parity_live.py` | 1880 | 174 |
 
 ## Complexity
 
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5754, missing=5628, covered=126, coverage=2.2%`
+- Interrogate docstring inventory: `total=5760, missing=5627, covered=133, coverage=2.3%`
 - Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;
   absolute public API and module-ownership thresholds remain report-only until
   classified.

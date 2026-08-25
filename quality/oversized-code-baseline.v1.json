@@ -7,9 +7,9 @@
       "path": "scripts/validate_cross_service_parity_live.py",
       "symbol": "__module__",
       "fingerprint": "oversized-code.v1|module|scripts/validate_cross_service_parity_live.py",
-      "max_lines": 3271,
+      "max_lines": 2957,
       "owner": "lotus-advise-quality-governance",
-      "reason": "Live parity certification still contains transitional proof primitives; orchestration decomposition is merged and further split work is tracked in the CI quality issue.",
+      "reason": "Live parity certification retains one explicitly inventoried validator module; policy-evaluation orchestration is split into a typed flow module and further decomposition is tracked in the CI quality issue.",
       "expires_on": "2027-08-24"
     }
   ]

@@ -4,9 +4,99 @@ from unittest.mock import MagicMock
 import pytest
 
 from scripts import live_memo_flow as memo_flow
+from scripts import live_policy_evaluation_flow as policy_flow
 from scripts import validate_cross_service_parity_live as parity
 from scripts.live_parity_orchestration import run_live_parity
 from scripts.live_report_delivery import ReportDeliveryPrimitives, assert_report_delivery
+
+
+def test_policy_flow_adapter_supplies_typed_primitives(monkeypatch) -> None:
+    scenario = parity.PortfolioParityScenario("PORTFOLIO", "2026-04-10", "USD", "complete", True)
+    captured: dict[str, object] = {}
+    expected_snapshot = object()
+
+    def record_policy_flow(*args, **kwargs):
+        captured["primitives"] = kwargs["primitives"]
+        return expected_snapshot
+
+    monkeypatch.setattr(parity, "assert_live_policy_evaluation", record_policy_flow)
+
+    result = parity._assert_live_policy_evaluation_flow(
+        object(),
+        advise_base_url="http://advise",
+        scenario=scenario,
+    )
+
+    primitives = captured["primitives"]
+    assert result is expected_snapshot
+    assert isinstance(primitives, policy_flow.LivePolicyEvaluationPrimitives)
+    assert primitives.assertion is parity._assert
+    assert primitives.get_json is parity._get_json
+    assert primitives.post_json is parity._post_json
+
+
+def test_policy_flow_preserves_phase_order_and_snapshot_projection(monkeypatch) -> None:
+    scenario = parity.PortfolioParityScenario("PORTFOLIO", "2026-04-10", "USD", "complete", True)
+    calls: list[str] = []
+    expected_snapshot = object()
+    primitives = policy_flow.LivePolicyEvaluationPrimitives(
+        assertion=lambda *_args: None,
+        get_json=lambda *_args, **_kwargs: {},
+        post_json=lambda *_args, **_kwargs: {},
+        ensure_policy_pack_active=lambda *_args, **_kwargs: None,
+        policy_evidence_bundle=lambda **_kwargs: {},
+        request_policy_report=lambda *_args, **_kwargs: ("READY", {}, None),
+        extract_snapshot=lambda **_kwargs: expected_snapshot,
+    )
+
+    monkeypatch.setattr(
+        policy_flow,
+        "_create_live_policy_evaluation",
+        lambda *_args, **_kwargs: (
+            calls.append("create"),
+            (
+                {"created": True},
+                {"source_evidence_hash": "source", "policy_content_hash": "policy"},
+                "evaluation",
+                "hash",
+            ),
+        )[1],
+    )
+    monkeypatch.setattr(
+        policy_flow,
+        "_assert_live_policy_read_surfaces",
+        lambda *_args, **_kwargs: (calls.append("read"), ({}, {}, {}))[1],
+    )
+    monkeypatch.setattr(
+        policy_flow,
+        "_assert_live_policy_pre_sign_off_guards",
+        lambda *_args, **_kwargs: (calls.append("guards"), ("STALE", "CLIENT_READY"))[1],
+    )
+    monkeypatch.setattr(
+        policy_flow,
+        "_sign_off_live_policy_evaluation",
+        lambda *_args, **_kwargs: (calls.append("sign_off"), {})[1],
+    )
+    monkeypatch.setattr(
+        policy_flow,
+        "_request_live_policy_ai_evidence",
+        lambda *_args, **_kwargs: (calls.append("ai"), ("FORBIDDEN", {}))[1],
+    )
+    monkeypatch.setattr(
+        policy_flow,
+        "_assert_live_policy_lineage_and_replay",
+        lambda *_args, **_kwargs: (calls.append("lineage"), ({}, {}))[1],
+    )
+
+    result = policy_flow.assert_live_policy_evaluation(
+        object(),
+        primitives=primitives,
+        advise_base_url="http://advise",
+        scenario=scenario,
+    )
+
+    assert result is expected_snapshot
+    assert calls == ["create", "read", "guards", "sign_off", "ai", "lineage"]
 
 
 def test_changed_state_workspace_parity_checks_each_selected_security(
