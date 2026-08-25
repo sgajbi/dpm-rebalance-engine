@@ -374,8 +374,10 @@ Boundary rules:
     booking center, proposal, version, and portfolio ids, but tenant, service, correlation, and
     trace identity must be source-safe hashes,
 23. outbound `lotus-report` calls must require source-derived as-of date, reporting currency, and
-   jurisdiction/booking-center metadata; current-date, USD, and SG fallbacks are not production
-   source truth,
+   jurisdiction/booking-center metadata; proposal memo report-package mapping must consume the
+   typed `valuation_context.*.effective_as_of_date` source evidence and reject missing or
+   conflicting current/simulated values before HTTP; current-date, USD, and SG fallbacks are not
+   production source truth,
 24. unavailable `lotus-risk` authority must always carry degraded evidence with a stable reason
    code; do not allow `risk_authority="unavailable"` with `degraded=false`.
 25. advisor memo and policy sign-off report packages must not project archive-ready status from

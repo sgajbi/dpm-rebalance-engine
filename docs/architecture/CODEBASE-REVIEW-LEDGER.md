@@ -29175,3 +29175,47 @@
     the Advise Core-client route fitness test fails if that route is added without replacing this
     unavailable posture. #491 retains named scenario-analysis work; Gateway/Workbench projection is
     downstream and must not infer unavailable evidence.
+
+## LA-REV-930-MEMO-REPORT-PACKAGE-DATE-BOUNDARY
+
+- Scope: Reviewed proposal memo to Lotus Report report-package request mapping and unavailable error
+  boundary.
+- Pattern: Downstream report requests must consume typed source-owned valuation evidence and
+  translate provider-port failures into the documented API unavailable contract; a mapping miss or
+  core-port exception must not escape as an unhandled HTTP 500.
+- Status: Hardened in bounded issue #557.
+- Finding Class: Downstream integration correctness, source authority, error semantics, and
+  contract-fitness regression prevention.
+- Summary: Canonical proposal results publish the governed date under
+  `valuation_context.current_state.effective_as_of_date` and
+  `valuation_context.simulated_state.effective_as_of_date`. The Report mapper previously ignored
+  those typed fields and raised `LOTUS_REPORT_REQUEST_UNAVAILABLE`; the runtime port then wrapped
+  that integration error as `ProposalMemoReportPackageUnavailableError`, which the memo route did
+  not catch. The canonical reviewed-memo report-package flow therefore returned an unhandled 500.
+- Evidence:
+  - `src/integrations/lotus_report/request_mapping.py` recognizes the typed effective date key,
+    deduplicates matching current/simulated values, and retains fail-closed missing/conflict
+    behavior before opening the HTTP client.
+  - `src/api/proposals/report_errors.py` catches the core memo report-package unavailable port
+    error as well as the integration error and emits the existing 503 unavailable contract.
+  - `tests/fixtures/canonical_proposal_memo_report_package.json` and the mapping/adapter tests
+    exercise the canonical portfolio source shape, exact date projection, and conflicting-date
+    rejection.
+  - The memo API regression test proves a runtime provider failure returns HTTP 503 with the
+    stable `LOTUS_REPORT_REQUEST_UNAVAILABLE` detail rather than HTTP 500.
+  - OpenAPI response documentation names required source-derived as-of/reporting context as an
+    unavailable condition; no new status family or client-side inference is introduced.
+- Compatibility:
+  - Existing legacy date-key support, reporting currency/jurisdiction requirements, memo review
+    gating, append-only persistence, idempotency replay, and downstream ownership remain intact.
+    The intentional correction is that canonical typed valuation evidence is now accepted and a
+    known unavailable provider path is product-safe 503 instead of an unhandled 500.
+  - No migration, calculation, approval, execution, benchmark/limit, scenario, or Workbench/Gateway
+    code changed.
+- Documentation decision: Updated repository engineering context, Proposal-Lifecycle wiki source,
+  OpenAPI response wording, and this ledger because source mapping and failure behavior are
+  externally supportable truth. No migration or supported-feature change was required.
+- Follow-Up:
+  - Canonical Workbench revalidation remains required after merge. #554/#491 producer evidence and
+    #495 CI follow-ups remain separate; do not use this mapping as a license to infer missing
+    valuation, benchmark, limit, risk, or scenario evidence.
