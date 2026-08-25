@@ -21,6 +21,10 @@ from scripts.live_memo_flow import (  # noqa: E402
     LiveMemoFlowPrimitives,
     assert_live_memo_flow,
 )
+from scripts.live_narrative_flow import (  # noqa: E402
+    LiveNarrativeFlowPrimitives,
+    assert_live_proposal_narrative_flow,
+)
 from scripts.live_policy_evaluation_flow import (  # noqa: E402
     LivePolicyEvaluationPrimitives,
     assert_live_policy_evaluation,
@@ -1883,206 +1887,21 @@ def _assert_live_proposal_narrative_flow(
     advise_base_url: str,
     scenario: PortfolioParityScenario,
 ) -> LiveProposalNarrativeSnapshot:
-    started = time.perf_counter()
-    created = _create_stateful_proposal(
+    """Run narrative certification through an explicit typed primitive seam."""
+    return assert_live_proposal_narrative_flow(
         client,
-        advise_base_url=advise_base_url,
-        scenario=scenario,
-        created_by="live-parity-validator-narrative",
-        narrative_request=_advisor_review_narrative_request(),
-    )
-    proposal_id = str(created["proposal"]["proposal_id"])
-    version = cast(dict[str, Any], created["version"])
-    version_no = int(version["version_no"])
-    version_artifact = cast(dict[str, Any], version["artifact"])
-    narrative = cast(dict[str, Any], version_artifact["proposal_narrative"])
-    _assert(
-        narrative["generation_mode"] == "DETERMINISTIC_TEMPLATE",
-        f"{proposal_id}: deterministic narrative generation mode drifted: {narrative}",
-    )
-    _assert(
-        summarize := [
-            item
-            for item in cast(list[dict[str, Any]], narrative["guardrail_results"])
-            if item.get("status") == "PASS"
-        ],
-        f"{proposal_id}: deterministic narrative did not emit pass guardrail evidence",
-    )
-    _assert(bool(summarize), f"{proposal_id}: guardrail pass posture missing")
-
-    read_body = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/{version_no}/narrative",
-        expected_status=200,
-    )
-    regeneration_body = _post_json(
-        client,
-        url=(
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{version_no}/narrative/regenerate"
+        primitives=LiveNarrativeFlowPrimitives(
+            create_stateful_proposal=_create_stateful_proposal,
+            get_json=_get_json,
+            post_json=_post_json,
+            feature_by_key=_feature_by_key,
+            assertion=_assert,
+            extract_snapshot=extract_live_narrative_snapshot,
+            extract_ai_lineage_status=extract_ai_lineage_status,
         ),
-        expected_status=200,
-        json_body={
-            "requested_by": "live-parity-validator",
-            "reason": "Live validation of non-persistent regeneration posture.",
-            "sections": ["EXECUTIVE_SUMMARY"],
-        },
-    )
-    _assert(
-        cast(dict[str, Any], regeneration_body["regeneration_posture"])["persistence_status"]
-        == "NOT_PERSISTED_REVIEW_REQUIRED",
-        f"{proposal_id}: regeneration unexpectedly persisted candidate narrative",
-    )
-    reread_body = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/{version_no}/narrative",
-        expected_status=200,
-    )
-    _assert(
-        reread_body["proposal_narrative"]["narrative_id"] == narrative["narrative_id"],
-        f"{proposal_id}: regeneration mutated persisted narrative",
-    )
-    review_body = _post_json(
-        client,
-        url=(
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{version_no}/narrative/review"
-        ),
-        expected_status=200,
-        json_body={
-            "action": "APPROVE",
-            "reviewed_by": "live-parity-validator",
-            "reason": "Evidence-grounded advisor-review narrative live validation.",
-            "client_ready_release_requested": False,
-        },
-        headers={"Idempotency-Key": f"live-narrative-review-{uuid.uuid4().hex}"},
-    )
-    _assert(
-        review_body["narrative_review"]["review_state"] == "APPROVED_FOR_ADVISOR_USE",
-        f"{proposal_id}: narrative review did not approve advisor-use posture",
-    )
-    _assert(
-        review_body["narrative_review"]["client_ready_status"] == "NOT_REQUESTED",
-        f"{proposal_id}: narrative review incorrectly promoted client-ready posture",
-    )
-    replay_body = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/{version_no}/replay-evidence",
-        expected_status=200,
-    )
-    _assert(
-        cast(dict[str, Any], replay_body["evidence"])["proposal_narrative"]["narrative_id"]
-        == narrative["narrative_id"],
-        f"{proposal_id}: replay evidence lost proposal narrative identity",
-    )
-    _assert(
-        cast(dict[str, Any], replay_body["evidence"])["proposal_narrative_review"][
-            "source_narrative_hash"
-        ]
-        == review_body["narrative_review"]["source_narrative_hash"],
-        f"{proposal_id}: replay evidence lost narrative review source hash",
-    )
-
-    capabilities = _get_json(
-        client,
-        url=f"{advise_base_url}/platform/capabilities",
-        expected_status=200,
-    )
-    report_feature = _feature_by_key(capabilities, "advisory.proposals.reporting")
-    report_response = client.post(
-        f"{advise_base_url}/advisory/proposals/{proposal_id}/report-requests",
-        json={
-            "report_type": "CLIENT_PROPOSAL_SUMMARY",
-            "requested_by": "live-parity-validator",
-            "related_version_no": version_no,
-            "include_execution_summary": False,
-            "include_reviewed_narrative": True,
-        },
-    )
-    report_body: dict[str, Any] | None
-    report_status: str
-    if report_feature["operational_ready"]:
-        _assert(
-            report_response.status_code == 200,
-            (
-                f"{proposal_id}: expected reviewed narrative report package success, got "
-                f"{report_response.status_code} body={report_response.text}"
-            ),
-        )
-        report_body = cast(dict[str, Any], report_response.json())
-        report_status = str(report_body["status"])
-        package = cast(dict[str, Any], report_body["explanation"])["proposal_narrative_package"]
-        _assert(
-            package["package_status"] == "INCLUDED_REVIEWED_NARRATIVE",
-            f"{proposal_id}: reviewed narrative package was not included",
-        )
-        _assert(
-            package["review_state"] == "APPROVED_FOR_ADVISOR_USE",
-            f"{proposal_id}: reviewed narrative package lost review state",
-        )
-    else:
-        _assert(
-            report_response.status_code == 503,
-            (
-                f"{proposal_id}: expected reviewed narrative report package degraded 503, got "
-                f"{report_response.status_code} body={report_response.text}"
-            ),
-        )
-        report_body = None
-        report_status = "UNAVAILABLE"
-
-    ai_assisted_status, ai_fallback_reason = _assert_ai_assisted_narrative_when_enabled(
-        client,
         advise_base_url=advise_base_url,
         scenario=scenario,
     )
-    latency_ms = (time.perf_counter() - started) * 1000.0
-    return extract_live_narrative_snapshot(
-        proposal_id=proposal_id,
-        version_no=version_no,
-        created_version=version,
-        read_body=read_body,
-        regeneration_body=regeneration_body,
-        review_body=review_body,
-        replay_body=replay_body,
-        report_status=report_status,
-        report_body=report_body,
-        latency_ms=latency_ms,
-        ai_assisted_status=ai_assisted_status,
-        ai_fallback_reason=ai_fallback_reason,
-    )
-
-
-def _assert_ai_assisted_narrative_when_enabled(
-    client: httpx.Client,
-    *,
-    advise_base_url: str,
-    scenario: PortfolioParityScenario,
-) -> tuple[str, str | None]:
-    if os.getenv("LOTUS_ADVISE_VALIDATE_AI_ASSISTED_NARRATIVE") != "1":
-        return "SKIPPED_NOT_ENABLED", None
-
-    created = _create_stateful_proposal(
-        client,
-        advise_base_url=advise_base_url,
-        scenario=scenario,
-        created_by="live-parity-validator-ai-narrative",
-        narrative_request=_advisor_review_narrative_request(generation_mode="AI_ASSISTED_DRAFT"),
-    )
-    version = cast(dict[str, Any], created["version"])
-    narrative = cast(
-        dict[str, Any],
-        cast(dict[str, Any], version["artifact"])["proposal_narrative"],
-    )
-    _assert(
-        narrative["generation_mode"] in {"AI_ASSISTED_DRAFT", "DETERMINISTIC_TEMPLATE"},
-        f"AI-assisted narrative returned unsupported generation mode {narrative}",
-    )
-    _assert(
-        isinstance(narrative.get("sections"), list) and narrative["sections"],
-        "AI-assisted narrative proof returned no narrative sections",
-    )
-    return extract_ai_lineage_status(narrative)
 
 
 def _assert_live_proposal_memo_flow(
