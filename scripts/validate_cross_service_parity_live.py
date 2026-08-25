@@ -130,56 +130,6 @@ class LiveParityResult:
     restricted_product_alternatives: LiveProposalAlternativesSnapshot
 
 
-@dataclass(frozen=True)
-class LiveParityConfiguration:
-    advise_base_url: str
-    core_query_base_url: str
-    core_control_base_url: str
-    risk_base_url: str
-    candidate_portfolios: tuple[str, ...]
-
-
-def _resolve_live_parity_configuration(
-    *,
-    advise_base_url: str | None,
-    core_query_base_url: str | None,
-    core_control_base_url: str | None,
-    risk_base_url: str | None,
-    candidate_portfolios: tuple[str, ...] | None,
-    environ: dict[str, str] | None = None,
-) -> LiveParityConfiguration:
-    environment = os.environ if environ is None else environ
-
-    def _base_url(value: str | None, environment_name: str, default: str) -> str:
-        return (value or environment.get(environment_name) or default).rstrip("/")
-
-    candidates = candidate_portfolios or tuple(
-        value.strip()
-        for value in environment.get(
-            "LOTUS_PARITY_PORTFOLIOS",
-            ",".join(_DEFAULT_PORTFOLIO_CANDIDATES),
-        ).split(",")
-        if value.strip()
-    )
-    return LiveParityConfiguration(
-        advise_base_url=_base_url(
-            advise_base_url, "LOTUS_ADVISE_BASE_URL", _DEFAULT_ADVISE_BASE_URL
-        ),
-        core_query_base_url=_base_url(
-            core_query_base_url,
-            "LOTUS_CORE_QUERY_BASE_URL",
-            _DEFAULT_CORE_QUERY_BASE_URL,
-        ),
-        core_control_base_url=_base_url(
-            core_control_base_url,
-            "LOTUS_CORE_BASE_URL",
-            _DEFAULT_CORE_CONTROL_BASE_URL,
-        ),
-        risk_base_url=_base_url(risk_base_url, "LOTUS_RISK_BASE_URL", _DEFAULT_RISK_BASE_URL),
-        candidate_portfolios=candidates,
-    )
-
-
 def _assert(condition: bool, message: str) -> None:
     if not condition:
         raise LiveParityValidationError(message)
@@ -3471,13 +3421,31 @@ def validate_live_cross_service_parity(
 ) -> LiveParityResult:
     from scripts.live_parity_orchestration import run_live_parity
 
+    environment = os.environ
+
+    def base_url(value: str | None, name: str, default: str) -> str:
+        return (value or environment.get(name) or default).rstrip("/")
+
+    candidates = candidate_portfolios or tuple(
+        value.strip()
+        for value in environment.get(
+            "LOTUS_PARITY_PORTFOLIOS", ",".join(_DEFAULT_PORTFOLIO_CANDIDATES)
+        ).split(",")
+        if value.strip()
+    )
     return run_live_parity(
         sys.modules[__name__],
-        advise_base_url=advise_base_url,
-        core_query_base_url=core_query_base_url,
-        core_control_base_url=core_control_base_url,
-        risk_base_url=risk_base_url,
-        candidate_portfolios=candidate_portfolios,
+        advise_base_url=base_url(
+            advise_base_url, "LOTUS_ADVISE_BASE_URL", _DEFAULT_ADVISE_BASE_URL
+        ),
+        core_query_base_url=base_url(
+            core_query_base_url, "LOTUS_CORE_QUERY_BASE_URL", _DEFAULT_CORE_QUERY_BASE_URL
+        ),
+        core_control_base_url=base_url(
+            core_control_base_url, "LOTUS_CORE_BASE_URL", _DEFAULT_CORE_CONTROL_BASE_URL
+        ),
+        risk_base_url=base_url(risk_base_url, "LOTUS_RISK_BASE_URL", _DEFAULT_RISK_BASE_URL),
+        candidate_portfolios=candidates,
     )
 
 

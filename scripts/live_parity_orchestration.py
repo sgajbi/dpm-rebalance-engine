@@ -10,46 +10,36 @@ if TYPE_CHECKING:
 def run_live_parity(
     primitives: ModuleType,
     *,
-    advise_base_url: str | None = None,
-    core_query_base_url: str | None = None,
-    core_control_base_url: str | None = None,
-    risk_base_url: str | None = None,
-    candidate_portfolios: tuple[str, ...] | None = None,
+    advise_base_url: str,
+    core_query_base_url: str,
+    core_control_base_url: str,
+    risk_base_url: str,
+    candidate_portfolios: tuple[str, ...],
 ) -> LiveParityResult:
     """Run the ordered live certification using the validator's proof primitives."""
     p = primitives
-    configuration = p._resolve_live_parity_configuration(
-        advise_base_url=advise_base_url,
-        core_query_base_url=core_query_base_url,
-        core_control_base_url=core_control_base_url,
-        risk_base_url=risk_base_url,
-        candidate_portfolios=candidate_portfolios,
-    )
 
     with p.httpx.Client(timeout=p.httpx.Timeout(30.0)) as client:
         complete, degraded = p._select_scenarios(
             client,
-            advise_base_url=configuration.advise_base_url,
-            core_query_base_url=configuration.core_query_base_url,
-            candidates=configuration.candidate_portfolios,
+            advise_base_url=advise_base_url,
+            core_query_base_url=core_query_base_url,
+            candidates=candidate_portfolios,
         )
         p._validate_live_scenario_parity(
             client,
-            advise_base_url=configuration.advise_base_url,
-            core_query_base_url=configuration.core_query_base_url,
-            risk_base_url=configuration.risk_base_url,
+            advise_base_url=advise_base_url,
+            core_query_base_url=core_query_base_url,
+            risk_base_url=risk_base_url,
             scenarios=(complete, degraded),
         )
 
-        cold_ms, warm_ms = p._measure_warm_cache(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
-        ready_decision, review_decision, blocked_decision = p._validate_live_decision_paths(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            complete_scenario=complete,
+        def advise_step(function, **kwargs):
+            return function(client, advise_base_url=advise_base_url, **kwargs)
+
+        cold_ms, warm_ms = advise_step(p._measure_warm_cache, scenario=complete)
+        ready_decision, review_decision, blocked_decision = advise_step(
+            p._validate_live_decision_paths, complete_scenario=complete
         )
         (
             noop_alternatives,
@@ -57,9 +47,8 @@ def run_live_parity(
             cash_raise_alternatives,
             cross_currency_alternatives,
             restricted_product_alternatives,
-        ) = p._validate_live_proposal_alternatives_paths(
-            client,
-            advise_base_url=configuration.advise_base_url,
+        ) = advise_step(
+            p._validate_live_proposal_alternatives_paths,
             complete_scenario=complete,
             warm_duration_ms=warm_ms,
         )
@@ -69,65 +58,32 @@ def run_live_parity(
             lifecycle_current_state,
             handoff_status,
             report_status,
-        ) = p._assert_lifecycle_and_delivery_flow(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
-        proposal_narrative = p._assert_live_proposal_narrative_flow(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
-        proposal_memo = p._assert_live_proposal_memo_flow(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
-        proposal_policy = p._assert_live_policy_evaluation_flow(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
+        ) = advise_step(p._assert_lifecycle_and_delivery_flow, scenario=complete)
+        proposal_narrative = advise_step(p._assert_live_proposal_narrative_flow, scenario=complete)
+        proposal_memo = advise_step(p._assert_live_proposal_memo_flow, scenario=complete)
+        proposal_policy = advise_step(p._assert_live_policy_evaluation_flow, scenario=complete)
         (
             async_lifecycle_portfolio,
             async_lifecycle_latest_version_no,
             async_lifecycle_current_state,
-        ) = p._assert_async_lifecycle_read_surfaces(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
-        p._assert_new_version_requires_fresh_approvals(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
-        p._assert_mixed_approval_routes_remain_version_scoped(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
+        ) = advise_step(p._assert_async_lifecycle_read_surfaces, scenario=complete)
+        advise_step(p._assert_new_version_requires_fresh_approvals, scenario=complete)
+        advise_step(p._assert_mixed_approval_routes_remain_version_scoped, scenario=complete)
         (
             workspace_rationale_initial_run_id,
             workspace_rationale_replacement_run_id,
             workspace_rationale_review_state,
             workspace_rationale_supportability_status,
-        ) = p._assert_workspace_flow(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            scenario=complete,
-        )
+        ) = advise_step(p._assert_workspace_flow, scenario=complete)
         (
             changed_state_security_id,
             cross_currency_security_id,
             non_held_security_id,
-        ) = p._validate_changed_state_workspace_parity(
-            client,
-            advise_base_url=configuration.advise_base_url,
-            core_query_base_url=configuration.core_query_base_url,
-            core_control_base_url=configuration.core_control_base_url,
-            risk_base_url=configuration.risk_base_url,
+        ) = advise_step(
+            p._validate_changed_state_workspace_parity,
+            core_query_base_url=core_query_base_url,
+            core_control_base_url=core_control_base_url,
+            risk_base_url=risk_base_url,
             scenario=complete,
         )
 
