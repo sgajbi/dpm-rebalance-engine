@@ -4,10 +4,13 @@
 
 - Scope: `src/core/advisory/valuation_context.py`, its proposal valuation-context contract tests,
   and this review ledger.
-- Pattern: A supportability rule that compares a missing-evidence count with a literal dimension
-  count silently becomes wrong when a new evidence dimension is added.
-- Status: Implemented in the bounded #491 extension-safety slice. The pure rule now receives its
-  declared evidence tuple and compares the missing count with `len(evidence)`.
+- Pattern: A supportability helper that only accepts today's named evidence dimensions cannot
+  express or directly test a future dimension; a later literal dimension count could then make
+  an all-missing state appear only partially supported.
+- Status: The pre-slice implementation already compared the missing count with `len(evidence)`
+  over its internally constructed two-item tuple. The bounded #491 extension-safety slice now
+  makes the pure rule receive its declared evidence tuple directly, so future dimensions are
+  expressible and testable without changing the rule again.
 - Finding Class: advisory evidence-state correctness, future contract extensibility, and
   regression-proof quality.
 - Summary: Existing two-dimension valuation behavior is unchanged. A three-dimension regression
