@@ -1,5 +1,31 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-934-QUEUE-AUTO-MERGE-MISSING-TOKEN
+
+- Scope: `.github/workflows/pr-auto-merge.yml`, its workflow contract test, branch-protection
+  operator guidance, and the repo-authored CI wiki page.
+- Pattern: Required CI automation must fail clearly when its governing credential is unavailable;
+  a successful warning-and-skip path makes a blocked merge prerequisite look like green evidence.
+- Status: Implemented in the bounded #464 CI reliability slice. Missing
+  `LOTUS_AUTOMERGE_TOKEN` now emits a machine-readable error and exits nonzero, so Queue Auto Merge
+  cannot report a successful skipped result.
+- Finding Class: CI quality-gate actionability, merge hygiene, and workflow contract regression
+  protection.
+- Summary: The internal, non-fork, `automerge`-labeled PR guard and least-privilege permissions
+  remain unchanged. The missing-secret path identifies the required secret, explains that no merge
+  was queued, and names the authorized human/release-actor manual rebase-merge fallback. The
+  post-merge releasability dispatch contract remains dependent on a non-`GITHUB_TOKEN` actor.
+- Evidence: The workflow contract test asserts the error annotation, nonzero exit, absence of the
+  old warning/zero-exit path, secret boundary, and governed rebase merge command.
+- Compatibility: CI status and operator guidance only. Product runtime, APIs/OpenAPI,
+  persistence, migrations, dependencies, and downstream contracts are unchanged.
+- Documentation decision: Updated the branch-protection operator guide, repo-authored
+  `wiki/Validation-and-CI.md`, and this ledger; publish and strict parity verification are
+  required after merge.
+- Follow-Up: #464 closes after merge, exact-mainline validation, wiki publication/parity, and
+  evidence-backed issue reconciliation. #495 remains the owner of subsequent CI quality-gate
+  improvements.
+
 ## LA-REV-495-MONETARY-FLOAT-PREEXPIRY
 
 - Scope: `scripts/check_monetary_float_usage.py`, its focused regression tests, monetary-float

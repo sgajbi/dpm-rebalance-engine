@@ -28,8 +28,9 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           if [ -z "$GH_TOKEN" ]; then
-            echo "::warning::LOTUS_AUTOMERGE_TOKEN is required for automatic rebase merge so post-merge releasability dispatch is triggered by a non-GITHUB_TOKEN actor. Skipping auto-merge; use an authorized human or release actor to rebase merge this PR."
-            exit 0
+            echo "::error title=Missing LOTUS_AUTOMERGE_TOKEN::Configure LOTUS_AUTOMERGE_TOKEN or use an authorized human or release actor to rebase-merge this PR; automatic rebase merge is not queued."
+            echo "Manual fallback: use an authorized human or release actor to rebase-merge this PR after required checks pass."
+            exit 1
           fi
           set +e
           output=$(gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --rebase --delete-branch 2>&1)

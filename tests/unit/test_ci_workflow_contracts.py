@@ -766,6 +766,9 @@ def test_validation_wiki_documents_repo_native_ci_enforcement() -> None:
         "make bandit-severity-regression-gate",
         "make observability-diagnostics",
         "make advisory-domain-golden-regressions",
+        "LOTUS_AUTOMERGE_TOKEN",
+        "machine-readable GitHub error",
+        "manual rebase-merge fallback",
         "measured, deterministic, repo-native, and low-noise",
         "poll GitHub sparsely",
         "..\\lotus-platform\\automation\\Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-advise",
@@ -791,8 +794,14 @@ def test_pull_request_target_auto_merge_is_guarded_to_internal_labeled_prs() -> 
     assert "contains(github.event.pull_request.labels.*.name, 'automerge')" in auto_merge_section
     assert "secrets.LOTUS_AUTOMERGE_TOKEN" in auto_merge_section
     assert "github.token" not in workflow
-    assert "LOTUS_AUTOMERGE_TOKEN is required" in auto_merge_section
-    assert "Skipping auto-merge; use an authorized human or release actor" in auto_merge_section
+    assert "::error title=Missing LOTUS_AUTOMERGE_TOKEN::" in auto_merge_section
+    assert "Manual fallback: use an authorized human or release actor" in auto_merge_section
+    missing_token_branch = auto_merge_section.split('if [ -z "$GH_TOKEN" ]; then', maxsplit=1)[
+        1
+    ].split("\n          fi", maxsplit=1)[0]
+    assert "exit 1" in missing_token_branch
+    assert "exit 0" not in missing_token_branch
+    assert "::warning::" not in missing_token_branch
     assert 'gh pr merge "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --auto --rebase' in (
         auto_merge_section
     )

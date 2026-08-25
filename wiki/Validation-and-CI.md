@@ -9,6 +9,13 @@ change reaches `main`.
 This page is the operating map for local gates, GitHub Actions lanes, release evidence, and
 post-merge wiki publication. It names blocking commands and the evidence each lane protects.
 
+The opt-in Queue Auto Merge workflow runs only for ready, internal, non-fork PRs targeting `main`
+with the `automerge` label. It uses `LOTUS_AUTOMERGE_TOKEN` to queue the repository-approved
+rebase merge so post-merge releasability dispatch is triggered by a non-`GITHUB_TOKEN` actor. If
+the secret is missing, the workflow emits a machine-readable GitHub error and fails the check;
+it does not report a green skipped result. After required checks pass, an authorized human or
+release actor may use the documented manual rebase-merge fallback.
+
 `make ci-local-docker` mounts the central Platform contract tree read-only at `/lotus-platform`,
 plus all repo-native domain-product source checkouts at their canonical `/lotus-*` paths. The
 platform host path defaults to `../lotus-platform` and can be overridden with
