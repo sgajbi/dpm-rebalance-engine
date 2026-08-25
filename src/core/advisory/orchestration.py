@@ -7,6 +7,7 @@ from src.core.advisory.explanation_contracts import (
     attach_governed_explanation_sections,
     build_authority_resolution_explanation,
 )
+from src.core.advisory.proposal_review_evidence import build_proposal_review_evidence
 from src.core.advisory.provider_ports import (
     AdvisoryProviderDependencyState,
     AdvisoryRiskEnrichmentUnavailableError,
@@ -132,6 +133,10 @@ def evaluate_advisory_proposal(
         source_provenance=risk.proposal_result.lineage.source_provenance,
         requested_as_of_date=requested_as_of_date,
         requested_reporting_currency=requested_reporting_currency,
+    )
+    risk.proposal_result.proposal_review_evidence = build_proposal_review_evidence(
+        policy_context=policy_context,
+        valuation_context=risk.proposal_result.valuation_context,
     )
     return cast(ProposalResult, risk.proposal_result)
 

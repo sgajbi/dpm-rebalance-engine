@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from src.core.advisory.alternatives_models import ProposalAlternatives
 from src.core.advisory.decision_summary_models import ProposalDecisionSummary
+from src.core.advisory.proposal_review_evidence_models import ProposalReviewEvidence
 from src.core.advisory.valuation_context_models import ProposalValuationContext
 from src.core.diagnostics_models import DiagnosticsData, LineageData, RuleResult
 from src.core.drift_models import DriftAnalysis
@@ -109,6 +110,14 @@ class ProposalResult(BaseModel):
         description=(
             "Typed requested/effective valuation-date and reporting-currency evidence for "
             "current and simulated states. Missing source evidence is explicit and unavailable."
+        ),
+    )
+    proposal_review_evidence: ProposalReviewEvidence = Field(
+        default_factory=ProposalReviewEvidence.unavailable,
+        description=(
+            "Typed benchmark-assignment and current/simulated mandate-limit evidence. Requested "
+            "selectors are not effective source evidence; missing upstream evidence remains "
+            "explicitly unavailable."
         ),
     )
     lineage: LineageData = Field(description="Lineage identifiers and request hash.")
