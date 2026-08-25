@@ -1,7 +1,10 @@
 from decimal import Decimal
 
 from src.api.main import app
-from src.core.advisory.valuation_context import build_proposal_valuation_context
+from src.core.advisory.valuation_context import (
+    _supportability,
+    build_proposal_valuation_context,
+)
 from src.core.advisory.valuation_context_models import ProposalValuationContext
 from src.core.portfolio_models import Money, PortfolioSnapshot
 from src.core.proposal_request_models import ProposalSimulateRequest
@@ -118,6 +121,14 @@ def test_valuation_context_preserves_missing_source_and_omitted_request_posture(
     assert omitted_request.current_state.requested_reporting_currency is None
     assert omitted_request.current_state.effective_reporting_currency == "USD"
     assert omitted_request.current_state.supportability == "READY"
+
+
+def test_supportability_counts_all_declared_evidence_dimensions() -> None:
+    assert _supportability(evidence=(None, None, None), reason_code=None) == "UNAVAILABLE"
+    assert _supportability(evidence=("2026-03-25", None, None), reason_code=None) == "PARTIAL"
+    assert _supportability(evidence=("2026-03-25", "USD", "LOTUS_CORE"), reason_code=None) == (
+        "READY"
+    )
 
 
 def test_openapi_publishes_typed_valuation_context_fields() -> None:

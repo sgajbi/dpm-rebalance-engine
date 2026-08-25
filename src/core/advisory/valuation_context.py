@@ -89,8 +89,7 @@ def _build_state(
         requested_reporting_currency=requested_reporting_currency,
         effective_reporting_currency=effective_reporting_currency,
         supportability=_supportability(
-            effective_as_of_date=effective_as_of_date,
-            effective_reporting_currency=effective_reporting_currency,
+            evidence=(effective_as_of_date, effective_reporting_currency),
             reason_code=reason_code,
         ),
         reason_code=reason_code,
@@ -117,11 +116,9 @@ def _values_mismatch(requested: str | None, effective: str | None) -> bool:
 
 def _supportability(
     *,
-    effective_as_of_date: str | None,
-    effective_reporting_currency: str | None,
+    evidence: tuple[str | None, ...],
     reason_code: ValuationContextReasonCode | None,
 ) -> ValuationContextSupportability:
-    evidence = (effective_as_of_date, effective_reporting_currency)
     missing_evidence = sum(value is None for value in evidence)
     if missing_evidence == len(evidence):
         return "UNAVAILABLE"
