@@ -1,3 +1,5 @@
+"""Render the maintainability and CI quality scorecard from collected evidence."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -160,6 +162,7 @@ def _scorecard_before_after_rows(context: QualityContext) -> list[tuple[str, str
 
 
 def render_quality_scorecard(context: QualityContext) -> str:
+    """Render the stable Markdown scorecard consumed by CI quality evidence."""
     rows = [
         ("Code size and hotspots", "Calibrated regression gate", "make oversized-code-gate"),
         (

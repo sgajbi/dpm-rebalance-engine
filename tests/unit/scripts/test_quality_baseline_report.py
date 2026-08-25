@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from pathlib import Path
 
 from scripts import quality_scorecard
@@ -16,7 +18,27 @@ from scripts.refactor_health_report import build_refactor_health_lines
 
 
 def test_scorecard_renderer_is_owned_by_dedicated_module() -> None:
+    """Keep the baseline module's renderer seam pointed at the dedicated owner."""
     assert render_quality_scorecard is quality_scorecard.render_quality_scorecard
+
+
+def test_quality_baseline_cli_keeps_direct_script_import_compatibility() -> None:
+    """Prove direct CLI execution still resolves the extracted scorecard module."""
+    repo_root = Path(__file__).resolve().parents[3]
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(repo_root / "scripts" / "quality_baseline_report.py"),
+            "--help",
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Generate Lotus Advise quality baseline reports." in result.stdout
 
 
 def test_radon_inventory_counts_nested_blocks_and_worst_complexity() -> None:

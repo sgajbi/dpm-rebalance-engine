@@ -29,7 +29,7 @@
   in one owner without retaining a transitional oversized renderer. The module is registered as
   first-party for deptry so the dependency gate models the internal seam rather than treating it
   as an external package.
-- Evidence: Focused quality-report tests pass 8 tests; configured mypy, Ruff, and format checks
+- Evidence: Focused quality-report tests pass 9 tests; configured mypy, Ruff, and format checks
   pass. Full native gates, quality trend, and exact-mainline coverage remain merge prerequisites.
   No wiki publication is needed because no operator workflow or consumer contract changed.
 - Follow-Up: #495 continues with the next separately bounded CI fitness or maintainability slice;
