@@ -54,7 +54,7 @@ def apply_context_resolution_override(
     if override is None:
         return resolved
     try:
-        input_mode = override["input_mode"]
+        input_mode_value = override["input_mode"]
         resolution_source = override["resolution_source"]
         resolved_context = ProposalResolvedContext.model_validate(override["resolved_context"])
         used_legacy_contract = override["used_legacy_contract"]
@@ -63,21 +63,44 @@ def apply_context_resolution_override(
         raise ProposalContextResolutionError(
             "PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID"
         ) from exc
-    if (
-        input_mode not in {"stateless", "stateful"}
-        or not isinstance(resolution_source, str)
-        or not resolution_source
-        or not isinstance(used_legacy_contract, bool)
-        or not isinstance(policy_context, dict)
-    ):
-        raise ProposalContextResolutionError("PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID")
+    input_mode = _require_override_input_mode(input_mode_value)
+    resolution_source = _require_override_resolution_source(resolution_source)
+    used_legacy_contract = _require_override_legacy_contract(used_legacy_contract)
+    _require_override_policy_context(policy_context)
     return replace(
         resolved,
-        input_mode=cast(ProposalInputMode, input_mode),
+        input_mode=input_mode,
         resolution_source=resolution_source,
         resolved_context=resolved_context,
         used_legacy_contract=used_legacy_contract,
     )
+
+
+def _require_override_input_mode(value: object) -> ProposalInputMode:
+    if not isinstance(value, str):
+        raise ProposalContextResolutionError("PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID")
+    if value not in {"stateless", "stateful"}:
+        raise ProposalContextResolutionError("PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID")
+    return cast(ProposalInputMode, value)
+
+
+def _require_override_resolution_source(value: object) -> str:
+    if not isinstance(value, str):
+        raise ProposalContextResolutionError("PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID")
+    if not value:
+        raise ProposalContextResolutionError("PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID")
+    return value
+
+
+def _require_override_legacy_contract(value: object) -> bool:
+    if not isinstance(value, bool):
+        raise ProposalContextResolutionError("PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID")
+    return value
+
+
+def _require_override_policy_context(value: object) -> None:
+    if not isinstance(value, dict):
+        raise ProposalContextResolutionError("PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID")
 
 
 def resolve_create_request(payload: ProposalCreateRequest) -> ResolvedProposalContext:
