@@ -87,6 +87,9 @@ model or source-owned date is present. It is not authoritative valuation evidenc
 `valuation_context.current_state.effective_as_of_date` or
 `valuation_context.simulated_state.effective_as_of_date`. When both requested date and currency
 are not honored, `reason_code` reports the primary date reason and is not a complete mismatch list.
+Core-authoritative stateful proposal create, version, and simulation resolution fails closed with
+`WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING` when the resolved source context omits its required date;
+this does not change the honest nullable-date behavior for direct/stateless requests.
 Normalized proposal replay evidence preserves the same lifecycle context with `as_of: null` when
 the direct/stateless source context has no explicit date; it does not discard the portfolio or
 snapshot identity.

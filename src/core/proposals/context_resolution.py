@@ -235,6 +235,14 @@ def _require_stateful_input(
     return stateful_input
 
 
+def _require_stateful_context_as_of(context: ProposalResolvedContext) -> str:
+    """Require authoritative stateful context to carry a resolved valuation date."""
+
+    if context.as_of is None:
+        raise ProposalContextResolutionError("WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING")
+    return cast(str, context.as_of)
+
+
 def _require_stateless_simulate_request(
     payload: ProposalCreateRequest | ProposalSimulationRequest | ProposalVersionRequest,
 ) -> ProposalSimulateRequest:
@@ -331,8 +339,11 @@ def _resolve_stateful_input(
 
     resolved_context = ProposalResolvedContext.model_validate(
         resolved.resolved_context.model_dump(mode="json")
-    ).model_copy(
+    )
+    resolved_context_as_of = _require_stateful_context_as_of(resolved_context)
+    resolved_context = resolved_context.model_copy(
         update={
+            "as_of": resolved_context_as_of,
             "requested_as_of": stateful_input.as_of,
             "requested_reporting_currency": stateful_input.reporting_currency,
         }
