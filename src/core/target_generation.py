@@ -5,6 +5,11 @@ from typing import Any
 from src.core.diagnostics_models import DiagnosticsData
 from src.core.engine_options_models import EngineOptions
 from src.core.portfolio_models import Money, ShelfEntry
+from src.core.target_solver_boundary import (
+    decimal_to_solver_scalar,
+    decimal_to_solver_vector,
+    solver_output_to_decimal,
+)
 from src.core.universe_target_models import TargetInstrument
 
 _SOLVER_STATUS_OPTIMAL = {"optimal", "optimal_inaccurate"}
@@ -480,8 +485,8 @@ def _append_cash_band_constraints(
 ) -> None:
     invested_min = Decimal("1.0") - options.cash_band_max_weight - locked_weight
     invested_max = Decimal("1.0") - options.cash_band_min_weight - locked_weight
-    constraints.append(cp.sum(w) >= float(invested_min))
-    constraints.append(cp.sum(w) <= float(invested_max))
+    constraints.append(cp.sum(w) >= decimal_to_solver_scalar(invested_min))
+    constraints.append(cp.sum(w) <= decimal_to_solver_scalar(invested_max))
 
 
 def _append_group_constraints(
@@ -514,8 +519,8 @@ def _append_group_constraints(
         group_locked_weight = exposure.locked_weight
         group_expr = cp.sum(
             [w[solver_index.indexed_tradeable[i_id]] for i_id in exposure.tradeable_ids]
-        ) + float(group_locked_weight)
-        constraints.append(group_expr <= float(constraint.max_weight))
+        ) + decimal_to_solver_scalar(group_locked_weight)
+        constraints.append(group_expr <= decimal_to_solver_scalar(constraint.max_weight))
 
 
 def _solver_group_constraint_exposure(
@@ -552,8 +557,9 @@ def _build_target_solver_problem(
     diagnostics: DiagnosticsData,
 ) -> _TargetSolverProblem:
     model_weights = {t.instrument_id: t.weight for t in model.targets}
-    w_model = np.array(
-        [float(model_weights.get(i_id, Decimal("0.0"))) for i_id in solver_index.tradeable_ids]
+    w_model = decimal_to_solver_vector(
+        (model_weights.get(i_id, Decimal("0.0")) for i_id in solver_index.tradeable_ids),
+        np,
     )
     w = cp.Variable(len(solver_index.tradeable_ids))
 
@@ -568,7 +574,7 @@ def _build_target_solver_problem(
     )
 
     if options.single_position_max_weight is not None:
-        constraints.append(w <= float(options.single_position_max_weight))
+        constraints.append(w <= decimal_to_solver_scalar(options.single_position_max_weight))
 
     _append_group_constraints(
         cp=cp,
@@ -589,7 +595,7 @@ def _apply_solved_weights(
     w: Any,
 ) -> None:
     for idx, i_id in enumerate(solver_index.tradeable_ids):
-        solved_weight = Decimal(str(max(float(w.value[idx]), 0.0))).quantize(Decimal("0.0001"))
+        solved_weight = solver_output_to_decimal(max(w.value[idx], 0.0))
         eligible_targets[i_id] = solved_weight
 
 
