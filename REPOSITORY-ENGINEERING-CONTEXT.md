@@ -449,7 +449,7 @@ Use these commands as the primary local contract:
    `make quality-baseline-check`
 10. quality trend regression gate
    `make quality-trend-gate` compares the committed baseline report at the merge base of the
-   governed base/head revisions and the exact head. The versioned policy blocks more than 250
+   governed base/head revisions and the exact head. The versioned policy blocks more than 200
    added Python lines, any new Radon B-ranked block, any increase in worst Radon complexity, or
    any Interrogate coverage decrease; reviewed exceptions require the exact effective comparison
    `base_sha` (the measured merge base) and `head_sha`, approver, reason, and expiry, and cannot
