@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from src.integrations.lotus_report.request_mapping import (
@@ -11,6 +14,13 @@ from src.integrations.lotus_report.request_mapping import (
     find_first_key_value,
     normalized_output_formats,
     report_status_path,
+)
+
+CANONICAL_MEMO_REPORT_FIXTURE = (
+    Path(__file__).resolve().parents[4]
+    / "tests"
+    / "fixtures"
+    / "canonical_proposal_memo_report_package.json"
 )
 
 
@@ -232,6 +242,29 @@ def test_extract_report_as_of_date_ignores_invalid_direct_dates_before_lineage_f
     }
 
     assert extract_report_as_of_date(request) == "2026-04-13"
+
+
+def test_extract_report_as_of_date_uses_typed_valuation_context_source() -> None:
+    request = json.loads(CANONICAL_MEMO_REPORT_FIXTURE.read_text(encoding="utf-8"))
+
+    assert extract_report_as_of_date(request) == "2026-05-28"
+    assert build_memo_report_package_job_request(request)["as_of_date"] == "2026-05-28"
+
+
+def test_extract_report_as_of_date_rejects_conflicting_typed_state_dates() -> None:
+    request = _proposal_request()
+    request["proposal_version"]["proposal_result"] = {
+        "valuation_context": {
+            "current_state": {"effective_as_of_date": "2026-04-14"},
+            "simulated_state": {"effective_as_of_date": "2026-04-15"},
+        },
+    }
+
+    with pytest.raises(
+        LotusReportRequestMappingError,
+        match="LOTUS_REPORT_REQUEST_UNAVAILABLE",
+    ):
+        extract_report_as_of_date(request)
 
 
 def test_extract_report_as_of_date_rejects_missing_or_conflicting_source_dates() -> None:

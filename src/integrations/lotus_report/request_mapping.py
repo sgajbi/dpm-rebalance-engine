@@ -6,7 +6,12 @@ from typing import Any, cast
 from src.core.proposals.correlation import MAX_CORRELATION_ID_LENGTH
 
 _SNAPSHOT_DATE_PATTERN = re.compile(r"\d{4}-\d{2}-\d{2}")
-_REPORT_DATE_KEYS = {"as_of_date", "report_end_date", "valuation_date"}
+_REPORT_DATE_KEYS = {
+    "as_of_date",
+    "effective_as_of_date",
+    "report_end_date",
+    "valuation_date",
+}
 _SUPPORTED_OUTPUT_FORMATS = {"pdf", "json"}
 _ADVISORY_POLICY_SIGN_OFF_PACKAGE = "ADVISORY_POLICY_SIGN_OFF_PACKAGE"
 

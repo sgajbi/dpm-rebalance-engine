@@ -4,6 +4,7 @@ from typing import NoReturn, TypeVar
 from fastapi import HTTPException, status
 
 from src.api.proposals.errors import safe_proposal_error_detail
+from src.core.proposals.memo_report_ports import ProposalMemoReportPackageUnavailableError
 from src.integrations.lotus_report import LotusReportUnavailableError
 
 LOTUS_REPORT_REQUEST_UNAVAILABLE_DETAIL = "LOTUS_REPORT_REQUEST_UNAVAILABLE"
@@ -18,7 +19,7 @@ def run_lotus_report_operation(
 ) -> _LotusReportOperationResult:
     try:
         return operation()
-    except LotusReportUnavailableError as exc:
+    except (LotusReportUnavailableError, ProposalMemoReportPackageUnavailableError) as exc:
         if on_unavailable is not None:
             on_unavailable()
         raise_lotus_report_unavailable_http_exception(exc)
