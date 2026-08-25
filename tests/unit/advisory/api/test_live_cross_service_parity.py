@@ -1,4 +1,6 @@
+import json
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -7,13 +9,7 @@ from scripts.live_policy_evaluation_support import (
     ensure_sg_policy_pack_active,
     request_live_policy_report,
 )
-from scripts.live_runtime_persisted_read_surfaces import (
-    PersistedReadSurfaces,
-    assert_persisted_delivery_and_approval_surfaces,
-    assert_persisted_identity_and_version,
-    assert_persisted_read_surfaces,
-    fetch_persisted_read_surfaces,
-)
+from scripts.live_runtime_persisted_read_surfaces import assert_persisted_read_surfaces
 from scripts.live_runtime_proposal_alternatives import extract_live_proposal_alternatives_snapshot
 from scripts.validate_cross_service_parity_live import (
     PortfolioParityScenario,
@@ -123,240 +119,56 @@ def test_live_policy_report_preserves_ready_and_degraded_outcomes(
     assert result == expected
 
 
-def test_fetch_persisted_read_surfaces_preserves_endpoint_order_and_version_scope() -> None:
-    calls: list[tuple[str, int]] = []
+def _persisted_read_surface_responses() -> dict[str, Any]:
+    fixture_path = (
+        Path(__file__).parents[3] / "fixtures" / "persisted_read_surfaces_two_version.json"
+    )
+    return json.loads(fixture_path.read_text(encoding="utf-8"))
 
+
+def _persisted_read_surface_getter(responses: dict[str, Any], calls: list[tuple[str, int]]) -> Any:
     def _fake_get_json(_client, *, url, expected_status):  # noqa: ANN001
         calls.append((url, expected_status))
-        if "/advisory/proposals?" in url:
-            return {"items": [{"proposal_id": "proposal-1"}]}
-        return {"url": url}
+        response_routes = (
+            ("/advisory/proposals?", "list"),
+            ("/versions/1/replay-evidence", "first_replay"),
+            ("/replay-evidence", "current_replay"),
+            ("/versions/2?include_evidence=false", "version"),
+            ("?include_evidence=false", "detail"),
+            ("/workflow-events", "timeline"),
+            ("/lineage", "lineage"),
+            ("/approvals", "approvals"),
+            ("/delivery-summary", "delivery_summary"),
+            ("/delivery-events", "delivery_history"),
+        )
+        for marker, response_key in response_routes:
+            if marker in url:
+                return responses[response_key]
+        raise AssertionError(f"unexpected persisted read-surface URL: {url}")
 
-    fetch_persisted_read_surfaces(
+    return _fake_get_json
+
+
+def _assert_complete_persisted_read_surfaces(
+    responses: dict[str, Any], calls: list[tuple[str, int]]
+) -> None:
+    assert_persisted_read_surfaces(
         object(),
         advise_base_url="http://advise.dev.lotus",
         proposal_id="proposal-1",
         expected_portfolio_id="PB_SG_GLOBAL_BAL_001",
         created_by_filter="live-validator",
         current_version_no=2,
-        get_json=_fake_get_json,
+        expected_state="EXECUTED",
+        expected_report_status="READY",
+        get_json=_persisted_read_surface_getter(responses, calls),
         assert_condition=_assert_condition,
     )
-
-    assert [url for url, status in calls] == [
-        "http://advise.dev.lotus/advisory/proposals?portfolio_id=PB_SG_GLOBAL_BAL_001&limit=100&created_by=live-validator",
-        "http://advise.dev.lotus/advisory/proposals/proposal-1?include_evidence=false",
-        "http://advise.dev.lotus/advisory/proposals/proposal-1/versions/2?include_evidence=false",
-        "http://advise.dev.lotus/advisory/proposals/proposal-1/workflow-events",
-        "http://advise.dev.lotus/advisory/proposals/proposal-1/lineage",
-        "http://advise.dev.lotus/advisory/proposals/proposal-1/approvals",
-        "http://advise.dev.lotus/advisory/proposals/proposal-1/delivery-summary",
-        "http://advise.dev.lotus/advisory/proposals/proposal-1/delivery-events",
-    ]
-    assert all(status == 200 for _, status in calls)
-
-
-def test_persisted_identity_rejects_divergent_decision_summary() -> None:
-    ready_summary = {
-        "decision_status": "READY",
-        "primary_reason_code": "READY_FOR_EXECUTION",
-        "approval_requirements": [],
-    }
-    proposal = {
-        "proposal_id": "proposal-1",
-        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
-        "current_version_no": 1,
-        "current_state": "EXECUTED",
-    }
-    ready_version = {
-        "version_no": 1,
-        "proposal_result": {"proposal_decision_summary": ready_summary},
-    }
-    blocked_version = {
-        "proposal_id": "proposal-1",
-        "version_no": 1,
-        "proposal_result": {
-            "proposal_decision_summary": {
-                **ready_summary,
-                "decision_status": "BLOCKED",
-                "primary_reason_code": "STALE_EVIDENCE",
-            },
-        },
-    }
-    surfaces = PersistedReadSurfaces(
-        list_item={
-            "proposal_id": "proposal-1",
-            "current_version_no": 1,
-            "current_state": "EXECUTED",
-        },
-        detail={"proposal": proposal, "current_version": ready_version},
-        version=blocked_version,
-        timeline={"current_state": "EXECUTED"},
-        lineage={"latest_version_no": 1},
-        approvals={},
-        delivery_summary={"proposal": {"current_state": "EXECUTED"}},
-        delivery_history={},
-    )
-
-    with pytest.raises(AssertionError, match="decision summaries diverged"):
-        assert_persisted_identity_and_version(
-            surfaces,
-            proposal_id="proposal-1",
-            expected_portfolio_id="PB_SG_GLOBAL_BAL_001",
-            current_version_no=1,
-            expected_state="EXECUTED",
-            assert_condition=_assert_condition,
-        )
-
-
-def test_persisted_delivery_rejects_non_delivery_event() -> None:
-    surfaces = PersistedReadSurfaces(
-        list_item={},
-        detail={},
-        version={},
-        timeline={},
-        lineage={},
-        approvals={"approval_count": 2, "approvals": [{"related_version_no": 1}] * 2},
-        delivery_summary={
-            "execution": {
-                "handoff_status": "EXECUTED",
-                "related_version_no": 1,
-                "latest_event_type": "EXECUTED",
-            },
-            "reporting": None,
-        },
-        delivery_history={
-            "events": [{"event_type": "CREATED", "related_version_no": 1}],
-            "latest_event": {"event_type": "CREATED"},
-        },
-    )
-
-    with pytest.raises(AssertionError, match="contained non-delivery events"):
-        assert_persisted_delivery_and_approval_surfaces(
-            surfaces,
-            proposal_id="proposal-1",
-            current_version_no=1,
-            expected_report_status="UNAVAILABLE",
-            assert_condition=_assert_condition,
-        )
 
 
 def test_persisted_read_surfaces_preserve_complete_two_version_contract() -> None:
-    proposal_id = "proposal-1"
-    portfolio_id = "PB_SG_GLOBAL_BAL_001"
-    decision_summary = {
-        "decision_status": "READY",
-        "primary_reason_code": "READY_FOR_EXECUTION",
-        "approval_requirements": [],
-    }
-    responses = {
-        "list": {
-            "items": [
-                {
-                    "proposal_id": proposal_id,
-                    "current_version_no": 2,
-                    "current_state": "EXECUTED",
-                }
-            ]
-        },
-        "detail": {
-            "proposal": {
-                "proposal_id": proposal_id,
-                "portfolio_id": portfolio_id,
-                "current_version_no": 2,
-                "current_state": "EXECUTED",
-            },
-            "current_version": {
-                "version_no": 2,
-                "proposal_result": {"proposal_decision_summary": decision_summary},
-            },
-        },
-        "version": {
-            "proposal_id": proposal_id,
-            "version_no": 2,
-            "proposal_result": {"proposal_decision_summary": decision_summary},
-        },
-        "timeline": {
-            "current_state": "EXECUTED",
-            "event_count": 3,
-            "events": [
-                {"event_type": "CREATED", "related_version_no": 1},
-                {"event_type": "NEW_VERSION_CREATED", "related_version_no": 2},
-                {"event_type": "EXECUTED", "related_version_no": 2},
-            ],
-        },
-        "lineage": {
-            "latest_version_no": 2,
-            "version_count": 2,
-            "versions": [{"version_no": 1}, {"version_no": 2}],
-            "lineage_complete": True,
-            "missing_version_numbers": [],
-        },
-        "approvals": {
-            "approval_count": 2,
-            "approvals": [
-                {"related_version_no": 2},
-                {"related_version_no": 2},
-            ],
-        },
-        "delivery_summary": {
-            "proposal": {"current_state": "EXECUTED"},
-            "execution": {
-                "handoff_status": "EXECUTED",
-                "related_version_no": 2,
-                "latest_event_type": "REPORT_REQUESTED",
-            },
-            "reporting": {"status": "READY", "related_version_no": 2},
-        },
-        "delivery_history": {
-            "event_count": 2,
-            "events": [
-                {"event_type": "EXECUTED", "related_version_no": 2},
-                {"event_type": "REPORT_REQUESTED", "related_version_no": 2},
-            ],
-            "latest_event": {"event_type": "REPORT_REQUESTED"},
-        },
-        "first_replay": {"subject": {"proposal_version_no": 1}},
-        "current_replay": {"subject": {"proposal_version_no": 2}},
-    }
     calls: list[tuple[str, int]] = []
-
-    def _fake_get_json(_client, *, url, expected_status):  # noqa: ANN001
-        calls.append((url, expected_status))
-        if "/advisory/proposals?" in url:
-            return responses["list"]
-        if "/versions/1/replay-evidence" in url:
-            return responses["first_replay"]
-        if "/replay-evidence" in url:
-            return responses["current_replay"]
-        if "/versions/2?include_evidence=false" in url:
-            return responses["version"]
-        if url.endswith("?include_evidence=false"):
-            return responses["detail"]
-        if "/workflow-events" in url:
-            return responses["timeline"]
-        if "/lineage" in url:
-            return responses["lineage"]
-        if "/approvals" in url:
-            return responses["approvals"]
-        if "/delivery-summary" in url:
-            return responses["delivery_summary"]
-        if "/delivery-events" in url:
-            return responses["delivery_history"]
-        raise AssertionError(f"unexpected persisted read-surface URL: {url}")
-
-    assert_persisted_read_surfaces(
-        object(),
-        advise_base_url="http://advise.dev.lotus",
-        proposal_id=proposal_id,
-        expected_portfolio_id=portfolio_id,
-        created_by_filter="live-validator",
-        current_version_no=2,
-        expected_state="EXECUTED",
-        expected_report_status="READY",
-        get_json=_fake_get_json,
-        assert_condition=_assert_condition,
-    )
+    _assert_complete_persisted_read_surfaces(_persisted_read_surface_responses(), calls)
 
     assert [url for url, status in calls] == [
         "http://advise.dev.lotus/advisory/proposals?portfolio_id="
@@ -372,6 +184,29 @@ def test_persisted_read_surfaces_preserve_complete_two_version_contract() -> Non
         "http://advise.dev.lotus/advisory/proposals/proposal-1/versions/2/replay-evidence",
     ]
     assert all(status == 200 for _, status in calls)
+
+
+@pytest.mark.parametrize(
+    ("response_key", "field", "value", "message"),
+    (
+        ("version", "decision_status", "BLOCKED", "decision summaries diverged"),
+        ("delivery_history", "event_type", "CREATED", "contained non-delivery events"),
+    ),
+)
+def test_persisted_read_surfaces_reject_contract_drift(
+    response_key: str,
+    field: str,
+    value: str,
+    message: str,
+) -> None:
+    responses = _persisted_read_surface_responses()
+    if response_key == "version":
+        responses[response_key]["proposal_result"]["proposal_decision_summary"][field] = value
+    else:
+        responses[response_key]["events"][0][field] = value
+
+    with pytest.raises(AssertionError, match=message):
+        _assert_complete_persisted_read_surfaces(responses, [])
 
 
 def test_select_changed_state_security_prefers_highest_weight_non_cash_position() -> None:

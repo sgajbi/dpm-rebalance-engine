@@ -70,11 +70,11 @@
   removed. The extracted module keeps the same endpoint order, expected HTTP 200 statuses,
   cross-surface identity/version/state checks, delivery/reporting assertions, and replay identity
   checks.
-- Evidence: Focused live-parity tests pass 22 tests, including complete two-version
+- Evidence: Focused live-parity tests pass 21 tests, including complete two-version
   endpoint-order/status and replay proof, divergent decision-summary rejection, and
   non-delivery-event rejection. Full mypy passes 659 source files; the oversized-code gate passes
   7 findings, 0 new, 0 resolved; duplicate-code remains 34 findings, 0 new. Generated quality
-  evidence records the 3,753-line main validator, 1,041 modules, 196,634 Python lines, and
+  evidence records the 3,753-line main validator, 1,041 modules, 196,469 Python lines, and
   Interrogate coverage improving from 1.7% to 1.9%.
 - Compatibility: CI/live-certification maintainability only. No product runtime, API/OpenAPI,
   persistence, migration, dependency, endpoint order/status, or downstream contract changes.

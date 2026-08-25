@@ -1,0 +1,73 @@
+{
+  "list": {
+    "items": [{"proposal_id": "proposal-1", "current_version_no": 2, "current_state": "EXECUTED"}]
+  },
+  "detail": {
+    "proposal": {
+      "proposal_id": "proposal-1",
+      "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+      "current_version_no": 2,
+      "current_state": "EXECUTED"
+    },
+    "current_version": {
+      "version_no": 2,
+      "proposal_result": {
+        "proposal_decision_summary": {
+          "decision_status": "READY",
+          "primary_reason_code": "READY_FOR_EXECUTION",
+          "approval_requirements": []
+        }
+      }
+    }
+  },
+  "version": {
+    "proposal_id": "proposal-1",
+    "version_no": 2,
+    "proposal_result": {
+      "proposal_decision_summary": {
+        "decision_status": "READY",
+        "primary_reason_code": "READY_FOR_EXECUTION",
+        "approval_requirements": []
+      }
+    }
+  },
+  "timeline": {
+    "current_state": "EXECUTED",
+    "event_count": 3,
+    "events": [
+      {"event_type": "CREATED", "related_version_no": 1},
+      {"event_type": "NEW_VERSION_CREATED", "related_version_no": 2},
+      {"event_type": "EXECUTED", "related_version_no": 2}
+    ]
+  },
+  "lineage": {
+    "latest_version_no": 2,
+    "version_count": 2,
+    "versions": [{"version_no": 1}, {"version_no": 2}],
+    "lineage_complete": true,
+    "missing_version_numbers": []
+  },
+  "approvals": {
+    "approval_count": 2,
+    "approvals": [{"related_version_no": 2}, {"related_version_no": 2}]
+  },
+  "delivery_summary": {
+    "proposal": {"current_state": "EXECUTED"},
+    "execution": {
+      "handoff_status": "EXECUTED",
+      "related_version_no": 2,
+      "latest_event_type": "REPORT_REQUESTED"
+    },
+    "reporting": {"status": "READY", "related_version_no": 2}
+  },
+  "delivery_history": {
+    "event_count": 2,
+    "events": [
+      {"event_type": "EXECUTED", "related_version_no": 2},
+      {"event_type": "REPORT_REQUESTED", "related_version_no": 2}
+    ],
+    "latest_event": {"event_type": "REPORT_REQUESTED"}
+  },
+  "first_replay": {"subject": {"proposal_version_no": 1}},
+  "current_replay": {"subject": {"proposal_version_no": 2}}
+}
