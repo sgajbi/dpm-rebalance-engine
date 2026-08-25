@@ -24,7 +24,9 @@ This repository adopts the platform-wide mandatory standard defined in `lotus-pl
 - Baseline allowlist: docs/standards/monetary-float-allowlist.json.
 - New findings fail CI until explicitly approved and allowlisted in dedicated PR.
 - Each allowlist entry requires `justification`, `owner`, and `review_by` metadata.
-- Stale allowlist entries (past `review_by`) fail CI.
+- Allowlist entries inside the inclusive seven-calendar-day pre-expiry window (`0 <=
+  days_remaining <= 7`) fail CI so approvals are reviewed before `review_by` passes.
+- Stale allowlist entries (past `review_by`) continue to fail CI.
 
 ## Deviation and Change Control
 
@@ -37,4 +39,3 @@ This repository adopts the platform-wide mandatory standard defined in `lotus-pl
 - Platform check: `lotus-platform/automation/Validate-Rounding-Consistency.ps1`.
 - Automation guide: `lotus-platform/automation/docs/Automation-Guide.md`.
 - Evidence artifact: `Rounding Consistency Report`.
-

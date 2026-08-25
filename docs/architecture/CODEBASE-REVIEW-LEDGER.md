@@ -1,5 +1,32 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-495-MONETARY-FLOAT-PREEXPIRY
+
+- Scope: `scripts/check_monetary_float_usage.py`, its focused regression tests, monetary-float
+  standards, and CI validation/wiki guidance.
+- Pattern: The fail-closed monetary-float guard rejected approvals only after `review_by` had
+  passed, so a valid approval could become a post-merge mainline failure without an actionable PR
+  warning window.
+- Status: Implemented in the bounded #495 pre-expiry slice. The gate now hard-fails approved
+  findings inside an inclusive seven-calendar-day window before expiry while preserving the stale,
+  malformed, and unauthorized-finding failures.
+- Finding Class: CI quality-gate timing, exception lifecycle governance, and deterministic
+  regression protection.
+- Summary: `MONETARY_FLOAT_EXPIRY_WARNING_DAYS = 7` is a reviewed gate constant. Date evaluation is
+  injectable for tests; output names each finding, `review_by`, and `days_remaining`, and the
+  threshold is not caller-controlled by the Make/CI invocation.
+- Evidence:
+  - Focused tests cover the seven-day inclusive boundary, eight-day exclusion, due-today behavior,
+    stale separation, negative-threshold rejection, and actionable production-gate output.
+  - `docs/standards/rounding-precision.md` and `wiki/Validation-and-CI.md` document the enforced
+    pre-expiry operator workflow.
+- Compatibility: CI/evidence and operator-guidance behavior only. Product runtime, APIs/OpenAPI,
+  persistence, migrations, dependencies, and downstream contracts are unchanged.
+- Documentation decision: Updated the rounding standard, repo-authored wiki source, and this ledger;
+  publish and strict parity verification are required after merge.
+- Follow-Up: #495 continues to own further CI quality-gate work; #544 remains the separate product
+  boundary migration for solver float conversions.
+
 ## LA-REV-495-MONETARY-FLOAT-REVIEW-FRESHNESS
 
 - Scope: scripts/check_monetary_float_usage.py, its focused regression tests, and
