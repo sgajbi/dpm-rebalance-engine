@@ -38,9 +38,7 @@ def build_proposal_review_evidence(
 
 
 def _build_mandate_limit_state(
-    *,
-    mandate_id: str | None,
-    requested_as_of_date: str | None,
+    mandate_id: str | None, requested_as_of_date: str | None
 ) -> MandateLimitEvidenceState:
     return MandateLimitEvidenceState(
         mandate_id=mandate_id,

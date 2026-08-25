@@ -114,11 +114,7 @@ class ProposalResult(BaseModel):
     )
     proposal_review_evidence: ProposalReviewEvidence = Field(
         default_factory=ProposalReviewEvidence.unavailable,
-        description=(
-            "Typed benchmark-assignment and current/simulated mandate-limit evidence. Requested "
-            "selectors are not effective source evidence; missing upstream evidence remains "
-            "explicitly unavailable."
-        ),
+        description="Review evidence; unavailable is explicit.",
     )
     lineage: LineageData = Field(description="Lineage identifiers and request hash.")
 
