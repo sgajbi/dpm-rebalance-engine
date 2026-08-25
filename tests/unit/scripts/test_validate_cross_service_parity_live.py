@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from scripts import live_memo_flow as memo_flow
 from scripts import validate_cross_service_parity_live as parity
 from scripts.live_parity_orchestration import run_live_parity
 from scripts.live_report_delivery import ReportDeliveryPrimitives, assert_report_delivery
@@ -219,3 +220,38 @@ def test_report_delivery_preserves_ready_and_degraded_outcomes(
     assert result == expected_status
     assert persisted_statuses == [expected_status]
     assert client.post.call_args.kwargs["json"]["related_version_no"] == 2
+
+
+def test_live_memo_flow_preserves_phase_order_and_snapshot_assembly(monkeypatch) -> None:
+    calls: list[str] = []
+    artifact = memo_flow._MemoArtifact("PROPOSAL", 2, {}, "sha256:memo", {})
+    review = memo_flow._MemoReviewEvidence({}, "STALE_HASH", "CLIENT_RELEASE")
+    report = memo_flow._MemoReportEvidence("READY", {}, None, "CLIENT_DOCUMENT")
+
+    def phase(name, value):
+        return lambda *_args, **_kwargs: (calls.append(name), value)[1]
+
+    for name, value in {
+        "_create_memo_artifact": ("create", artifact),
+        "_assert_memo_review_controls": ("review", review),
+        "_assert_memo_report_package": ("report", report),
+        "_assert_memo_ai_and_replay": ("runtime", memo_flow._MemoRuntimeEvidence({}, {}, {})),
+    }.items():
+        monkeypatch.setattr(memo_flow, name, phase(*value))
+
+    def extract_snapshot(**kwargs):
+        calls.append("extract")
+        assert (kwargs["proposal_id"], kwargs["version_no"]) == ("PROPOSAL", 2)
+        assert kwargs["report_status"] == "READY"
+        assert kwargs["stale_hash_block_status"] == "STALE_HASH"
+        assert kwargs["client_ready_document_block_status"] == "CLIENT_DOCUMENT"
+        return "SNAPSHOT"
+
+    primitives = memo_flow.LiveMemoFlowPrimitives(
+        *(MagicMock() for _ in range(4)), extract_snapshot=extract_snapshot
+    )
+    result = memo_flow.assert_live_memo_flow(
+        object(), primitives=primitives, advise_base_url="http://advise", scenario=object()
+    )
+
+    assert calls == ["create", "review", "report", "runtime", "extract"] and result == "SNAPSHOT"

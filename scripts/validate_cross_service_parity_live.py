@@ -17,6 +17,10 @@ import httpx
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts.live_memo_flow import (  # noqa: E402
+    LiveMemoFlowPrimitives,
+    assert_live_memo_flow,
+)
 from scripts.live_policy_evaluation_support import (  # noqa: E402
     ensure_sg_policy_pack_active,
     live_policy_evidence_bundle,
@@ -2083,227 +2087,17 @@ def _assert_live_proposal_memo_flow(
     advise_base_url: str,
     scenario: PortfolioParityScenario,
 ) -> LiveProposalMemoSnapshot:
-    started = time.perf_counter()
-    created = _create_stateful_proposal(
+    return assert_live_memo_flow(
         client,
+        primitives=LiveMemoFlowPrimitives(
+            create_stateful_proposal=_create_stateful_proposal,
+            post_json=_post_json,
+            get_json=_get_json,
+            assertion=_assert,
+            extract_snapshot=extract_live_memo_snapshot,
+        ),
         advise_base_url=advise_base_url,
         scenario=scenario,
-        created_by="live-parity-validator-memo",
-    )
-    proposal_id = str(created["proposal"]["proposal_id"])
-    version_no = int(cast(dict[str, Any], created["version"])["version_no"])
-    memo_body = _post_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/{version_no}/memo",
-        expected_status=200,
-        json_body={
-            "created_by": "live-parity-validator",
-            "lifecycle_status": "DRAFT",
-            "reason": {"purpose": "RFC-0024 Slice 13 live memo implementation proof"},
-        },
-        headers={"Idempotency-Key": f"live-memo-create-{uuid.uuid4().hex}"},
-    )
-    memo_hash = str(memo_body["memo_hash"])
-    _assert(
-        memo_hash.startswith("sha256:"),
-        f"{proposal_id}: memo hash was not canonical sha256: {memo_hash}",
-    )
-    read_body = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/{version_no}/memo",
-        expected_status=200,
-    )
-    _assert(
-        read_body["memo_hash"] == memo_hash,
-        f"{proposal_id}: memo read lost hash continuity",
-    )
-    projection_body = _get_json(
-        client,
-        url=(
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{version_no}/memo/projection?audience=ADVISOR"
-        ),
-        expected_status=200,
-    )
-    projection_posture = cast(dict[str, Any], projection_body["projection_posture"])
-    _assert(
-        projection_posture["client_ready_publication"] == "BLOCKED",
-        f"{proposal_id}: memo projection promoted client-ready publication",
-    )
-    _assert(
-        bool(projection_body["sections"]),
-        f"{proposal_id}: advisor memo projection returned no sections",
-    )
-
-    stale_hash_response = client.post(
-        f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/{version_no}/memo/review",
-        json={
-            "action": "APPROVE_FOR_ADVISOR_USE",
-            "reviewed_by": "live-parity-validator",
-            "reason": "Validate stale hash rejection.",
-            "source_memo_hash": "sha256:stale",
-        },
-        headers={"Idempotency-Key": f"live-memo-stale-review-{uuid.uuid4().hex}"},
-    )
-    _assert(
-        stale_hash_response.status_code == 422,
-        f"{proposal_id}: stale memo hash review was not rejected",
-    )
-    stale_hash_block_status = str(cast(dict[str, Any], stale_hash_response.json()).get("detail"))
-
-    client_ready_release_response = client.post(
-        f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/{version_no}/memo/review",
-        json={
-            "action": "APPROVE_FOR_ADVISOR_USE",
-            "reviewed_by": "live-parity-validator",
-            "reason": "Validate client-ready memo review remains blocked.",
-            "source_memo_hash": memo_hash,
-            "client_ready_release_requested": True,
-        },
-        headers={"Idempotency-Key": f"live-memo-client-ready-review-{uuid.uuid4().hex}"},
-    )
-    _assert(
-        client_ready_release_response.status_code == 422,
-        f"{proposal_id}: client-ready memo review request was not blocked",
-    )
-    client_ready_release_block_status = str(
-        cast(dict[str, Any], client_ready_release_response.json()).get("detail")
-    )
-
-    review_body = _post_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/{version_no}/memo/review",
-        expected_status=200,
-        json_body={
-            "action": "APPROVE_FOR_ADVISOR_USE",
-            "reviewed_by": "live-parity-validator",
-            "reason": "Hash-continuous advisor-use memo proof.",
-            "source_memo_hash": memo_hash,
-            "client_ready_release_requested": False,
-        },
-        headers={"Idempotency-Key": f"live-memo-review-{uuid.uuid4().hex}"},
-    )
-    review_reason = cast(dict[str, Any], review_body["review_event"])["reason"]
-    _assert(
-        cast(dict[str, Any], review_reason)["review_action"] == "APPROVE_FOR_ADVISOR_USE",
-        f"{proposal_id}: memo review did not record advisor-use approval",
-    )
-
-    client_ready_document_response = client.post(
-        (
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{version_no}/memo/report-packages"
-        ),
-        json={
-            "requested_by": "live-parity-validator",
-            "source_memo_hash": memo_hash,
-            "client_ready_document_requested": True,
-            "reason": {"purpose": "Validate client-ready memo document block"},
-        },
-        headers={"Idempotency-Key": f"live-memo-client-ready-report-{uuid.uuid4().hex}"},
-    )
-    _assert(
-        client_ready_document_response.status_code == 422,
-        f"{proposal_id}: client-ready memo report request was not blocked",
-    )
-    client_ready_document_block_status = str(
-        cast(dict[str, Any], client_ready_document_response.json()).get("detail")
-    )
-
-    report_response = client.post(
-        (
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{version_no}/memo/report-packages"
-        ),
-        json={
-            "requested_by": "live-parity-validator",
-            "source_memo_hash": memo_hash,
-            "requested_output_formats": ["pdf"],
-            "client_ready_document_requested": False,
-            "reason": {"purpose": "advisor-use memo report package live proof"},
-        },
-        headers={"Idempotency-Key": f"live-memo-report-{uuid.uuid4().hex}"},
-    )
-    report_body: dict[str, Any] | None
-    report_status: str
-    report_degraded_reason: str | None
-    if report_response.status_code == 200:
-        report_body = cast(dict[str, Any], report_response.json())
-        report_status = str(cast(dict[str, Any], report_body["report"])["status"])
-        report_degraded_reason = None
-    else:
-        _assert(
-            report_response.status_code == 503,
-            (
-                f"{proposal_id}: expected memo report package success or degraded 503, got "
-                f"{report_response.status_code} body={report_response.text}"
-            ),
-        )
-        report_body = None
-        report_status = "UNAVAILABLE"
-        report_degraded_reason = str(cast(dict[str, Any], report_response.json()).get("detail"))
-
-    ai_body = _post_json(
-        client,
-        url=(
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{version_no}/memo/ai-commentary"
-        ),
-        expected_status=200,
-        json_body={
-            "requested_by": "live-parity-validator",
-            "source_memo_hash": memo_hash,
-            "requested_sections": ["EXECUTIVE_SUMMARY", "LIMITATIONS_AND_DISCLOSURES"],
-            "reason": {"purpose": "review-gated memo commentary live proof"},
-        },
-        headers={"Idempotency-Key": f"live-memo-ai-{uuid.uuid4().hex}"},
-    )
-    commentary = cast(dict[str, Any], ai_body["commentary"])
-    _assert(
-        commentary["authoritative_for_memo_status"] is False,
-        f"{proposal_id}: AI commentary became authoritative for memo status",
-    )
-    _assert(
-        commentary["review_required"] is True,
-        f"{proposal_id}: AI commentary did not retain review-required posture",
-    )
-
-    lineage_body = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/memos/lineage",
-        expected_status=200,
-    )
-    _assert(lineage_body["memo_count"] >= 1, f"{proposal_id}: memo lineage was empty")
-    replay_body = _get_json(
-        client,
-        url=(
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{version_no}/memo/replay-evidence"
-        ),
-        expected_status=200,
-    )
-    replay_hashes = cast(dict[str, Any], replay_body["hashes"])
-    _assert(
-        replay_hashes["memo_hash"] == memo_hash,
-        f"{proposal_id}: memo replay evidence lost memo hash continuity",
-    )
-    latency_ms = (time.perf_counter() - started) * 1000.0
-    return extract_live_memo_snapshot(
-        proposal_id=proposal_id,
-        version_no=version_no,
-        memo_body=memo_body,
-        projection_body=projection_body,
-        review_body=review_body,
-        report_status=report_status,
-        report_body=report_body,
-        ai_body=ai_body,
-        lineage_body=lineage_body,
-        replay_body=replay_body,
-        stale_hash_block_status=stale_hash_block_status,
-        client_ready_release_block_status=client_ready_release_block_status,
-        client_ready_document_block_status=client_ready_document_block_status,
-        report_degraded_reason=report_degraded_reason,
-        latency_ms=latency_ms,
     )
 
 
