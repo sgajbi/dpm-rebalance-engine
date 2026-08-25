@@ -75,7 +75,9 @@ Authority orchestration note:
   - same key + different canonical request: `409 Conflict`
   - preserved legacy records may replay when the proposal and narrative business semantics match;
     the idempotency command hash and immutable version request hash are separate domains and are
-    not compared to one another
+    not compared to one another. Stateful legacy replay compares every resolved proposal field
+    exactly; omitted metadata is not a wildcard, while a field omitted on both sides remains a
+    valid match when both stored and expected values are `null`.
 
 ### `POST /advisory/proposals/async`
 - Purpose: accept proposal create for asynchronous execution.

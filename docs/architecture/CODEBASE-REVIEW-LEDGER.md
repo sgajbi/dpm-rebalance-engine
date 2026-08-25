@@ -26,7 +26,31 @@
 - Documentation decision: Updated developer idempotency guidance and repo-authored
   `wiki/Proposal-Lifecycle.md`; wiki publication and strict parity are required after merge.
 - Follow-Up: retain issue #482 open until the PR review, exact-mainline validation, and governed
-  canonical Workbench replay evidence are complete.
+  canonical Workbench replay evidence are complete. Issue #482 is now verified closed; issue #552
+  hardens the newly load-bearing stateful metadata matcher so omitted populated fields conflict.
+
+## LA-REV-940-STATEFUL-REPLAY-METADATA-STRICTNESS
+
+- Scope: stateful proposal-create legacy replay field matching, focused idempotency regressions,
+  the PostgreSQL repository integration path, and replay/idempotency documentation.
+- Pattern: `_legacy_proposal_fields_match` treated `None` expected metadata as an omitted wildcard,
+  so a retry that omitted `title`, `advisor_notes`, or `jurisdiction` could replay a stored proposal
+  containing a different populated value after #482 removed the invalid cross-domain hash guard.
+- Status: Implemented in bounded issue #552 work. Stateful legacy replay now compares every
+  resolved proposal field exactly, including the mandate resolved from metadata or stateful input.
+- Finding Class: durable idempotency correctness, semantic replay safety, and PostgreSQL-path
+  regression prevention.
+- Evidence: focused unit tests reject each omitted populated metadata field and preserve replay when
+  both stored and expected values are null. A live-DSN PostgreSQL integration test proves the
+  retained record replays with equal metadata and rejects a retry omitting its populated title.
+- Compatibility: Intentional correction for unsafe legacy replay permissiveness. Genuine replays
+  remain supported; omitted populated metadata now returns `409 Conflict`. No endpoint, request
+  schema, migration, OpenAPI, calculation, downstream ownership, or approval/execution contract
+  changes.
+- Documentation decision: Updated developer idempotency guidance and repo-authored
+  `wiki/Proposal-Lifecycle.md`; wiki publication and strict parity are required after merge.
+- Follow-Up: none within this bounded matcher scope; broader legacy replay changes require a new
+  issue and the same semantic plus storage-backed regression standard.
 
 ## LA-REV-937-PROPOSAL-STATEFUL-AS-OF-GUARD
 
