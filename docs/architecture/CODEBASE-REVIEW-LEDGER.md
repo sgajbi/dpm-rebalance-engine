@@ -14,8 +14,10 @@
   deterministic regression protection.
 - Summary: The current target-generation solver bridge was re-reviewed as an intentional
   Decimal-to-solver float boundary and its six existing allowlist entries were renewed through
-  2026-10-05. The line-drift matching test now uses a deterministic far-future fixture date,
-  and a separate regression test proves a past review_by remains reported as stale.
+  2026-10-05 with explicit deferral rationale: migration waits for Decimal-capable solver
+  inputs or an owned typed adapter that isolates conversion; #544 owns that product-boundary
+  follow-up. The line-drift matching test now uses a deterministic far-future fixture date, and
+  a separate regression test proves a past review_by remains reported as stale.
 - Evidence:
   - python scripts/check_monetary_float_usage.py passes with seven observed findings and no
     unapproved finding; the committed inventory and its approval metadata remain intact.
