@@ -47,7 +47,11 @@
 - Evidence:
   - `target_generation.py` contains no direct `float(` conversion.
   - Focused tests cover the named guard inventory, scalar/vector boundary, finite input/output
-    rejection, constraints, zero/near-boundary values, and quantized solver output.
+    rejection, invalid solver output, constraints, zero/near-boundary values, and quantized solver
+    output.
+  - The stale `.coveragerc` omission for `target_generation.py` was removed so combined coverage
+    and changed-source coverage measure the same refactored product module; the changed-source gate
+    now passes with evidence for both changed source files.
   - The allowlist contains one explicit adapter approval rather than six distributed domain
     approvals; #544 owns its retirement when the solver boundary accepts Decimal inputs.
 - Compatibility: No API/OpenAPI, persistence, migration, dependency, or downstream contract
