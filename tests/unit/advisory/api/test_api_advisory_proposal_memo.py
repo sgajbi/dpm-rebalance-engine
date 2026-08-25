@@ -7,6 +7,7 @@ from src.api.main import app
 from src.api.proposals.router import reset_proposal_workflow_service_for_tests
 from src.core.proposals import memo_api
 from src.core.proposals.memo_ai_ports import ProposalMemoAiCommentaryDraft
+from src.integrations.lotus_report import LotusReportUnavailableError
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
@@ -465,6 +466,46 @@ def test_proposal_memo_report_package_blocks_without_review_and_client_ready_req
         )
         assert client_ready.status_code == 422
         assert client_ready.json()["detail"] == "MEMO_CLIENT_READY_DOCUMENT_NOT_SUPPORTED"
+
+
+def test_proposal_memo_report_package_maps_runtime_provider_failure_to_503(monkeypatch) -> None:
+    def _raise_unavailable(**_: object) -> None:
+        raise LotusReportUnavailableError("LOTUS_REPORT_REQUEST_UNAVAILABLE")
+
+    monkeypatch.setattr(
+        api_main,
+        "request_proposal_memo_report_package_with_lotus_report",
+        _raise_unavailable,
+        raising=False,
+    )
+
+    with TestClient(app) as client:
+        created = _create_proposal(client)
+        proposal_id = created["proposal"]["proposal_id"]
+        memo = _create_memo(client, proposal_id)
+        assert (
+            client.post(
+                f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
+                json={
+                    "action": "APPROVE_FOR_ADVISOR_USE",
+                    "reviewed_by": "compliance_1",
+                    "reason": "Evidence is sufficient for advisor discussion.",
+                    "source_memo_hash": memo["memo_hash"],
+                },
+            ).status_code
+            == 200
+        )
+
+        response = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
+            json={
+                "requested_by": "advisor_1",
+                "source_memo_hash": memo["memo_hash"],
+            },
+        )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "LOTUS_REPORT_REQUEST_UNAVAILABLE"
 
 
 def test_proposal_memo_report_package_rejects_empty_output_formats() -> None:

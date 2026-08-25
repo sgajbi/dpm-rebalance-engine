@@ -454,6 +454,40 @@ def test_lotus_report_adapter_submits_memo_package_for_pdf_render_archive(monkey
     ]
 
 
+def test_lotus_report_adapter_submits_canonical_typed_memo_source_date(monkeypatch) -> None:
+    request = _memo_report_package_request()
+    request["proposal_version"]["proposal_result"] = {
+        "before": {"total_value": {"amount": "100.00", "currency": "USD"}},
+        "valuation_context": {
+            "source_service": "LOTUS_CORE",
+            "current_state": {"effective_as_of_date": "2026-05-28"},
+            "simulated_state": {"effective_as_of_date": "2026-05-28"},
+        },
+    }
+    fake_client = _FakeClient(
+        _FakeResponse(
+            202,
+            {
+                "report_request_id": "rrq_report_001",
+                "report_job_id": "rjob_memo_001",
+                "status": "archived",
+                "status_url": "/reports/jobs/rjob_memo_001",
+                "idempotency_key": "prr_memo_001",
+            },
+        )
+    )
+    monkeypatch.setenv("LOTUS_REPORT_BASE_URL", "http://report.dev.lotus/")
+    monkeypatch.setattr(
+        "src.integrations.lotus_report.adapter.httpx.Client",
+        lambda timeout: fake_client,
+    )
+
+    request_proposal_memo_report_package_with_lotus_report(request=request)
+
+    [post] = fake_client.posts
+    assert post["json"]["as_of_date"] == "2026-05-28"
+
+
 def test_lotus_report_adapter_polls_memo_package_until_archived(monkeypatch) -> None:
     fake_client = _FakeClient(
         _FakeResponse(

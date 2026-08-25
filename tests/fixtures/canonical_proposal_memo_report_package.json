@@ -1,0 +1,39 @@
+{
+  "report_request_id": "prr_canonical_memo_001",
+  "proposal": {
+    "proposal_id": "pp_30f90667bc42",
+    "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+    "jurisdiction": "SG"
+  },
+  "proposal_version": {
+    "proposal_result": {
+      "before": {
+        "total_value": {
+          "amount": "1000000.00",
+          "currency": "USD"
+        }
+      },
+      "valuation_context": {
+        "schema_version": "lotus.proposal-valuation-context.v1",
+        "source_service": "LOTUS_CORE",
+        "source_references": [
+          "lotus-core:portfolio:PB_SG_GLOBAL_BAL_001:2026-05-28"
+        ],
+        "current_state": {
+          "effective_as_of_date": "2026-05-28",
+          "effective_reporting_currency": "USD",
+          "supportability": "READY"
+        },
+        "simulated_state": {
+          "effective_as_of_date": "2026-05-28",
+          "effective_reporting_currency": "USD",
+          "supportability": "READY"
+        }
+      }
+    }
+  },
+  "requested_by": "advisor_1",
+  "requested_output_formats": [
+    "pdf"
+  ]
+}

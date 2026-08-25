@@ -73,7 +73,10 @@ MEMO_REPORT_PACKAGE_RESPONSES = {
         )
     },
     status.HTTP_503_SERVICE_UNAVAILABLE: {
-        "description": "lotus-report report/render/archive materialization is unavailable."
+        "description": (
+            "lotus-report report/render/archive materialization or required source-derived "
+            "as-of/reporting context is unavailable."
+        )
     },
 }
 

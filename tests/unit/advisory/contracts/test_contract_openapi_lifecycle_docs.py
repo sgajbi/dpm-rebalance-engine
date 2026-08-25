@@ -871,6 +871,10 @@ def test_rfc0024_memo_route_family_is_canonical_and_error_documented():
         "lotus-report report/render/archive materialization"
         in memo_report_package["responses"]["503"]["description"]
     )
+    assert (
+        "source-derived as-of/reporting context is unavailable"
+        in memo_report_package["responses"]["503"]["description"]
+    )
 
     memo_report_package_event = paths[
         "/advisory/proposals/{proposal_id}/versions/{version_no}/memo/report-package-events"
