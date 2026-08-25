@@ -53,6 +53,31 @@ def _simulate_request(portfolio_id: str = "pf_context_hash") -> dict:
     }
 
 
+def _workspace_context_override(resolved: ResolvedProposalContext) -> dict:
+    return build_context_resolution_evidence(
+        ResolvedProposalContext(
+            input_mode="stateful",
+            resolution_source="LOTUS_CORE",
+            simulate_request=resolved.simulate_request,
+            resolved_context=resolved.resolved_context.model_copy(
+                update={
+                    "requested_as_of": "2026-06-15",
+                    "requested_reporting_currency": "EUR",
+                }
+            ),
+            metadata=resolved.metadata,
+            policy_selectors=_policy_selectors(
+                stateful_input=ProposalStatefulInput(
+                    portfolio_id="pf_context_hash",
+                    as_of="2026-06-15",
+                    reporting_currency="EUR",
+                )
+            ),
+            used_legacy_contract=False,
+        )
+    )
+
+
 def test_build_create_request_hash_normalizes_legacy_and_stateless_contracts():
     legacy_payload = ProposalCreateRequest(
         created_by="advisor_context",
@@ -119,28 +144,7 @@ def test_context_resolution_override_preserves_workspace_request_dimensions_and_
         simulate_request=_simulate_request(),
     )
     resolved = resolve_create_request(payload)
-    override = build_context_resolution_evidence(
-        ResolvedProposalContext(
-            input_mode="stateful",
-            resolution_source="LOTUS_CORE",
-            simulate_request=resolved.simulate_request,
-            resolved_context=resolved.resolved_context.model_copy(
-                update={
-                    "requested_as_of": "2026-06-15",
-                    "requested_reporting_currency": "EUR",
-                }
-            ),
-            metadata=resolved.metadata,
-            policy_selectors=_policy_selectors(
-                stateful_input=ProposalStatefulInput(
-                    portfolio_id="pf_context_hash",
-                    as_of="2026-06-15",
-                    reporting_currency="EUR",
-                )
-            ),
-            used_legacy_contract=False,
-        )
-    )
+    override = _workspace_context_override(resolved)
 
     effective = apply_context_resolution_override(resolved, override)
 
@@ -164,6 +168,34 @@ def test_context_resolution_override_rejects_malformed_internal_projection():
         match="PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID",
     ):
         apply_context_resolution_override(resolved, {"input_mode": "stateful"})
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("input_mode", None),
+        ("input_mode", "unsupported"),
+        ("resolution_source", None),
+        ("resolution_source", ""),
+        ("used_legacy_contract", "false"),
+        ("advisory_policy_context", None),
+    ],
+)
+def test_context_resolution_override_rejects_invalid_typed_values(field, value):
+    resolved = resolve_create_request(
+        ProposalCreateRequest(
+            created_by="advisor_context",
+            simulate_request=_simulate_request(),
+        )
+    )
+    override = _workspace_context_override(resolved)
+    override[field] = value
+
+    with pytest.raises(
+        ProposalContextResolutionError,
+        match="PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID",
+    ):
+        apply_context_resolution_override(resolved, override)
 
 
 def test_build_version_request_hash_is_canonical_and_concurrency_sensitive():
