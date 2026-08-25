@@ -14,8 +14,10 @@ from src.core.proposals.context import (
 from src.core.proposals.context_evidence import build_context_resolution_evidence
 from src.core.proposals.context_hashing import build_simulation_request_hash
 from src.core.proposals.context_resolution import (
+    ResolvedProposalContext,
     ResolvedSimulationContext,
     _policy_selectors,
+    apply_context_resolution_override,
 )
 from src.core.proposals.models import (
     ProposalCreateMetadata,
@@ -109,6 +111,59 @@ def test_stateless_context_preserves_reference_model_date_as_lifecycle_input():
 
     assert resolved.resolved_context.as_of == "2026-06-15"
     assert resolved.resolved_context.requested_as_of == "2026-06-15"
+
+
+def test_context_resolution_override_preserves_workspace_request_dimensions_and_draft():
+    payload = ProposalCreateRequest(
+        created_by="advisor_context",
+        simulate_request=_simulate_request(),
+    )
+    resolved = resolve_create_request(payload)
+    override = build_context_resolution_evidence(
+        ResolvedProposalContext(
+            input_mode="stateful",
+            resolution_source="LOTUS_CORE",
+            simulate_request=resolved.simulate_request,
+            resolved_context=resolved.resolved_context.model_copy(
+                update={
+                    "requested_as_of": "2026-06-15",
+                    "requested_reporting_currency": "EUR",
+                }
+            ),
+            metadata=resolved.metadata,
+            policy_selectors=_policy_selectors(
+                stateful_input=ProposalStatefulInput(
+                    portfolio_id="pf_context_hash",
+                    as_of="2026-06-15",
+                    reporting_currency="EUR",
+                )
+            ),
+            used_legacy_contract=False,
+        )
+    )
+
+    effective = apply_context_resolution_override(resolved, override)
+
+    assert effective.input_mode == "stateful"
+    assert effective.resolution_source == "LOTUS_CORE"
+    assert effective.resolved_context.requested_as_of == "2026-06-15"
+    assert effective.resolved_context.requested_reporting_currency == "EUR"
+    assert effective.simulate_request == resolved.simulate_request
+
+
+def test_context_resolution_override_rejects_malformed_internal_projection():
+    resolved = resolve_create_request(
+        ProposalCreateRequest(
+            created_by="advisor_context",
+            simulate_request=_simulate_request(),
+        )
+    )
+
+    with pytest.raises(
+        ProposalContextResolutionError,
+        match="PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID",
+    ):
+        apply_context_resolution_override(resolved, {"input_mode": "stateful"})
 
 
 def test_build_version_request_hash_is_canonical_and_concurrency_sensitive():

@@ -1,5 +1,32 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-936-PROPOSAL-CONTEXT-HANDOFF-REQUEST-DIMENSIONS
+
+- Scope: `src/core/proposals/context_resolution.py`, proposal create/version command context
+  application, workspace handoff regression coverage, and lifecycle documentation.
+- Pattern: A workspace handoff must preserve both the workspace-owned edited simulation and the
+  source-owned caller context. Treating the edited simulation as a legacy direct request dropped
+  requested valuation dimensions even though the handoff already carried a typed context override.
+- Status: Implemented in the bounded #491 stateful handoff slice. The existing internal context
+  override is now validated and applied as the effective proposal context for simulation, hashing,
+  policy evidence, and persistence while the edited simulation request remains unchanged.
+- Finding Class: proposal lifecycle contract correctness, source-authority preservation, and
+  downstream evidence integrity.
+- Summary: Stateful workspace create and version handoffs now retain explicit requested as-of date
+  and reporting currency in both current and simulated valuation-context states. The fix does not
+  normalize away workspace draft trades, cash flows, options, or other simulation input.
+- Evidence: focused context, handoff, and workspace-service tests pass 27 tests. Regression
+  coverage asserts create and version handoffs preserve both requested dimensions and the edited
+  simulation. Malformed internal context overrides fail closed with a stable domain error.
+- Compatibility: Intentional correctness correction within the existing additive valuation-context
+  contract. No endpoint rename, migration, new calculation, source-authority change, approval or
+  execution behavior, Gateway/Workbench behavior, or downstream field removal.
+- Documentation decision: Updated developer guidance and repo-authored `wiki/Proposal-Lifecycle.md`
+  because the stateful handoff evidence contract was clarified. Wiki publication and strict parity
+  are required after merge.
+- Follow-Up: #491 retains the separately bounded stateful proposal missing-date guard,
+  extension-safe evidence-count fix, benchmark/limit evidence, and scenario-analysis evidence.
+
 ## LA-REV-935-OVERSIZED-GATE-ORCHESTRATION
 
 - Scope: `scripts/oversized_code_gate.py`, its focused unit tests, and generated quality evidence.

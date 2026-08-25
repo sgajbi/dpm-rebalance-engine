@@ -10,6 +10,7 @@ from src.core.proposals.context_evidence import build_context_resolution_evidenc
 from src.core.proposals.context_hashing import build_version_request_hash
 from src.core.proposals.context_resolution import (
     ProposalContextResolutionError,
+    apply_context_resolution_override,
     resolve_version_request,
 )
 from src.core.proposals.create_persistence import persist_created_proposal_version
@@ -74,6 +75,10 @@ def create_proposal_version(
 
     try:
         resolved_request = resolve_version_request(payload)
+        resolved_request = apply_context_resolution_override(
+            resolved_request,
+            context_resolution_override,
+        )
     except ProposalContextResolutionError as exc:
         raise ProposalValidationError(
             safe_proposal_error_detail(
@@ -85,7 +90,11 @@ def create_proposal_version(
         request=resolved_request.simulate_request,
         require_simulation_flag=require_proposal_simulation_flag,
     )
-    context_resolution = build_context_resolution_evidence(resolved_request)
+    context_resolution = (
+        context_resolution_override
+        if context_resolution_override is not None
+        else build_context_resolution_evidence(resolved_request)
+    )
     request_hash = build_version_request_hash(payload=payload, resolved=resolved_request)
     try:
         validate_create_version_portfolio_context(
