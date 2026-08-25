@@ -13,6 +13,7 @@ from src.core.proposals.context_hashing import (
 from src.core.proposals.context_resolution import (
     ProposalContextResolutionError,
     ResolvedProposalContext,
+    apply_context_resolution_override,
     resolve_create_request,
 )
 from src.core.proposals.create_persistence import persist_created_proposal
@@ -96,6 +97,10 @@ def create_proposal_command(
 
     try:
         resolved_request = resolve_create_request(payload)
+        resolved_request = apply_context_resolution_override(
+            resolved_request,
+            context_resolution_override,
+        )
     except ProposalContextResolutionError as exc:
         raise ProposalValidationError(
             safe_proposal_error_detail(
@@ -109,7 +114,11 @@ def create_proposal_command(
         request=resolved_request.simulate_request,
         require_simulation_flag=require_proposal_simulation_flag,
     )
-    context_resolution = build_context_resolution_evidence(resolved_request)
+    context_resolution = (
+        context_resolution_override
+        if context_resolution_override is not None
+        else build_context_resolution_evidence(resolved_request)
+    )
     proposal_result = run_advisory_proposal_simulation(
         request=resolved_request.simulate_request,
         resolved_as_of=resolved_request.resolved_context.as_of,

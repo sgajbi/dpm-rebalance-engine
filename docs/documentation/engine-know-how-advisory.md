@@ -337,6 +337,9 @@ Current handoff rule:
 - later workspace handoffs create new versions on the linked proposal instead of creating duplicate proposal aggregates
 - stateless workspaces support lifecycle handoff directly from embedded simulation payloads
 - stateful workspaces support lifecycle handoff when the Lotus Core advisory context seam can resolve replay-safe simulation inputs
+- stateful workspace handoff preserves explicit requested as-of date and reporting currency in the
+  proposal valuation context for both current and simulated states; the workspace's edited
+  simulation payload remains the source for draft trades, cash flows, and options
 
 Current AI assistance rule:
 - workspace AI rationale is available only for evaluated workspaces

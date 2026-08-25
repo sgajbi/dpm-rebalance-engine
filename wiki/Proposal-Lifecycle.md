@@ -77,6 +77,10 @@ the current and simulated states:
 
 Requested date and currency fields are populated only when the caller explicitly provides those
 dimensions; a portfolio base currency is effective source evidence, not a synthesized request.
+Stateful workspace-to-proposal handoff preserves those caller-requested dimensions through the
+typed valuation context for both the current and simulated proposal states while retaining the
+workspace's edited simulation payload. A source-context override changes context authority only;
+it does not discard draft trades, cash flows, options, or other workspace-owned simulation input.
 `ProposalResolvedContext.as_of` is an optional lifecycle context date used for evaluation, replay,
 or upstream routing. Direct/stateless requests do not synthesize a current date when no reference
 model or source-owned date is present. It is not authoritative valuation evidence: consumers must use

@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import cast
+
+from pydantic import ValidationError
 
 from src.core.advisory.policy_context import ProposalPolicySelectors
 from src.core.proposal_request_models import ProposalSimulateRequest
@@ -41,6 +43,41 @@ class ResolvedSimulationContext:
     resolved_context: ProposalResolvedContext
     policy_selectors: ProposalPolicySelectors
     used_legacy_contract: bool
+
+
+def apply_context_resolution_override(
+    resolved: ResolvedProposalContext,
+    override: dict[str, object] | None,
+) -> ResolvedProposalContext:
+    """Apply an internal source-context projection without replacing the edited simulation."""
+
+    if override is None:
+        return resolved
+    try:
+        input_mode = override["input_mode"]
+        resolution_source = override["resolution_source"]
+        resolved_context = ProposalResolvedContext.model_validate(override["resolved_context"])
+        used_legacy_contract = override["used_legacy_contract"]
+        policy_context = override["advisory_policy_context"]
+    except (KeyError, TypeError, ValidationError) as exc:
+        raise ProposalContextResolutionError(
+            "PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID"
+        ) from exc
+    if (
+        input_mode not in {"stateless", "stateful"}
+        or not isinstance(resolution_source, str)
+        or not resolution_source
+        or not isinstance(used_legacy_contract, bool)
+        or not isinstance(policy_context, dict)
+    ):
+        raise ProposalContextResolutionError("PROPOSAL_CONTEXT_RESOLUTION_OVERRIDE_INVALID")
+    return replace(
+        resolved,
+        input_mode=cast(ProposalInputMode, input_mode),
+        resolution_source=resolution_source,
+        resolved_context=resolved_context,
+        used_legacy_contract=used_legacy_contract,
+    )
 
 
 def resolve_create_request(payload: ProposalCreateRequest) -> ResolvedProposalContext:
@@ -337,6 +374,7 @@ __all__ = [
     "ProposalContextResolutionError",
     "ResolvedProposalContext",
     "ResolvedSimulationContext",
+    "apply_context_resolution_override",
     "resolve_create_request",
     "resolve_simulation_request",
     "resolve_version_request",

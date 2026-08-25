@@ -112,6 +112,7 @@ def test_workspace_service_replace_options_and_stateful_handoff_guard(monkeypatc
                     "household_id": "hh_001",
                     "mandate_id": "mandate_growth_01",
                     "as_of": "2026-03-25",
+                    "reporting_currency": "EUR",
                 },
             }
         )
@@ -163,6 +164,38 @@ def test_workspace_service_replace_options_and_stateful_handoff_guard(monkeypatc
     assert handoff_response.workspace.resolved_context is not None
     assert (
         handoff_response.workspace.resolved_context.portfolio_snapshot_id == "ps_pf_001_2026-03-25"
+    )
+    first_valuation = handoff_response.proposal.version.proposal_result.valuation_context
+    assert first_valuation.current_state.requested_as_of_date == "2026-03-25"
+    assert first_valuation.current_state.requested_reporting_currency == "EUR"
+    assert first_valuation.simulated_state.requested_as_of_date == "2026-03-25"
+    assert first_valuation.simulated_state.requested_reporting_currency == "EUR"
+    assert first_valuation.current_state.supportability == "PARTIAL"
+    assert first_valuation.current_state.reason_code == ("REQUESTED_REPORTING_CURRENCY_NOT_HONORED")
+    assert first_valuation.simulated_state.supportability == "PARTIAL"
+    assert first_valuation.simulated_state.reason_code == (
+        "REQUESTED_REPORTING_CURRENCY_NOT_HONORED"
+    )
+
+    version_response = handoff_workspace_to_proposal_lifecycle(
+        workspace_id=session.workspace_id,
+        request=workspace_service.WorkspaceLifecycleHandoffRequest(handoff_by="advisor_123"),
+        proposal_service=get_proposal_workflow_service(),
+        idempotency_key="workspace-handoff-idem-version",
+        correlation_id=None,
+    )
+    version_valuation = version_response.proposal.version.proposal_result.valuation_context
+    assert version_valuation.current_state.requested_as_of_date == "2026-03-25"
+    assert version_valuation.current_state.requested_reporting_currency == "EUR"
+    assert version_valuation.simulated_state.requested_as_of_date == "2026-03-25"
+    assert version_valuation.simulated_state.requested_reporting_currency == "EUR"
+    assert version_valuation.current_state.supportability == "PARTIAL"
+    assert version_valuation.current_state.reason_code == (
+        "REQUESTED_REPORTING_CURRENCY_NOT_HONORED"
+    )
+    assert version_valuation.simulated_state.supportability == "PARTIAL"
+    assert version_valuation.simulated_state.reason_code == (
+        "REQUESTED_REPORTING_CURRENCY_NOT_HONORED"
     )
 
 
