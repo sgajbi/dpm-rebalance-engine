@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from fastapi.openapi.utils import get_openapi
@@ -35,6 +36,9 @@ def test_projection_keeps_requested_context_without_claiming_effective_evidence(
         evidence.benchmark_assignment.requested_as_of_date,
         evidence.benchmark_assignment.supportability,
     ) == ("BM_1", None, "2026-03-25", "UNAVAILABLE")
+    assert evidence.benchmark_assignment.reason_code == (
+        "BENCHMARK_ASSIGNMENT_EVIDENCE_UNAVAILABLE"
+    )
     assert (
         evidence.current_mandate_limits.mandate_id,
         evidence.current_mandate_limits.requested_as_of_date,
@@ -74,9 +78,21 @@ def test_evidence_models_reject_opaque_extension_fields() -> None:
     with pytest.raises(ValidationError):
         BenchmarkAssignmentEvidence(
             supportability="UNAVAILABLE",
-            reason_code="BENCHMARK_ASSIGNMENT_UNAVAILABLE",
+            reason_code="BENCHMARK_ASSIGNMENT_EVIDENCE_UNAVAILABLE",
             opaque_payload={"effective_benchmark_id": "BM_INFERRED"},
         )
+
+
+def test_unavailable_benchmark_evidence_is_revisited_when_core_route_is_added() -> None:
+    core_client_source = Path(__file__).parents[4] / "src" / "integrations" / "lotus_core"
+    benchmark_assignment_route = "/integration/portfolios/{portfolio_id}/benchmark-assignment"
+    route_references = [
+        path.read_text(encoding="utf-8") for path in core_client_source.glob("*.py")
+    ]
+    assert not any(benchmark_assignment_route in source for source in route_references), (
+        "Advise now contains a Core benchmark-assignment route; map its source-owned contract "
+        "into ProposalReviewEvidence before changing the published UNAVAILABLE posture."
+    )
 
 
 def test_proposal_result_openapi_publishes_additive_review_evidence_contract() -> None:

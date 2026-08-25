@@ -24,7 +24,7 @@ def build_proposal_review_evidence(
             requested_benchmark_id=benchmark_id,
             requested_as_of_date=valuation_context.current_state.requested_as_of_date,
             supportability="UNAVAILABLE",
-            reason_code="BENCHMARK_ASSIGNMENT_UNAVAILABLE",
+            reason_code="BENCHMARK_ASSIGNMENT_EVIDENCE_UNAVAILABLE",
         ),
         current_mandate_limits=_build_mandate_limit_state(
             mandate_id=mandate_id,

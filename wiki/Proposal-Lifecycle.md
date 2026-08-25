@@ -124,12 +124,14 @@ requested as-of context separate from effective source evidence:
 - `current_mandate_limits` and `simulated_mandate_limits` are separate state projections with typed
   observations, units, thresholds, outcomes, severity, and source references when an authoritative
   producer supplies them.
-- The current upstream payloads do not provide effective benchmark assignment or source-owned
-  mandate-limit observations. The contract therefore returns `UNAVAILABLE`, null effective values,
-  empty observations, and stable reason codes rather than promoting a selector or interpreting
-  generic `rule_results` as mandate evidence.
+- Advise does not currently consume Core's existing benchmark-assignment route, and no mapped
+  source-owned mandate-limit observation contract is available to this envelope. The contract
+  therefore returns `UNAVAILABLE`, null effective values, empty observations, and stable reason
+  codes rather than promoting a selector or interpreting generic `rule_results` as mandate evidence.
 
 This is an explicit capability boundary, not a positive benchmark/limit claim. Advise does not
-calculate benchmark returns, limit breaches, materiality, or acceptability. A future producer
-contract must supply source authority, effective dates, and stable references before the envelope
-can move beyond the unavailable posture.
+calculate benchmark returns, limit breaches, materiality, or acceptability. A future adapter/producer
+mapping must supply source authority, effective dates, and stable references before the envelope can
+move beyond the unavailable posture. The existing Core route is a named revisit point; Advise must
+not silently leave the published unavailable posture in place after adding that route to its Core
+client.
