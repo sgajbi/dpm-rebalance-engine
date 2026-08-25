@@ -6,6 +6,8 @@ import httpx
 
 @dataclass(frozen=True)
 class ReportDeliveryPrimitives:
+    """Dependencies needed to certify report delivery without owning HTTP plumbing."""
+
     get_json: Callable[..., dict[str, Any]]
     feature_by_key: Callable[..., dict[str, Any]]
     assertion: Callable[..., None]
@@ -21,6 +23,8 @@ def assert_report_delivery(
     related_version_no: int,
     expected_portfolio_id: str,
 ) -> str:
+    """Assert READY or explicitly degraded report delivery and persisted read surfaces."""
+
     capabilities = primitives.get_json(
         client,
         url=f"{advise_base_url}/platform/capabilities",
