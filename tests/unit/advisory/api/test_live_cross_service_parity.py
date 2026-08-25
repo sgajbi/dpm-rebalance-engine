@@ -550,11 +550,7 @@ def test_simulate_live_alternatives_path_preserves_stateful_request_and_snapshot
         object(),
         advise_base_url="http://advise.dev.lotus",
         complete_scenario=PortfolioParityScenario(
-            portfolio_id="PB_SG_GLOBAL_BAL_001",
-            as_of_date="2026-05-22",
-            reporting_currency="USD",
-            issuer_coverage_status="complete",
-            risk_available=True,
+            "PB_SG_GLOBAL_BAL_001", "2026-05-22", "USD", "complete", True
         ),
         idempotency_prefix="live-alt-test",
         path_name="cash_raise_path",
@@ -606,43 +602,29 @@ def test_live_noop_alternatives_path_rejects_missing_policy_evidence() -> None:
         latency_ms=10.0,
     )
     scenario = PortfolioParityScenario(
-        portfolio_id="PB_SG_GLOBAL_BAL_001",
-        as_of_date="2026-05-22",
-        reporting_currency="USD",
-        issuer_coverage_status="complete",
-        risk_available=True,
+        "PB_SG_GLOBAL_BAL_001", "2026-05-22", "USD", "complete", True
     )
 
-    def _simulate_path(snapshot_to_return: LiveProposalAlternativesSnapshot):
-        return lambda *args, **kwargs: (proposal_body, snapshot_to_return)
-
-    assert (
-        alternatives_validation._validate_live_noop_alternatives_path(
+    def _run(snapshot_to_return: LiveProposalAlternativesSnapshot):
+        return alternatives_validation._validate_live_noop_alternatives_path(
             object(),
             advise_base_url="http://advise.dev.lotus",
             complete_scenario=scenario,
-            simulate_path=_simulate_path(snapshot),
+            simulate_path=lambda *args, **kwargs: (proposal_body, snapshot_to_return),
             collect_statuses=_collect_alternative_statuses,
             assert_condition=live_parity._assert,
         )
-        is snapshot
-    )
+
+    assert _run(snapshot) is snapshot
 
     incomplete_snapshot = LiveProposalAlternativesSnapshot(
         **{**snapshot.__dict__, "rejected_reason_codes": ("ALTERNATIVE_CASH_ALREADY_SUFFICIENT",)}
     )
     with pytest.raises(
         live_parity.LiveParityValidationError,
-        match="restricted-product deferred evidence",
+        match="ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE",
     ):
-        alternatives_validation._validate_live_noop_alternatives_path(
-            object(),
-            advise_base_url="http://advise.dev.lotus",
-            complete_scenario=scenario,
-            simulate_path=_simulate_path(incomplete_snapshot),
-            collect_statuses=_collect_alternative_statuses,
-            assert_condition=live_parity._assert,
-        )
+        _run(incomplete_snapshot)
 
 
 def test_json_safe_value_serializes_decimals_for_http_payloads() -> None:
