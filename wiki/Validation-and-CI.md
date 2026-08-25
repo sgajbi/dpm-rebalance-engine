@@ -17,6 +17,13 @@ platform host path defaults to `../lotus-platform` and can be overridden with
 for Spectral; if Spectral cannot execute, the gate fails rather than treating a report-only `127`
 result as evidence.
 
+The monetary-float guard runs inside `make lint` and fails closed for unauthorized findings,
+malformed approvals, stale approvals, and approved findings inside the inclusive seven-calendar-day
+pre-expiry window (`0 <= days_remaining <= 7`). Each allowlist entry must retain a justification,
+owner, and `review_by` date. The pre-expiry gate makes review work visible in the PR lane before a
+post-merge mainline failure; it is CI/developer evidence only and does not change runtime, API,
+persistence, migration, or data-model behavior.
+
 The fast static lanes also run `make dead-code-gate`. It scans `src` and `scripts` with the pinned
 Vulture version and fails on any finding outside the versioned
 `quality/dead-code-policy.v1.json` exception set. Each reviewed compatibility exception carries a
