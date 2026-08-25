@@ -1,5 +1,31 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-935-OVERSIZED-GATE-ORCHESTRATION
+
+- Scope: `scripts/oversized_code_gate.py`, its focused unit tests, and generated quality evidence.
+- Pattern: An enforced quality gate should not centralize policy loading, baseline classification,
+  expiry/failure construction, and report serialization in a D-ranked orchestration function; the
+  measurement code itself must remain reviewable and maintainable.
+- Status: Implemented in the bounded #495 CI-maintainability slice. The gate now uses named private
+  helpers and typed internal snapshots for input loading, live/baseline finding classification,
+  actionable failure construction, and machine-readable report assembly.
+- Finding Class: CI measurement maintainability, quality-gate reliability, and behavior-preserving
+  regression protection.
+- Summary: `run_gate` decreased from Radon D/29 to A/2. Classification helpers are A-ranked,
+  failure construction is B/7, and report assembly is B/8. The repository-native gate remains
+  fail-closed and retains the existing finding fingerprints, threshold/baseline provenance,
+  failure ordering, status, counts, and output schema.
+- Evidence: `tests/unit/scripts/test_oversized_code_gate.py` passes 11 tests, including a new
+  machine-readable policy/baseline provenance contract. The existing baseline, new/grown/shrunken,
+  resolved, expiry, syntax, policy-fingerprint, and qualified-symbol regressions remain covered.
+- Compatibility: CI/evidence maintainability only. Product runtime, APIs/OpenAPI, persistence,
+  migrations, dependencies, and downstream contracts are unchanged.
+- Documentation decision: Updated this ledger and generated quality evidence. No wiki/operator
+  workflow change occurred; `make oversized-code-gate` remains the same command, thresholds, and
+  remediation contract, so no wiki publication is required for this slice.
+- Follow-Up: #495 continues to own the next separately bounded quality-gate improvement; stricter
+  Radon/Xenon threshold promotion remains out of scope.
+
 ## LA-REV-934-QUEUE-AUTO-MERGE-MISSING-TOKEN
 
 - Scope: `.github/workflows/pr-auto-merge.yml`, its workflow contract test, branch-protection
