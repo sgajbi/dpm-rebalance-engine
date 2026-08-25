@@ -27,6 +27,9 @@ This repository adopts the platform-wide mandatory standard defined in `lotus-pl
 - Allowlist entries inside the inclusive seven-calendar-day pre-expiry window (`0 <=
   days_remaining <= 7`) fail CI so approvals are reviewed before `review_by` passes.
 - Stale allowlist entries (past `review_by`) continue to fail CI.
+- The target-generation domain contains no direct solver conversions; the single remaining
+  Decimal-to-cvxpy conversion is isolated in `target_solver_boundary.py` with explicit approval
+  metadata and a #544 removal condition.
 
 ## Deviation and Change Control
 

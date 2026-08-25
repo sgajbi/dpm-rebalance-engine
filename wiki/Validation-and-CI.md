@@ -24,6 +24,10 @@ owner, and `review_by` date. The pre-expiry gate makes review work visible in th
 post-merge mainline failure; it is CI/developer evidence only and does not change runtime, API,
 persistence, migration, or data-model behavior.
 
+Target-generation solver conversions are kept behind the typed `src/core/target_solver_boundary.py`
+adapter. The guard inventories its one intentional Decimal-to-cvxpy conversion separately from
+domain monetary calculations; its approval carries owner, expiry, and #544 removal evidence.
+
 The fast static lanes also run `make dead-code-gate`. It scans `src` and `scripts` with the pinned
 Vulture version and fails on any finding outside the versioned
 `quality/dead-code-policy.v1.json` exception set. Each reviewed compatibility exception carries a

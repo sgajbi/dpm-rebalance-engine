@@ -27,6 +27,35 @@
 - Follow-Up: #495 continues to own further CI quality-gate work; #544 remains the separate product
   boundary migration for solver float conversions.
 
+## LA-REV-544-TYPED-TARGET-SOLVER-BOUNDARY
+
+- Scope: `src/core/target_generation.py`, `src/core/target_solver_boundary.py`, focused numerical
+  regression tests, and the target-generation monetary-float approvals.
+- Pattern: Six governed solver conversions plus one sibling cash-band conversion were distributed
+  through the target-generation domain, coupling Decimal business rules to the optional cvxpy
+  numeric representation and making the solver boundary hard to audit.
+- Status: Isolated in the bounded #544 slice. Target generation delegates scalar/vector input
+  conversion and solver-output re-entry to a named typed adapter; the six distributed findings are
+  removed from the allowlist. One intentional adapter conversion remains explicitly inventoried
+  with owner, expiry, and #544 removal evidence.
+- Finding Class: Numerical precision boundary, domain ownership, solver compatibility, and contract
+  regression protection.
+- Summary: The adapter preserves the existing solver-facing numeric representation, keeps all
+  domain-side inputs as Decimal, re-enters through `Decimal(str(...))`, and quantizes outputs to
+  `0.0001`. Cash-band, group, single-position, model-weight, fallback, zero, and near-boundary
+  behavior remain covered.
+- Evidence:
+  - `target_generation.py` contains no direct `float(` conversion.
+  - Focused tests cover the named guard inventory, scalar/vector boundary, finite input/output
+    rejection, constraints, zero/near-boundary values, and quantized solver output.
+  - The allowlist contains one explicit adapter approval rather than six distributed domain
+    approvals; #544 owns its retirement when the solver boundary accepts Decimal inputs.
+- Compatibility: No API/OpenAPI, persistence, migration, dependency, or downstream contract
+  changes; solver statuses, fallback order, constraints, and Decimal output quantization are
+  preserved.
+- Documentation decision: Updated rounding standard, wiki CI guidance, and this ledger; strict wiki
+  publication/parity is required after merge.
+
 ## LA-REV-495-MONETARY-FLOAT-REVIEW-FRESHNESS
 
 - Scope: scripts/check_monetary_float_usage.py, its focused regression tests, and
