@@ -18,6 +18,10 @@
 - Evidence: `tests/unit/scripts/test_oversized_code_gate.py` passes 11 tests, including a new
   machine-readable policy/baseline provenance contract. The existing baseline, new/grown/shrunken,
   resolved, expiry, syntax, policy-fingerprint, and qualified-symbol regressions remain covered.
+- CI fix-forward: The first PR head exposed an Interrogate trend regression because the extracted
+  internal types/helpers increased the documentation inventory without documented boundaries.
+  The helpers and snapshots now carry concise docstrings; the generated baseline records coverage
+  improving from `1.6%` to `1.7%`, with no threshold or exception change.
 - Compatibility: CI/evidence maintainability only. Product runtime, APIs/OpenAPI, persistence,
   migrations, dependencies, and downstream contracts are unchanged.
 - Documentation decision: Updated this ledger and generated quality evidence. No wiki/operator

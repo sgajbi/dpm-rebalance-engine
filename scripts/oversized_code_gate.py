@@ -294,6 +294,8 @@ def scan_repository(
 
 @dataclass(frozen=True)
 class _GateInputs:
+    """Validated policy, baseline, and scan inputs used by the gate."""
+
     policy: dict[str, Any]
     thresholds: dict[str, int]
     scan_paths: tuple[str, ...]
@@ -303,6 +305,8 @@ class _GateInputs:
 
 @dataclass(frozen=True)
 class _FindingGroups:
+    """Classified live and baseline findings used to build the gate report."""
+
     baseline_by_fingerprint: dict[str, dict[str, Any]]
     new: list[OversizedFinding]
     grown: list[OversizedFinding]
@@ -315,6 +319,8 @@ class _FindingGroups:
 def _classify_live_findings(
     findings: list[OversizedFinding], baseline_by_fingerprint: dict[str, dict[str, Any]]
 ) -> tuple[list[OversizedFinding], list[OversizedFinding], list[OversizedFinding]]:
+    """Partition live findings by their relationship to the reviewed baseline."""
+
     new: list[OversizedFinding] = []
     grown: list[OversizedFinding] = []
     shrunken: list[OversizedFinding] = []
@@ -332,6 +338,8 @@ def _classify_live_findings(
 def _classify_baseline_state(
     *, baseline: list[dict[str, Any]], observed: set[str], policy: dict[str, Any]
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], bool]:
+    """Identify resolved, expired, and provenance-expired baseline entries."""
+
     baseline_by_fingerprint = {entry["fingerprint"]: entry for entry in baseline}
     resolved = [
         baseline_by_fingerprint[fingerprint]
@@ -344,6 +352,8 @@ def _classify_baseline_state(
 
 
 def _load_gate_inputs(*, repo_root: Path, policy_path: Path) -> _GateInputs:
+    """Load and validate the policy and its referenced oversized-code baseline."""
+
     policy = load_policy(policy_path)
     thresholds = policy["thresholds"]
     scan_paths = tuple(policy["scan_paths"])
@@ -370,6 +380,8 @@ def _load_gate_inputs(*, repo_root: Path, policy_path: Path) -> _GateInputs:
 def _classify_findings(
     *, findings: list[OversizedFinding], baseline: list[dict[str, Any]], policy: dict[str, Any]
 ) -> _FindingGroups:
+    """Reject duplicate observations and classify all live/baseline findings."""
+
     observed = {finding.fingerprint: finding for finding in findings}
     if len(observed) != len(findings):
         raise ValueError("Oversized-code scanner produced duplicate fingerprints.")
@@ -392,6 +404,8 @@ def _classify_findings(
 
 
 def _build_failures(*, policy: dict[str, Any], groups: _FindingGroups) -> list[str]:
+    """Render deterministic remediation messages for every policy violation."""
+
     failures: list[str] = []
     if groups.provenance_expired:
         failures.append(
@@ -440,6 +454,8 @@ def _build_report_payload(
     groups: _FindingGroups,
     failures: list[str],
 ) -> dict[str, Any]:
+    """Build the stable machine-readable report consumed by CI and operators."""
+
     policy = inputs.policy
     return {
         "policy_version": policy["policy_version"],
