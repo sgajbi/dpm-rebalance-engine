@@ -22,6 +22,9 @@ from scripts.live_policy_evaluation_support import (  # noqa: E402
     live_policy_evidence_bundle,
     request_live_policy_report,
 )
+from scripts.live_proposal_alternatives_validation import (  # noqa: E402
+    validate_live_proposal_alternatives_paths,
+)
 from scripts.live_runtime_decision_summary import (  # noqa: E402
     LiveDecisionSnapshot,
     extract_live_decision_snapshot,
@@ -613,6 +616,36 @@ def _collect_alternative_statuses(
     return statuses_by_objective
 
 
+def _simulate_live_alternatives_path(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    complete_scenario: PortfolioParityScenario,
+    idempotency_prefix: str,
+    path_name: str,
+    objectives: list[str],
+    max_alternatives: int,
+    constraints: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], LiveProposalAlternativesSnapshot]:
+    proposal_body, latency_ms = _simulate_stateful_alternatives(
+        client,
+        advise_base_url=advise_base_url,
+        portfolio_id=complete_scenario.portfolio_id,
+        as_of_date=complete_scenario.as_of_date,
+        idempotency_key=f"{idempotency_prefix}-{uuid.uuid4().hex}",
+        alternatives_request=_build_alternatives_request(
+            objectives=objectives,
+            max_alternatives=max_alternatives,
+            constraints=constraints,
+        ),
+    )
+    return proposal_body, _extract_live_proposal_alternatives_snapshot(
+        proposal_body=proposal_body,
+        path_name=path_name,
+        latency_ms=latency_ms,
+    )
+
+
 def _validate_live_proposal_alternatives_paths(
     client: httpx.Client,
     *,
@@ -626,222 +659,14 @@ def _validate_live_proposal_alternatives_paths(
     LiveProposalAlternativesSnapshot,
     LiveProposalAlternativesSnapshot,
 ]:
-    noop_body, noop_latency_ms = _simulate_stateful_alternatives(
+    return validate_live_proposal_alternatives_paths(
         client,
         advise_base_url=advise_base_url,
-        portfolio_id=complete_scenario.portfolio_id,
-        as_of_date=complete_scenario.as_of_date,
-        idempotency_key=f"live-alt-noop-{uuid.uuid4().hex}",
-        alternatives_request=_build_alternatives_request(
-            objectives=[
-                "REDUCE_CONCENTRATION",
-                "RAISE_CASH",
-                "IMPROVE_CURRENCY_ALIGNMENT",
-                "AVOID_RESTRICTED_PRODUCTS",
-            ],
-            max_alternatives=3,
-            constraints={
-                "cash_floor": {
-                    "amount": "25000",
-                    "currency": complete_scenario.reporting_currency,
-                }
-            },
-        ),
-    )
-    noop_snapshot = _extract_live_proposal_alternatives_snapshot(
-        proposal_body=noop_body,
-        path_name="no_op_path",
-        latency_ms=noop_latency_ms,
-    )
-    noop_statuses = _collect_alternative_statuses(noop_body)
-    _assert(
-        noop_snapshot.requested_objectives
-        == (
-            "REDUCE_CONCENTRATION",
-            "RAISE_CASH",
-            "IMPROVE_CURRENCY_ALIGNMENT",
-            "AVOID_RESTRICTED_PRODUCTS",
-        ),
-        f"no_op_path: requested objectives drifted, got {noop_snapshot.requested_objectives}",
-    )
-    _assert(
-        noop_statuses.get("REDUCE_CONCENTRATION") == {"REJECTED_POLICY_BLOCKED"},
-        (
-            "no_op_path: expected concentration objective to surface as policy-blocked under "
-            f"canonical posture, got {noop_statuses}"
-        ),
-    )
-    _assert(
-        noop_statuses.get("IMPROVE_CURRENCY_ALIGNMENT") == {"REJECTED_POLICY_BLOCKED"},
-        (
-            "no_op_path: expected currency objective to surface as policy-blocked under "
-            f"canonical posture, got {noop_statuses}"
-        ),
-    )
-    _assert(
-        "ALTERNATIVE_CASH_ALREADY_SUFFICIENT" in noop_snapshot.rejected_reason_codes,
-        (
-            "no_op_path: expected cash-floor rejection evidence, got "
-            f"{noop_snapshot.rejected_reason_codes}"
-        ),
-    )
-    _assert(
-        "ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE" in noop_snapshot.rejected_reason_codes,
-        (
-            "no_op_path: expected restricted-product deferred evidence, got "
-            f"{noop_snapshot.rejected_reason_codes}"
-        ),
-    )
-
-    concentration_body, concentration_latency_ms = _simulate_stateful_alternatives(
-        client,
-        advise_base_url=advise_base_url,
-        portfolio_id=complete_scenario.portfolio_id,
-        as_of_date=complete_scenario.as_of_date,
-        idempotency_key=f"live-alt-concentration-{uuid.uuid4().hex}",
-        alternatives_request=_build_alternatives_request(
-            objectives=["REDUCE_CONCENTRATION"],
-            max_alternatives=1,
-        ),
-    )
-    concentration_snapshot = _extract_live_proposal_alternatives_snapshot(
-        proposal_body=concentration_body,
-        path_name="concentration_path",
-        latency_ms=concentration_latency_ms,
-    )
-    concentration_statuses = _collect_alternative_statuses(concentration_body)
-    _assert(
-        concentration_snapshot.requested_objectives == ("REDUCE_CONCENTRATION",),
-        (
-            "concentration_path: requested objective drifted from concentration posture, got "
-            f"{concentration_snapshot.requested_objectives}"
-        ),
-    )
-    _assert(
-        concentration_statuses.get("REDUCE_CONCENTRATION") == {"REJECTED_POLICY_BLOCKED"},
-        (
-            "concentration_path: expected policy-blocked concentration alternative, got "
-            f"{concentration_statuses}"
-        ),
-    )
-
-    cash_raise_body, cash_raise_latency_ms = _simulate_stateful_alternatives(
-        client,
-        advise_base_url=advise_base_url,
-        portfolio_id=complete_scenario.portfolio_id,
-        as_of_date=complete_scenario.as_of_date,
-        idempotency_key=f"live-alt-cash-{uuid.uuid4().hex}",
-        alternatives_request=_build_alternatives_request(
-            objectives=["RAISE_CASH"],
-            max_alternatives=1,
-            constraints={
-                "cash_floor": {
-                    "amount": "25000",
-                    "currency": complete_scenario.reporting_currency,
-                }
-            },
-        ),
-    )
-    cash_raise_snapshot = _extract_live_proposal_alternatives_snapshot(
-        proposal_body=cash_raise_body,
-        path_name="cash_raise_path",
-        latency_ms=cash_raise_latency_ms,
-    )
-    _assert(
-        cash_raise_snapshot.rejected_reason_codes == ("ALTERNATIVE_CASH_ALREADY_SUFFICIENT",),
-        (
-            "cash_raise_path: expected cash-floor rejection due to already sufficient base cash, "
-            f"got {cash_raise_snapshot.rejected_reason_codes}"
-        ),
-    )
-
-    cross_currency_body, cross_currency_latency_ms = _simulate_stateful_alternatives(
-        client,
-        advise_base_url=advise_base_url,
-        portfolio_id=complete_scenario.portfolio_id,
-        as_of_date=complete_scenario.as_of_date,
-        idempotency_key=f"live-alt-currency-{uuid.uuid4().hex}",
-        alternatives_request=_build_alternatives_request(
-            objectives=["IMPROVE_CURRENCY_ALIGNMENT"],
-            max_alternatives=1,
-        ),
-    )
-    cross_currency_snapshot = _extract_live_proposal_alternatives_snapshot(
-        proposal_body=cross_currency_body,
-        path_name="cross_currency_path",
-        latency_ms=cross_currency_latency_ms,
-    )
-    cross_currency_statuses = _collect_alternative_statuses(cross_currency_body)
-    _assert(
-        cross_currency_snapshot.requested_objectives == ("IMPROVE_CURRENCY_ALIGNMENT",),
-        (
-            "cross_currency_path: requested objective drifted from currency posture, got "
-            f"{cross_currency_snapshot.requested_objectives}"
-        ),
-    )
-    _assert(
-        cross_currency_statuses.get("IMPROVE_CURRENCY_ALIGNMENT") == {"REJECTED_POLICY_BLOCKED"},
-        (
-            "cross_currency_path: expected policy-blocked currency alternative, got "
-            f"{cross_currency_statuses}"
-        ),
-    )
-
-    restricted_product_body, restricted_product_latency_ms = _simulate_stateful_alternatives(
-        client,
-        advise_base_url=advise_base_url,
-        portfolio_id=complete_scenario.portfolio_id,
-        as_of_date=complete_scenario.as_of_date,
-        idempotency_key=f"live-alt-restricted-{uuid.uuid4().hex}",
-        alternatives_request=_build_alternatives_request(
-            objectives=["AVOID_RESTRICTED_PRODUCTS"],
-            max_alternatives=1,
-        ),
-    )
-    restricted_product_snapshot = _extract_live_proposal_alternatives_snapshot(
-        proposal_body=restricted_product_body,
-        path_name="restricted_product_path",
-        latency_ms=restricted_product_latency_ms,
-    )
-    _assert(
-        restricted_product_snapshot.feasible_count == 0
-        and restricted_product_snapshot.feasible_with_review_count == 0,
-        (
-            "restricted_product_path: deferred restricted-product path unexpectedly produced "
-            f"ranked alternatives {restricted_product_snapshot}"
-        ),
-    )
-    _assert(
-        "ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE"
-        in restricted_product_snapshot.rejected_reason_codes,
-        (
-            "restricted_product_path: expected deferred canonical-evidence rejection, got "
-            f"{restricted_product_snapshot.rejected_reason_codes}"
-        ),
-    )
-
-    latency_bound_ms = max(warm_duration_ms * 6.0, 5000.0)
-    for snapshot in (
-        noop_snapshot,
-        concentration_snapshot,
-        cash_raise_snapshot,
-        cross_currency_snapshot,
-        restricted_product_snapshot,
-    ):
-        _assert(
-            snapshot.latency_ms <= latency_bound_ms,
-            (
-                f"{snapshot.path_name}: alternatives latency exceeded bound "
-                f"{snapshot.latency_ms:.2f}ms > {latency_bound_ms:.2f}ms"
-            ),
-        )
-
-    return (
-        noop_snapshot,
-        concentration_snapshot,
-        cash_raise_snapshot,
-        cross_currency_snapshot,
-        restricted_product_snapshot,
+        complete_scenario=complete_scenario,
+        warm_duration_ms=warm_duration_ms,
+        simulate_path=_simulate_live_alternatives_path,
+        collect_statuses=_collect_alternative_statuses,
+        assert_condition=_assert,
     )
 
 
