@@ -26,6 +26,9 @@ from scripts.live_runtime_decision_summary import (  # noqa: E402
     LiveDecisionSnapshot,
     extract_live_decision_snapshot,
 )
+from scripts.live_runtime_persisted_read_surfaces import (  # noqa: E402
+    assert_persisted_read_surfaces,
+)
 from scripts.live_runtime_policy_evaluation import (  # noqa: E402
     LivePolicyEvaluationSnapshot,
     extract_live_policy_evaluation_snapshot,
@@ -3418,266 +3421,18 @@ def _assert_persisted_read_surfaces(
     expected_state: str,
     expected_report_status: str,
 ) -> None:
-    list_query = (
-        f"{advise_base_url}/advisory/proposals?portfolio_id={expected_portfolio_id}&limit=100"
-    )
-    if created_by_filter:
-        list_query += f"&created_by={created_by_filter}"
-    listed = _get_json(
+    assert_persisted_read_surfaces(
         client,
-        url=list_query,
-        expected_status=200,
+        advise_base_url=advise_base_url,
+        proposal_id=proposal_id,
+        expected_portfolio_id=expected_portfolio_id,
+        created_by_filter=created_by_filter,
+        current_version_no=current_version_no,
+        expected_state=expected_state,
+        expected_report_status=expected_report_status,
+        get_json=_get_json,
+        assert_condition=_assert,
     )
-    items = cast(list[dict[str, Any]], listed["items"])
-    list_item = next(
-        (item for item in items if str(item["proposal_id"]) == proposal_id),
-        None,
-    )
-    _assert(
-        isinstance(list_item, dict),
-        f"{proposal_id}: proposal missing from list response for {expected_portfolio_id}",
-    )
-    list_item_dict = cast(dict[str, Any], list_item)
-
-    detail = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}?include_evidence=false",
-        expected_status=200,
-    )
-    version = _get_json(
-        client,
-        url=(
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{current_version_no}?include_evidence=false"
-        ),
-        expected_status=200,
-    )
-    timeline = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/workflow-events",
-        expected_status=200,
-    )
-    lineage = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/lineage",
-        expected_status=200,
-    )
-    approvals = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/approvals",
-        expected_status=200,
-    )
-    delivery_summary = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/delivery-summary",
-        expected_status=200,
-    )
-    delivery_history = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/delivery-events",
-        expected_status=200,
-    )
-
-    _assert(
-        str(list_item_dict["proposal_id"]) == str(detail["proposal"]["proposal_id"]) == proposal_id,
-        f"{proposal_id}: list/detail proposal ids diverged",
-    )
-    _assert(
-        str(detail["proposal"]["portfolio_id"]) == expected_portfolio_id,
-        (
-            f"{proposal_id}: detail endpoint returned wrong portfolio "
-            f"{detail['proposal']['portfolio_id']}"
-        ),
-    )
-    _assert(
-        int(list_item_dict["current_version_no"])
-        == int(detail["proposal"]["current_version_no"])
-        == int(lineage["latest_version_no"])
-        == current_version_no,
-        f"{proposal_id}: current version diverged across list/detail/lineage",
-    )
-    _assert(
-        str(list_item_dict["current_state"])
-        == str(detail["proposal"]["current_state"])
-        == str(timeline["current_state"])
-        == str(delivery_summary["proposal"]["current_state"])
-        == expected_state,
-        f"{proposal_id}: current state diverged across read surfaces",
-    )
-    _assert(
-        int(detail["current_version"]["version_no"])
-        == int(version["version_no"])
-        == current_version_no,
-        f"{proposal_id}: detail/version endpoints diverged on current version",
-    )
-    detail_summary = cast(
-        dict[str, Any],
-        cast(dict[str, Any], detail["current_version"]["proposal_result"])[
-            "proposal_decision_summary"
-        ],
-    )
-    version_summary = cast(
-        dict[str, Any],
-        cast(dict[str, Any], version["proposal_result"])["proposal_decision_summary"],
-    )
-    _assert(
-        detail_summary == version_summary,
-        f"{proposal_id}: detail/version decision summaries diverged",
-    )
-    _assert(
-        bool(detail_summary.get("decision_status"))
-        and bool(detail_summary.get("primary_reason_code")),
-        f"{proposal_id}: persisted decision summary omitted required posture fields",
-    )
-    _assert(
-        isinstance(detail_summary.get("approval_requirements"), list),
-        f"{proposal_id}: persisted decision summary omitted approval requirements list",
-    )
-    _assert(
-        str(version["proposal_id"]) == proposal_id,
-        f"{proposal_id}: version endpoint returned wrong proposal id",
-    )
-    _assert(
-        int(lineage["version_count"]) == current_version_no,
-        f"{proposal_id}: lineage version count did not match latest version",
-    )
-    lineage_versions = cast(list[dict[str, Any]], lineage["versions"])
-    _assert(
-        [int(item["version_no"]) for item in lineage_versions]
-        == list(range(1, current_version_no + 1)),
-        f"{proposal_id}: lineage version numbers were not contiguous and ordered",
-    )
-    _assert(
-        bool(lineage["lineage_complete"]) is True,
-        f"{proposal_id}: lineage unexpectedly incomplete",
-    )
-    _assert(
-        list(lineage["missing_version_numbers"]) == [],
-        f"{proposal_id}: lineage unexpectedly reported missing versions",
-    )
-    timeline_events = cast(list[dict[str, Any]], timeline["events"])
-    delivery_events = cast(list[dict[str, Any]], delivery_history["events"])
-    _assert(
-        int(timeline["event_count"]) == len(timeline_events),
-        f"{proposal_id}: timeline event_count mismatch",
-    )
-    _assert(
-        int(delivery_history["event_count"]) == len(delivery_events),
-        f"{proposal_id}: delivery history event_count mismatch",
-    )
-    _assert(
-        len(delivery_events) > 0 and len(timeline_events) >= len(delivery_events),
-        f"{proposal_id}: delivery history unexpectedly empty or larger than timeline",
-    )
-    created_event = next(
-        (event for event in timeline_events if event["event_type"] == "CREATED"),
-        None,
-    )
-    _assert(
-        isinstance(created_event, dict) and created_event["related_version_no"] == 1,
-        f"{proposal_id}: missing version-1 CREATED event in workflow timeline",
-    )
-    if current_version_no > 1:
-        new_version_events = [
-            event for event in timeline_events if event["event_type"] == "NEW_VERSION_CREATED"
-        ]
-        _assert(
-            len(new_version_events) == current_version_no - 1
-            and {
-                int(event["related_version_no"])
-                for event in cast(list[dict[str, Any]], new_version_events)
-            }
-            == set(range(2, current_version_no + 1)),
-            f"{proposal_id}: workflow timeline lost version-creation events",
-        )
-    _assert(
-        all(
-            event["event_type"]
-            in {
-                "EXECUTION_REQUESTED",
-                "EXECUTION_ACCEPTED",
-                "EXECUTION_PARTIALLY_EXECUTED",
-                "EXECUTION_REJECTED",
-                "EXECUTION_CANCELLED",
-                "EXECUTION_EXPIRED",
-                "EXECUTED",
-                "REPORT_REQUESTED",
-            }
-            for event in delivery_events
-        ),
-        f"{proposal_id}: delivery history contained non-delivery events",
-    )
-    _assert(
-        all(int(event["related_version_no"]) == current_version_no for event in delivery_events),
-        f"{proposal_id}: delivery history leaked non-current version events",
-    )
-    _assert(
-        int(approvals["approval_count"]) >= 2,
-        f"{proposal_id}: approvals endpoint missing lifecycle approval records",
-    )
-    approval_rows = cast(list[dict[str, Any]], approvals["approvals"])
-    _assert(
-        all(
-            int(approval["related_version_no"]) == current_version_no for approval in approval_rows
-        ),
-        f"{proposal_id}: approvals endpoint leaked non-current version approvals",
-    )
-    execution = cast(dict[str, Any], delivery_summary["execution"])
-    _assert(
-        execution["handoff_status"] == "EXECUTED",
-        f"{proposal_id}: delivery summary execution did not reach EXECUTED",
-    )
-    _assert(
-        execution["related_version_no"] == current_version_no,
-        f"{proposal_id}: execution summary was not anchored to latest version",
-    )
-    _assert(
-        str(cast(dict[str, Any], delivery_history["latest_event"])["event_type"])
-        == (
-            "REPORT_REQUESTED"
-            if expected_report_status == "READY"
-            else str(execution["latest_event_type"])
-        ),
-        f"{proposal_id}: delivery latest event did not match delivery posture",
-    )
-    reporting = delivery_summary.get("reporting")
-    if expected_report_status == "READY":
-        reporting_dict = cast(dict[str, Any], reporting)
-        _assert(
-            isinstance(reporting, dict) and reporting_dict["status"] == "READY",
-            f"{proposal_id}: delivery summary missing ready reporting posture",
-        )
-        _assert(
-            reporting_dict["related_version_no"] == current_version_no,
-            f"{proposal_id}: report summary was not anchored to latest version",
-        )
-    else:
-        _assert(
-            reporting is None,
-            f"{proposal_id}: delivery summary unexpectedly contained reporting posture",
-        )
-    if current_version_no > 1:
-        first_version_replay = _get_json(
-            client,
-            url=(f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/1/replay-evidence"),
-            expected_status=200,
-        )
-        current_version_replay = _get_json(
-            client,
-            url=(
-                f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-                f"{current_version_no}/replay-evidence"
-            ),
-            expected_status=200,
-        )
-        _assert(
-            first_version_replay["subject"]["proposal_version_no"] == 1,
-            f"{proposal_id}: version-1 replay subject lost immutable version identity",
-        )
-        _assert(
-            current_version_replay["subject"]["proposal_version_no"] == current_version_no,
-            f"{proposal_id}: current-version replay subject lost version identity",
-        )
 
 
 def validate_live_cross_service_parity(
