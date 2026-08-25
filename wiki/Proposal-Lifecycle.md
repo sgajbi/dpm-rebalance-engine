@@ -112,3 +112,24 @@ Missing provenance is represented as unavailable or partial evidence; the servic
 today's date, zero, pass, approval, or an inferred valuation. `lotus-core` remains the source-data
 and simulation authority, while `lotus-advise` owns the lifecycle projection and does not recalculate
 valuation, benchmark, limit, risk, suitability, or reporting methodology.
+
+## Benchmark And Mandate-Limit Evidence
+
+Proposal simulation and immutable lifecycle-version responses also carry the additive
+`proposal_review_evidence` envelope. It keeps the requested benchmark and mandate identifiers and
+requested as-of context separate from effective source evidence:
+
+- `benchmark_assignment` contains requested/effective identifiers, requested/effective as-of dates,
+  source references, and supportability.
+- `current_mandate_limits` and `simulated_mandate_limits` are separate state projections with typed
+  observations, units, thresholds, outcomes, severity, and source references when an authoritative
+  producer supplies them.
+- The current upstream payloads do not provide effective benchmark assignment or source-owned
+  mandate-limit observations. The contract therefore returns `UNAVAILABLE`, null effective values,
+  empty observations, and stable reason codes rather than promoting a selector or interpreting
+  generic `rule_results` as mandate evidence.
+
+This is an explicit capability boundary, not a positive benchmark/limit claim. Advise does not
+calculate benchmark returns, limit breaches, materiality, or acceptability. A future producer
+contract must supply source authority, effective dates, and stable references before the envelope
+can move beyond the unavailable posture.
