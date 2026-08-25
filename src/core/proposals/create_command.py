@@ -84,7 +84,6 @@ def create_proposal_command(
         if existing.request_hash == idempotency_request_hash or _is_matching_legacy_replay(
             repository=repository,
             payload=payload,
-            stored_request_hash=existing.request_hash,
             proposal_id=existing.proposal_id,
             proposal_version_no=existing.proposal_version_no,
         ):
@@ -185,13 +184,13 @@ def _is_matching_legacy_replay(
     *,
     repository: ProposalRepository,
     payload: ProposalCreateRequest,
-    stored_request_hash: str,
     proposal_id: str,
     proposal_version_no: int,
 ) -> bool:
+    """Match legacy replay referents by business semantics, not cross-domain hashes."""
     proposal = repository.get_proposal(proposal_id=proposal_id)
     version = repository.get_version(proposal_id=proposal_id, version_no=proposal_version_no)
-    if proposal is None or version is None or stored_request_hash != version.request_hash:
+    if proposal is None or version is None:
         return False
     if payload.input_mode in (None, "stateless"):
         return _is_matching_direct_legacy_replay(

@@ -1,5 +1,33 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-939-PRESERVED-PROPOSAL-REPLAY-HASH-DOMAINS
+
+- Scope: proposal-create legacy replay matching, focused idempotency regressions, the PostgreSQL
+  repository integration path, and replay/idempotency documentation.
+- Pattern: `_is_matching_legacy_replay` compared the stored command-idempotency hash with the
+  immutable proposal-version request hash even though request-model/default enrichment can make
+  those hashes differ while the preserved proposal and caller business semantics still match.
+- Status: Implemented in bounded issue #482 follow-up work. Legacy replay now loads the referenced
+  proposal/version and matches the existing proposal, resolved context, and narrative semantics;
+  the cross-domain hash equality precondition and its obsolete parameter are removed.
+- Finding Class: durable idempotency correctness, replay compatibility, and PostgreSQL-path
+  regression prevention.
+- Summary: A preserved stateful request with omitted product-type hints can replay a version whose
+  source-resolved narrative contains product types. Genuine creator, portfolio, context, metadata,
+  narrative, and malformed-record drift remains rejected by the existing semantic checks.
+- Evidence: focused legacy idempotency tests cover cross-domain version hashes and enrichment
+  compatibility plus semantic drift rejection. A live-DSN PostgreSQL integration test persists the
+  historical proposal/version/event/idempotency records and proves replay returns the original
+  proposal/version without creating a duplicate; local runs skip that test when no live DSN exists.
+- Compatibility: Intentional correction for preserved proposal-create replay. Same canonical
+  command hashes still replay directly; changed business semantics still return `409 Conflict`.
+  No endpoint, request schema, migration, OpenAPI, calculation, downstream ownership, or
+  approval/execution contract changes.
+- Documentation decision: Updated developer idempotency guidance and repo-authored
+  `wiki/Proposal-Lifecycle.md`; wiki publication and strict parity are required after merge.
+- Follow-Up: retain issue #482 open until the PR review, exact-mainline validation, and governed
+  canonical Workbench replay evidence are complete.
+
 ## LA-REV-937-PROPOSAL-STATEFUL-AS-OF-GUARD
 
 - Scope: `src/core/proposals/context_resolution.py`, proposal stateful create/version/simulation

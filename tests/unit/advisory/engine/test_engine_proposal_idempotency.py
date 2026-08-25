@@ -291,7 +291,7 @@ def test_load_replayed_approval_reads_repository_approvals():
     assert replayed == latest
 
 
-def test_legacy_stateful_create_replay_helpers_match_canonical_legacy_payload() -> None:
+def test_legacy_stateful_create_replay_ignores_version_hash_domain_and_enrichment() -> None:
     stateful_input = SimpleNamespace(
         portfolio_id="pf_legacy_replay",
         as_of="2026-05-20",
@@ -303,7 +303,7 @@ def test_legacy_stateful_create_replay_helpers_match_canonical_legacy_payload() 
                 "audience": "ADVISOR_REVIEW",
                 "jurisdiction": "SG",
                 "client_audience": "RELATIONSHIP_MANAGER",
-                "product_types": ["EQUITY", "FX"],
+                "product_types": [],
                 "generation_mode": "DETERMINISTIC_TEMPLATE",
                 "sections": ["overview", "risk"],
                 "requested_by": "advisor_legacy",
@@ -330,7 +330,7 @@ def test_legacy_stateful_create_replay_helpers_match_canonical_legacy_payload() 
         mandate_id="mandate_stateful",
     )
     version = SimpleNamespace(
-        request_hash="sha256:legacy",
+        request_hash="sha256:legacy-resolved-version",
         evidence_bundle_json={
             "context_resolution": {
                 "resolved_context": {
@@ -375,7 +375,6 @@ def test_legacy_stateful_create_replay_helpers_match_canonical_legacy_payload() 
     assert _is_matching_legacy_replay(
         repository=_LegacyReplayRepository(proposal=proposal, version=version),
         payload=payload,
-        stored_request_hash="sha256:legacy",
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
     )
@@ -386,7 +385,6 @@ def test_legacy_stateful_create_replay_helpers_match_canonical_legacy_payload() 
     [
         ({"input_mode": "snapshot"}, {}),
         ({"stateful_input": None}, {}),
-        ({}, {"request_hash": "sha256:changed"}),
         (
             {
                 "metadata": SimpleNamespace(
@@ -477,7 +475,6 @@ def test_legacy_stateful_create_replay_helpers_reject_drift(
     assert not _is_matching_legacy_replay(
         repository=_LegacyReplayRepository(proposal=proposal, version=version),
         payload=payload,
-        stored_request_hash="sha256:legacy",
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
     )
@@ -521,7 +518,6 @@ def test_legacy_create_replay_helpers_match_non_stateful_direct_payloads(
     assert _is_matching_legacy_replay(
         repository=_LegacyReplayRepository(proposal=proposal, version=version),
         payload=payload,
-        stored_request_hash="sha256:legacy-direct-resolved",
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
     )
@@ -566,7 +562,6 @@ def test_legacy_create_replay_helpers_reject_non_stateful_input_drift() -> None:
     assert not _is_matching_legacy_replay(
         repository=_LegacyReplayRepository(proposal=proposal, version=version),
         payload=changed_payload,
-        stored_request_hash="sha256:legacy-direct-resolved",
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
     )
@@ -651,7 +646,6 @@ def test_legacy_stateful_create_replay_helpers_reject_stateful_scope_drift(
     assert not _is_matching_legacy_replay(
         repository=_LegacyReplayRepository(proposal=proposal, version=version),
         payload=payload,
-        stored_request_hash="sha256:legacy",
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
     )
@@ -726,7 +720,6 @@ def test_legacy_stateful_create_replay_helpers_reject_omitted_optional_scope() -
     assert not _is_matching_legacy_replay(
         repository=_LegacyReplayRepository(proposal=proposal, version=version),
         payload=payload,
-        stored_request_hash="sha256:legacy",
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
     )
