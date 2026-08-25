@@ -1,5 +1,40 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-946-QUALITY-SCORECARD-REPORT-BOUNDARY
+
+- Scope: `scripts/quality_baseline_report.py`, the extracted
+  `scripts/quality_scorecard.py`, its first-party deptry classification in `pyproject.toml`,
+  focused quality-report tests, and generated quality and oversized-code evidence.
+- Pattern: The 1,151-line quality baseline module combined tool/context collection, baseline and
+  refactor-health report rendering, scorecard before/after evidence, CLI output, and freshness
+  comparison. The scorecard renderer was a cohesive 270-line reporting responsibility.
+- Status: Implemented in the bounded #495 CI maintainability slice. Scorecard rendering now has a
+  dedicated module; the baseline module remains the owner of context collection, baseline report,
+  refactor-health report, report-file orchestration, and freshness diagnostics.
+- Finding Class: CI quality-evidence maintainability, report-boundary ownership, import-cycle
+  prevention, and oversized-code regression prevention.
+- Summary: `quality_baseline_report.py` decreases from 1,151 to 895 source lines and the new
+  `quality_scorecard.py` is 270 lines. The oversized-code baseline removes only the resolved
+  quality-report module fingerprint, leaving the validator as the single existing finding; the
+  gate passes with one finding, zero new findings, and zero resolved findings. Thresholds and
+  unreviewed exceptions remain unchanged.
+- Compatibility: CI quality-report tooling only. Report filenames, generated content, CLI
+  options, timestamp normalization, freshness drift detection, and the import path used by the
+  existing repository test contract remain unchanged. No product API/OpenAPI, persistence,
+  migration, runtime, Workbench, or downstream contract changes are in scope.
+- Design decision: `quality_scorecard.py` owns scorecard-only rendering and its optional-count
+  formatting helper. It references `QualityContext` under `TYPE_CHECKING` to avoid a runtime
+  import cycle; `quality_baseline_report.py` imports and continues to expose the renderer so the
+  existing report API/test seam remains compatible. This keeps collection and report orchestration
+  in one owner without retaining a transitional oversized renderer. The module is registered as
+  first-party for deptry so the dependency gate models the internal seam rather than treating it
+  as an external package.
+- Evidence: Focused quality-report tests pass 8 tests; configured mypy, Ruff, and format checks
+  pass. Full native gates, quality trend, and exact-mainline coverage remain merge prerequisites.
+  No wiki publication is needed because no operator workflow or consumer contract changed.
+- Follow-Up: #495 continues with the next separately bounded CI fitness or maintainability slice;
+  product/evidence issues #481, #485, #491, #554, and #557 remain outside this scope.
+
 ## LA-REV-945-LIVE-MEMO-CERTIFICATION-BOUNDARY
 
 - Scope: `scripts/validate_cross_service_parity_live.py`, the extracted

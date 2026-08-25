@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from scripts import quality_scorecard
 from scripts.quality_baseline_report import (
     _radon_inventory_from_payload,
     _review_ledger_range,
@@ -12,6 +13,10 @@ from scripts.quality_baseline_report import (
     render_refactor_health_report,
 )
 from scripts.refactor_health_report import build_refactor_health_lines
+
+
+def test_scorecard_renderer_is_owned_by_dedicated_module() -> None:
+    assert render_quality_scorecard is quality_scorecard.render_quality_scorecard
 
 
 def test_radon_inventory_counts_nested_blocks_and_worst_complexity() -> None:
