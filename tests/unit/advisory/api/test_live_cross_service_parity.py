@@ -7,6 +7,12 @@ from scripts.live_policy_evaluation_support import (
     ensure_sg_policy_pack_active,
     request_live_policy_report,
 )
+from scripts.live_runtime_persisted_read_surfaces import (
+    PersistedReadSurfaces,
+    assert_persisted_delivery_and_approval_surfaces,
+    assert_persisted_identity_and_version,
+    fetch_persisted_read_surfaces,
+)
 from scripts.live_runtime_proposal_alternatives import extract_live_proposal_alternatives_snapshot
 from scripts.validate_cross_service_parity_live import (
     PortfolioParityScenario,
@@ -38,6 +44,10 @@ class _FakePolicyClient:
 
     def post(self, *args: Any, **kwargs: Any) -> _FakePolicyResponse:
         return self.response
+
+
+def _assert_condition(condition: bool, message: str) -> None:
+    assert condition, message
 
 
 def test_live_policy_pack_activation_is_idempotent_when_already_active() -> None:
@@ -110,6 +120,126 @@ def test_live_policy_report_preserves_ready_and_degraded_outcomes(
     )
 
     assert result == expected
+
+
+def test_fetch_persisted_read_surfaces_preserves_endpoint_order_and_version_scope() -> None:
+    calls: list[tuple[str, int]] = []
+
+    def _fake_get_json(_client, *, url, expected_status):  # noqa: ANN001
+        calls.append((url, expected_status))
+        if "/advisory/proposals?" in url:
+            return {"items": [{"proposal_id": "proposal-1"}]}
+        return {"url": url}
+
+    surfaces = fetch_persisted_read_surfaces(
+        object(),
+        advise_base_url="http://advise.dev.lotus",
+        proposal_id="proposal-1",
+        expected_portfolio_id="PB_SG_GLOBAL_BAL_001",
+        created_by_filter="live-validator",
+        current_version_no=2,
+        get_json=_fake_get_json,
+        assert_condition=_assert_condition,
+    )
+
+    assert surfaces.list_item["proposal_id"] == "proposal-1"
+    assert [url for url, status in calls] == [
+        "http://advise.dev.lotus/advisory/proposals?portfolio_id=PB_SG_GLOBAL_BAL_001&limit=100&created_by=live-validator",
+        "http://advise.dev.lotus/advisory/proposals/proposal-1?include_evidence=false",
+        "http://advise.dev.lotus/advisory/proposals/proposal-1/versions/2?include_evidence=false",
+        "http://advise.dev.lotus/advisory/proposals/proposal-1/workflow-events",
+        "http://advise.dev.lotus/advisory/proposals/proposal-1/lineage",
+        "http://advise.dev.lotus/advisory/proposals/proposal-1/approvals",
+        "http://advise.dev.lotus/advisory/proposals/proposal-1/delivery-summary",
+        "http://advise.dev.lotus/advisory/proposals/proposal-1/delivery-events",
+    ]
+    assert all(status == 200 for _, status in calls)
+
+
+def test_persisted_identity_rejects_divergent_decision_summary() -> None:
+    surfaces = PersistedReadSurfaces(
+        list_item={
+            "proposal_id": "proposal-1",
+            "current_version_no": 1,
+            "current_state": "EXECUTED",
+        },
+        detail={
+            "proposal": {
+                "proposal_id": "proposal-1",
+                "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+                "current_version_no": 1,
+                "current_state": "EXECUTED",
+            },
+            "current_version": {
+                "version_no": 1,
+                "proposal_result": {
+                    "proposal_decision_summary": {
+                        "decision_status": "READY",
+                        "primary_reason_code": "READY_FOR_EXECUTION",
+                        "approval_requirements": [],
+                    }
+                },
+            },
+        },
+        version={
+            "proposal_id": "proposal-1",
+            "version_no": 1,
+            "proposal_result": {
+                "proposal_decision_summary": {
+                    "decision_status": "BLOCKED",
+                    "primary_reason_code": "STALE_EVIDENCE",
+                    "approval_requirements": [],
+                }
+            },
+        },
+        timeline={"current_state": "EXECUTED"},
+        lineage={"latest_version_no": 1},
+        approvals={},
+        delivery_summary={"proposal": {"current_state": "EXECUTED"}},
+        delivery_history={},
+    )
+
+    with pytest.raises(AssertionError, match="decision summaries diverged"):
+        assert_persisted_identity_and_version(
+            surfaces,
+            proposal_id="proposal-1",
+            expected_portfolio_id="PB_SG_GLOBAL_BAL_001",
+            current_version_no=1,
+            expected_state="EXECUTED",
+            assert_condition=_assert_condition,
+        )
+
+
+def test_persisted_delivery_rejects_non_delivery_event() -> None:
+    surfaces = PersistedReadSurfaces(
+        list_item={},
+        detail={},
+        version={},
+        timeline={},
+        lineage={},
+        approvals={"approval_count": 2, "approvals": [{"related_version_no": 1}] * 2},
+        delivery_summary={
+            "execution": {
+                "handoff_status": "EXECUTED",
+                "related_version_no": 1,
+                "latest_event_type": "EXECUTED",
+            },
+            "reporting": None,
+        },
+        delivery_history={
+            "events": [{"event_type": "CREATED", "related_version_no": 1}],
+            "latest_event": {"event_type": "CREATED"},
+        },
+    )
+
+    with pytest.raises(AssertionError, match="contained non-delivery events"):
+        assert_persisted_delivery_and_approval_surfaces(
+            surfaces,
+            proposal_id="proposal-1",
+            current_version_no=1,
+            expected_report_status="UNAVAILABLE",
+            assert_condition=_assert_condition,
+        )
 
 
 def test_select_changed_state_security_prefers_highest_weight_non_cash_position() -> None:

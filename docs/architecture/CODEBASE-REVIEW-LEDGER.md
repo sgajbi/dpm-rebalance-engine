@@ -51,6 +51,38 @@
   `wiki/Proposal-Lifecycle.md`; wiki publication and strict parity are required after merge.
 - Follow-Up: none within this bounded matcher scope; broader legacy replay changes require a new
   issue and the same semantic plus storage-backed regression standard.
+## LA-REV-938-PERSISTED-READ-SURFACES
+
+- Scope: `scripts/validate_cross_service_parity_live.py`, new
+  `scripts/live_runtime_persisted_read_surfaces.py`, focused live-parity tests, oversized-code
+  policy/baseline evidence, and generated quality reports.
+- Pattern: The live parity validator kept list/detail/version, lineage/timeline,
+  delivery/approval/reporting, replay, and endpoint-fetch responsibilities in one 271-line Radon
+  D/22 helper. Keeping those concerns together obscured the evidence boundaries and made the
+  already-large validator harder to maintain.
+- Status: Implemented in the bounded #495 live-certification maintainability slice. The validator
+  now delegates to a focused typed persisted-read-surface module with explicit fetch, identity,
+  lineage/timeline, delivery/approval, and replay proof boundaries.
+- Finding Class: CI/live-certification maintainability, evidence-contract readability, and
+  oversized-code regression prevention.
+- Summary: The original `_assert_persisted_read_surfaces` helper is now a thin A-ranked adapter;
+  the main validator decreased from 3,998 to 3,753 lines, and the old helper baseline finding was
+  removed. The extracted module keeps the same endpoint order, expected HTTP 200 statuses,
+  cross-surface identity/version/state checks, delivery/reporting assertions, and replay identity
+  checks.
+- Evidence: Focused live-parity tests pass 22 tests, including complete two-version
+  endpoint-order/status and replay proof, divergent decision-summary rejection, and
+  non-delivery-event rejection. Full mypy passes 659 source files; the oversized-code gate passes
+  7 findings, 0 new, 0 resolved; duplicate-code remains 34 findings, 0 new. Generated quality
+  evidence records the 3,753-line main validator, 1,041 modules, 196,433 Python lines, and
+  Interrogate coverage improving from 1.7% to 1.9%.
+- Compatibility: CI/live-certification maintainability only. No product runtime, API/OpenAPI,
+  persistence, migration, dependency, endpoint order/status, or downstream contract changes.
+- Documentation decision: Updated this ledger and generated quality evidence. No wiki/operator
+  workflow change occurred; the live validation command, runtime probes, and remediation contract
+  remain unchanged, so no wiki publication is required.
+- Follow-Up: #495 continues to own the next separately bounded live-validation hotspot or
+  quality-threshold calibration slice.
 
 ## LA-REV-937-PROPOSAL-STATEFUL-AS-OF-GUARD
 
