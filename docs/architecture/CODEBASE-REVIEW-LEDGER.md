@@ -1,5 +1,27 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-942-EXTENSION-SAFE-VALUATION-EVIDENCE-COUNT
+
+- Scope: `src/core/advisory/valuation_context.py`, its proposal valuation-context contract tests,
+  and this review ledger.
+- Pattern: A supportability rule that compares a missing-evidence count with a literal dimension
+  count silently becomes wrong when a new evidence dimension is added.
+- Status: Implemented in the bounded #491 extension-safety slice. The pure rule now receives its
+  declared evidence tuple and compares the missing count with `len(evidence)`.
+- Finding Class: advisory evidence-state correctness, future contract extensibility, and
+  regression-proof quality.
+- Summary: Existing two-dimension valuation behavior is unchanged. A three-dimension regression
+  now proves all-missing evidence remains `UNAVAILABLE`, partial evidence remains `PARTIAL`, and
+  complete evidence remains `READY`; a future hard-coded `== 2` cannot pass this test.
+- Compatibility: Internal rule/test hardening only. No public API, OpenAPI, persistence, migration,
+  source-authority, calculation, Gateway, Workbench, approval, execution, benchmark, mandate-limit,
+  or scenario-analysis behavior changes.
+- Documentation decision: Updated this ledger because the reviewed failure pattern and its durable
+  proof are repository engineering truth. No operator workflow or consumer contract changed, so no
+  wiki publication is required.
+- Follow-Up: #491 remains open for source-owned benchmark/mandate-limit evidence and scenario
+  analysis; those are separately bounded and must not be inferred here.
+
 ## LA-REV-941-LIVE-PROPOSAL-ALTERNATIVES-VALIDATION-BOUNDARY
 
 - Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
@@ -141,8 +163,8 @@
   strict parity are required after merge.
 - OpenAPI/migration decision: No changes; the correction uses the existing domain error vocabulary
   at an internal resolution boundary and does not alter public schemas or persisted structures.
-- Follow-Up: #491 retains the extension-safe missing-evidence count fix, benchmark/limit evidence,
-  and scenario-analysis evidence.
+- Follow-Up: #491 retains benchmark/limit evidence and scenario-analysis evidence; the
+  extension-safe missing-evidence count fix is covered by LA-REV-942.
 
 ## LA-REV-936-PROPOSAL-CONTEXT-HANDOFF-REQUEST-DIMENSIONS
 
@@ -168,8 +190,8 @@
 - Documentation decision: Updated developer guidance and repo-authored `wiki/Proposal-Lifecycle.md`
   because the stateful handoff evidence contract was clarified. Wiki publication and strict parity
   are required after merge.
-- Follow-Up: #491 retains the separately bounded stateful proposal missing-date guard,
-  extension-safe evidence-count fix, benchmark/limit evidence, and scenario-analysis evidence.
+- Follow-Up: #491 retains benchmark/limit evidence and scenario-analysis evidence; the stateful
+  proposal missing-date guard and extension-safe evidence-count fix are complete.
 
 ## LA-REV-935-OVERSIZED-GATE-ORCHESTRATION
 
