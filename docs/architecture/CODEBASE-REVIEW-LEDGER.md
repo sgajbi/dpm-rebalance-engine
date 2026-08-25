@@ -434,24 +434,22 @@
 - Follow-Up: #495 still owns the remaining mandatory-control wording and unrelated quality/live
   validation hotspot decomposition; no threshold ratchet is introduced here.
 
-## LA-REV-495-QUALITY-TREND-RATCHET
+## LA-REV-495-QUALITY-TREND-RATCHET-250
 
-- Scope: The active `total_python_lines` allowance in the machine-readable quality-trend policy.
+- Scope: Historical 500-to-250 `total_python_lines` allowance in the machine-readable quality-trend policy.
 - Pattern: A 500-line per-comparison allowance left a half-kiloline window in which generated
   production code or shallow test bulk could remain green even though ordinary recent quality
   slices were materially smaller.
-- Status: Ratcheted in the bounded #495 implementation slice; review and exact-mainline closure
-  evidence remain governed by the PR and issue lifecycle.
+- Status: Superseded on `main` by the bounded #495 200-line ratchet; retained as the prior
+  calibration record so the policy history remains auditable.
 - Finding Class: CI quality threshold calibration, maintainability regression prevention, and
   operator/developer evidence truth.
-- Summary: `quality/quality-trend-policy.v1.json` now rejects more than 250 added Python lines
-  without an exact, reviewed exception. The boundary is explicit: +250 passes the active policy
-  and +251 fails. Review-lead evidence for recent merged PRs #526-#535 reports the ordinary
-  merge-base-to-head run at +12 to +166 lines, with two large batches at +435 and +511; 250
-  admits the ordinary run while requiring exact reviewed exceptions for those larger changes.
+- Summary: The prior policy rejected more than 250 added Python lines without an exact, reviewed
+  exception. Its +250/+251 boundary was based on the same review-lead evidence for recent merged
+  PRs #526-#535 that now supports the stricter 200-line limit.
 - Evidence:
-  - `tests/unit/scripts/test_quality_trend_gate.py` proves the active policy's +250/+251 boundary
-    through the comparator and checks the actionable failure evidence.
+  - The prior `tests/unit/scripts/test_quality_trend_gate.py` boundary test proved the +250/+251
+    comparator behavior before the 200-line ratchet.
   - `tests/unit/test_ci_workflow_contracts.py` prevents the workflow contract from silently
     restoring the former 500-line allowance.
   - Repository context and `wiki/Validation-and-CI.md` publish the current threshold and its
@@ -463,6 +461,35 @@
   because the enforced quality threshold changed. No OpenAPI or migration update is needed.
 - Follow-Up: #495 still owns mandatory-control wording and hotspot decomposition; exception schema
   and revision binding are complete in prior bounded slices.
+
+## LA-REV-495-QUALITY-TREND-RATCHET-200
+
+- Scope: The active `total_python_lines` allowance after the next threshold/rate calibration.
+- Pattern: Even after the 500-to-250 ratchet, an unreviewed 250-line batch remained materially
+  larger than the ordinary quality slices and could hide unnecessary production or test bulk.
+- Status: Ratcheted in the bounded #495 implementation slice; exact-head review, CI, and
+  exact-mainline closure evidence remain governed by the PR and issue lifecycle.
+- Finding Class: CI quality threshold calibration, maintainability regression prevention, and
+  operator/developer evidence truth.
+- Summary: `quality/quality-trend-policy.v1.json` now rejects more than 200 added Python lines
+  without an exact, reviewed exception. The boundary is explicit: +200 passes and +201 fails.
+  The governed merge-base evidence for PRs #526-#535 reports ordinary growth from +12 to +166,
+  leaving 34 lines of measured headroom while retaining the exact SHA-bound exception path for
+  the +435 and +511 large batches.
+- Evidence:
+  - `tests/unit/scripts/test_quality_trend_gate.py` proves the active +200/+201 boundary and
+    checks the actionable failure evidence.
+  - `quality/quality-trend-policy.v1.json` carries the content-fingerprint policy version and no
+    active exception entries.
+  - `REPOSITORY-ENGINEERING-CONTEXT.md` and `wiki/Validation-and-CI.md` publish the active
+    threshold and its reproducible calibration basis.
+- Compatibility: CI/evidence policy and developer/operator guidance only. No runtime, API/OpenAPI,
+  persistence, migration, calculation, data-model, dependency, or downstream contract changes
+  are intended.
+- Documentation decision: Updated repository context, this ledger, and `wiki/Validation-and-CI.md`
+  because the enforced quality threshold changed. No OpenAPI or migration update is needed.
+- Follow-Up: #495 still owns mandatory-control wording and further hotspot decomposition; any
+  future threshold change must be supported by a refreshed merge-base evidence range.
 
 ## LA-REV-495-QUALITY-TREND-EXCEPTION-BINDING
 

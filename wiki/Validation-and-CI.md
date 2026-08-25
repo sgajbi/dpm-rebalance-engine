@@ -85,9 +85,9 @@ runtime evidence fields.
 
 The same fast static lanes also run `make quality-trend-gate`. This gate compares the committed
 `quality/baseline_report.md` metrics at the merge base of the supplied base/head revisions and the
-exact head revision, then writes `output/quality-trend-gate.json`. The versioned policy allows at most 250 additional Python lines;
-this is an evidence-based ratchet from 500 that admits the ordinary +12-to-+166-line run across merged PRs #526-#535 while
-requiring exact reviewed exceptions for the +435 and +511 large batches, rather than admitting an
+exact head revision, then writes `output/quality-trend-gate.json`. The versioned policy allows at most 200 additional Python lines;
+this is an evidence-based ratchet from 500 through 250 to 200 that admits the ordinary +12-to-+166-line run across merged PRs #526-#535
+with 34 lines of measured headroom while requiring exact reviewed exceptions for the +435 and +511 large batches, rather than admitting an
 unreviewed half-kiloline batch;
 no increase in Radon B-ranked blocks, no increase in the worst Radon complexity, and no decrease
 in Interrogate coverage. Interrogate comparisons derive from the exact `covered` and `total`
