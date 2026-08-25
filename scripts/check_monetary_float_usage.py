@@ -22,6 +22,7 @@ IGNORE_DIRS = {"tests", ".venv", "venv", "docs", "rfcs", "output", "build", "dis
 
 FLOAT_ANNOTATION = re.compile(r"\bfloat\b")
 MONETARY_FLOAT_EXPIRY_WARNING_DAYS = 7
+SOLVER_BOUNDARY_FLOAT_PATHS = {"src/core/target_solver_boundary.py"}
 AllowlistEntry: TypeAlias = dict[str, str]
 
 
@@ -44,9 +45,11 @@ def scan_repo(repo_root: Path) -> list[str]:
             file_path.read_text(encoding="utf-8", errors="ignore").splitlines(), start=1
         ):
             lowered = line.lower()
-            if not any(k in lowered for k in KEYWORDS):
-                continue
             if not FLOAT_ANNOTATION.search(lowered):
+                continue
+            if not any(k in lowered for k in KEYWORDS) and not (
+                rel in SOLVER_BOUNDARY_FLOAT_PATHS and "float(" in lowered
+            ):
                 continue
             if "# monetary-float-allow" in lowered:
                 continue
