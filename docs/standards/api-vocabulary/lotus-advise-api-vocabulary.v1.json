@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-08-25T08:50:06.838570+00:00",
+  "generatedAt": "2026-08-25T09:40:11.484319+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -1481,7 +1481,7 @@
       "semanticId": "lotus.benchmark_assignment",
       "canonicalTerm": "benchmark_assignment",
       "preferredName": "benchmark_assignment",
-      "description": "Source-owned benchmark assignment evidence for proposal review.",
+      "description": "Canonical benchmark assignment used by lotus-advise APIs.",
       "example": {
         "supportability": "READY"
       },
@@ -2706,7 +2706,7 @@
       "semanticId": "lotus.current_mandate_limits",
       "canonicalTerm": "current_mandate_limits",
       "preferredName": "current_mandate_limits",
-      "description": "Current or simulated source-owned mandate-limit evidence state.",
+      "description": "Canonical current mandate limits used by lotus-advise APIs.",
       "example": {
         "supportability": "READY"
       },
@@ -3537,7 +3537,7 @@
       "semanticId": "lotus.effective_benchmark_id",
       "canonicalTerm": "effective_benchmark_id",
       "preferredName": "effective_benchmark_id",
-      "description": "Source-owned benchmark identifier actually applied to the proposal state.",
+      "description": "Applied ID.",
       "example": "EFFECTIVE_BENCHMARK_001",
       "type": "string",
       "locations": [
@@ -6165,7 +6165,7 @@
       "semanticId": "lotus.limit_code",
       "canonicalTerm": "limit_code",
       "preferredName": "limit_code",
-      "description": "Stable source-owned mandate-limit code.",
+      "description": "Stable limit code.",
       "example": "ADVISORY_REVIEW_REQUIRED",
       "type": "string",
       "locations": [
@@ -6179,7 +6179,7 @@
       "semanticId": "lotus.limit_name",
       "canonicalTerm": "limit_name",
       "preferredName": "limit_name",
-      "description": "Human-readable source-owned mandate-limit name.",
+      "description": "Limit display name.",
       "example": "advisory_review_context",
       "type": "string",
       "locations": [
@@ -6732,7 +6732,7 @@
       "semanticId": "lotus.maximum",
       "canonicalTerm": "maximum",
       "preferredName": "maximum",
-      "description": "Inclusive upper bound supplied by the authoritative limit source.",
+      "description": "Inclusive upper bound.",
       "example": "0.125",
       "type": "string",
       "locations": [
@@ -6961,7 +6961,7 @@
       "semanticId": "lotus.minimum",
       "canonicalTerm": "minimum",
       "preferredName": "minimum",
-      "description": "Inclusive lower bound supplied by the authoritative limit source.",
+      "description": "Inclusive lower bound.",
       "example": "0.125",
       "type": "string",
       "locations": [
@@ -7201,7 +7201,7 @@
       "semanticId": "lotus.observations",
       "canonicalTerm": "observations",
       "preferredName": "observations",
-      "description": "Source-owned mandate-limit observations for this proposal state.",
+      "description": "Limit observations.",
       "example": [
         "observations_item_value"
       ],
@@ -7245,7 +7245,7 @@
       "semanticId": "lotus.observed_value",
       "canonicalTerm": "observed_value",
       "preferredName": "observed_value",
-      "description": "Observed value supplied by the authoritative limit source.",
+      "description": "Observed value.",
       "example": "0.125",
       "type": "string",
       "locations": [
@@ -7378,7 +7378,7 @@
       "semanticId": "lotus.outcome",
       "canonicalTerm": "outcome",
       "preferredName": "outcome",
-      "description": "Source-owned outcome for this limit.",
+      "description": "Limit outcome.",
       "example": "WITHIN_LIMIT",
       "type": "string",
       "locations": [
@@ -8448,7 +8448,7 @@
       "semanticId": "lotus.proposal_review_evidence",
       "canonicalTerm": "proposal_review_evidence",
       "preferredName": "proposal_review_evidence",
-      "description": "Versioned benchmark and mandate-limit evidence envelope for proposal consumers.",
+      "description": "Canonical proposal review evidence used by lotus-advise APIs.",
       "example": {
         "benchmark_assignment": "benchmark_assignment_value",
         "current_mandate_limits": "current_mandate_limits_value",
@@ -9634,7 +9634,7 @@
       "semanticId": "lotus.requested_benchmark_id",
       "canonicalTerm": "requested_benchmark_id",
       "preferredName": "requested_benchmark_id",
-      "description": "Benchmark identifier requested by the proposal context. This is not evidence that the benchmark was applied.",
+      "description": "Requested ID.",
       "example": "REQUESTED_BENCHMARK_001",
       "type": "string",
       "locations": [
@@ -10702,7 +10702,7 @@
       "semanticId": "lotus.scope",
       "canonicalTerm": "scope",
       "preferredName": "scope",
-      "description": "Scope to which the limit applies.",
+      "description": "Limit scope.",
       "example": "advisory_review_context",
       "type": "string",
       "locations": [
@@ -11010,7 +11010,7 @@
       "semanticId": "lotus.simulated_mandate_limits",
       "canonicalTerm": "simulated_mandate_limits",
       "preferredName": "simulated_mandate_limits",
-      "description": "Current or simulated source-owned mandate-limit evidence state.",
+      "description": "Canonical simulated mandate limits used by lotus-advise APIs.",
       "example": {
         "supportability": "READY"
       },
@@ -12518,7 +12518,7 @@
       "semanticId": "lotus.unit",
       "canonicalTerm": "unit",
       "preferredName": "unit",
-      "description": "Unit of the observed value and bounds.",
+      "description": "Value unit.",
       "example": "advisory_review_context",
       "type": "string",
       "locations": [
@@ -19006,14 +19006,6 @@
             "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
           },
           {
-            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.schema_version",
-            "attributeRef": "#/attributeCatalog/lotus.schema_version"
-          },
-          {
             "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
             "location": "body",
             "required": false,
@@ -19222,14 +19214,6 @@
             "attributeRef": "#/attributeCatalog/lotus.source_service"
           },
           {
-            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
-          },
-          {
             "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
             "location": "body",
             "required": true,
@@ -19388,14 +19372,6 @@
             "type": "string",
             "semanticId": "lotus.source_service",
             "attributeRef": "#/attributeCatalog/lotus.source_service"
-          },
-          {
-            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
           },
           {
             "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
@@ -22772,14 +22748,6 @@
             "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
           },
           {
-            "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.schema_version",
-            "attributeRef": "#/attributeCatalog/lotus.schema_version"
-          },
-          {
             "name": "current_version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
             "location": "body",
             "required": false,
@@ -22988,14 +22956,6 @@
             "attributeRef": "#/attributeCatalog/lotus.source_service"
           },
           {
-            "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
-          },
-          {
             "name": "current_version.proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
             "location": "body",
             "required": true,
@@ -23154,14 +23114,6 @@
             "type": "string",
             "semanticId": "lotus.source_service",
             "attributeRef": "#/attributeCatalog/lotus.source_service"
-          },
-          {
-            "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
           },
           {
             "name": "current_version.proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
@@ -26179,14 +26131,6 @@
             "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
           },
           {
-            "name": "proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.schema_version",
-            "attributeRef": "#/attributeCatalog/lotus.schema_version"
-          },
-          {
             "name": "proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
             "location": "body",
             "required": false,
@@ -26395,14 +26339,6 @@
             "attributeRef": "#/attributeCatalog/lotus.source_service"
           },
           {
-            "name": "proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
-          },
-          {
             "name": "proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
             "location": "body",
             "required": true,
@@ -26561,14 +26497,6 @@
             "type": "string",
             "semanticId": "lotus.source_service",
             "attributeRef": "#/attributeCatalog/lotus.source_service"
-          },
-          {
-            "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
           },
           {
             "name": "proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
@@ -29730,14 +29658,6 @@
             "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
           },
           {
-            "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.schema_version",
-            "attributeRef": "#/attributeCatalog/lotus.schema_version"
-          },
-          {
             "name": "version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
             "location": "body",
             "required": false,
@@ -29946,14 +29866,6 @@
             "attributeRef": "#/attributeCatalog/lotus.source_service"
           },
           {
-            "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
-          },
-          {
             "name": "version.proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
             "location": "body",
             "required": true,
@@ -30112,14 +30024,6 @@
             "type": "string",
             "semanticId": "lotus.source_service",
             "attributeRef": "#/attributeCatalog/lotus.source_service"
-          },
-          {
-            "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
           },
           {
             "name": "version.proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
@@ -54146,14 +54050,6 @@
             "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
           },
           {
-            "name": "proposal_review_evidence.benchmark_assignment.schema_version",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.schema_version",
-            "attributeRef": "#/attributeCatalog/lotus.schema_version"
-          },
-          {
             "name": "proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
             "location": "body",
             "required": false,
@@ -54362,14 +54258,6 @@
             "attributeRef": "#/attributeCatalog/lotus.source_service"
           },
           {
-            "name": "proposal_review_evidence.current_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
-          },
-          {
             "name": "proposal_review_evidence.current_mandate_limits.supportability",
             "location": "body",
             "required": true,
@@ -54528,14 +54416,6 @@
             "type": "string",
             "semanticId": "lotus.source_service",
             "attributeRef": "#/attributeCatalog/lotus.source_service"
-          },
-          {
-            "name": "proposal_review_evidence.simulated_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
           },
           {
             "name": "proposal_review_evidence.simulated_mandate_limits.supportability",
@@ -68094,14 +67974,6 @@
             "attributeRef": "#/attributeCatalog/lotus.benchmark_assignment"
           },
           {
-            "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.schema_version",
-            "location": "body",
-            "required": false,
-            "type": "string",
-            "semanticId": "lotus.schema_version",
-            "attributeRef": "#/attributeCatalog/lotus.schema_version"
-          },
-          {
             "name": "proposal.version.proposal_result.proposal_review_evidence.benchmark_assignment.requested_benchmark_id",
             "location": "body",
             "required": false,
@@ -68310,14 +68182,6 @@
             "attributeRef": "#/attributeCatalog/lotus.source_service"
           },
           {
-            "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
-          },
-          {
             "name": "proposal.version.proposal_result.proposal_review_evidence.current_mandate_limits.supportability",
             "location": "body",
             "required": true,
@@ -68476,14 +68340,6 @@
             "type": "string",
             "semanticId": "lotus.source_service",
             "attributeRef": "#/attributeCatalog/lotus.source_service"
-          },
-          {
-            "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.source_references",
-            "location": "body",
-            "required": false,
-            "type": "array",
-            "semanticId": "lotus.source_references",
-            "attributeRef": "#/attributeCatalog/lotus.source_references"
           },
           {
             "name": "proposal.version.proposal_result.proposal_review_evidence.simulated_mandate_limits.supportability",
