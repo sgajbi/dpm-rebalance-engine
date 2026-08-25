@@ -29260,3 +29260,30 @@
 - Follow-Up: Keep #495 open for the next independently bounded fitness-function or hotspot slice;
   do not weaken the oversized-code gate or treat this renderer decomposition as product-domain
   modularization.
+
+## LA-REV-932-STARLETTE-TESTCLIENT-DEPENDENCY-POSTURE
+
+- Scope: Python 3.11 test-client dependency and warning-free CI execution.
+- Pattern: Every unit, integration, and E2E lane emitted the same Starlette deprecation warning
+  because Starlette 1.6 fell back to the separately named `httpx` package for TestClient. A green
+  test result therefore still carried a known dependency-compatibility defect into CI evidence.
+- Status: Hardened in bounded issue #470; the issue remains open until the merged mainline lanes
+  prove the warning-free posture.
+- Finding Class: Dependency compatibility, CI signal quality, and regression prevention.
+- Summary: Added direct development pin `httpx2==2.12.0`, the compatibility client explicitly
+  recommended by Starlette 1.6. Production integrations remain on `httpx==0.28.1`; no production
+  adapter migration is implied.
+- Evidence:
+  - A focused subprocess regression test exercises a real FastAPI TestClient health request with
+    `DeprecationWarning` promoted to an error, proving both behavior and warning posture.
+  - Dependency-lock and license/IP artifacts are regenerated from the governed requirement graph,
+    including the new direct and transitive development packages.
+  - Mainline unit, integration, and E2E lanes must show zero Starlette TestClient warnings after
+    merge; broad warning suppression is not permitted.
+- Compatibility:
+  - Development/CI tooling only. API, persistence, migration, calculations, advisory policy,
+    execution, production HTTP adapters, and downstream contracts are unchanged.
+- Documentation decision: Updated the repository dependency-hygiene standard and this ledger;
+  no wiki publication is required because no product or operator workflow truth changed.
+- Follow-Up: Keep #470 open until exact-mainline validation and the post-merge Releasability run
+  confirm the warning-free dependency posture, then close with the run evidence.
