@@ -29117,9 +29117,10 @@
 - Summary: The bounded #554 slice adds `ProposalReviewEvidence:v1` to `ProposalResult`. It carries
   requested/effective benchmark assignment, requested/effective as-of dates, source service and
   references, plus separate current and simulated mandate-limit states with typed observations.
-  The current upstream payloads do not supply effective benchmark or mandate-limit evidence, so the
-  projection retains requested selectors only and returns null effective values, empty observations,
-  `UNAVAILABLE` supportability, and stable reason codes.
+  Core has an existing benchmark-assignment route, but Advise does not currently consume or map it;
+  no source-owned mandate-limit observation producer is mapped. The projection therefore retains
+  requested selectors only and returns null effective values, empty observations, `UNAVAILABLE`
+  supportability, and stable reason codes.
 - Evidence:
   - `src/core/advisory/proposal_review_evidence_models.py` owns the versioned Pydantic/OpenAPI
     envelope, strict observation fields, and fail-closed unavailable factory.
@@ -29134,14 +29135,16 @@
 - Compatibility:
   - Existing simulation, decision, suitability, approval, execution, migration, and downstream
     ownership behavior is unchanged. The response gains only an additive typed field.
-  - Effective evidence is intentionally not claimed until an authoritative producer contract is
-    available. Consumers must treat `UNAVAILABLE` as unsupported evidence, not as within-limit,
-    compliant, ready, or approved.
+  - Effective evidence is intentionally not claimed until the source-owned Core benchmark contract
+    and mandate-limit producer semantics are mapped. Consumers must treat `UNAVAILABLE` as
+    unsupported evidence, not as within-limit, compliant, ready, or approved.
 - Documentation:
   - Updated supported-features, RFC-0082 upstream ownership mapping, advisory know-how, and the
     Proposal-Lifecycle wiki source. Wiki source changed; parity must be checked before merge and
     publication is required after merge.
 - Follow-Up:
   - #554 remains open for the authoritative producer mapping and any later effective benchmark or
-    mandate-limit evidence slice. #491 retains named scenario-analysis work; Gateway/Workbench
-    projection is downstream and must not infer unavailable evidence.
+    mandate-limit evidence slice. The Core benchmark-assignment route is an explicit revisit point;
+    the Advise Core-client route fitness test fails if that route is added without replacing this
+    unavailable posture. #491 retains named scenario-analysis work; Gateway/Workbench projection is
+    downstream and must not infer unavailable evidence.
