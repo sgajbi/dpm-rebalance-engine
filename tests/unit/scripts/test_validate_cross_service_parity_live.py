@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from scripts import live_memo_flow as memo_flow
+from scripts import live_narrative_flow as narrative_flow
 from scripts import live_policy_evaluation_flow as policy_flow
 from scripts import validate_cross_service_parity_live as parity
 from scripts.live_parity_orchestration import run_live_parity
@@ -97,6 +98,56 @@ def test_policy_flow_preserves_phase_order_and_snapshot_projection(monkeypatch) 
 
     assert result is expected_snapshot
     assert calls == ["create", "read", "guards", "sign_off", "ai", "lineage"]
+
+
+def test_narrative_flow_adapter_supplies_typed_primitives(monkeypatch) -> None:
+    scenario = parity.PortfolioParityScenario("PORTFOLIO", "2026-04-10", "USD", "complete", True)
+    captured: dict[str, object] = {}
+    expected_snapshot = object()
+
+    def record_narrative_flow(*args, **kwargs):
+        captured["primitives"] = kwargs["primitives"]
+        return expected_snapshot
+
+    monkeypatch.setattr(parity, "assert_live_proposal_narrative_flow", record_narrative_flow)
+
+    result = parity._assert_live_proposal_narrative_flow(
+        object(),
+        advise_base_url="http://advise",
+        scenario=scenario,
+    )
+
+    primitives = captured["primitives"]
+    assert result is expected_snapshot
+    assert isinstance(primitives, narrative_flow.LiveNarrativeFlowPrimitives)
+    assert primitives.assertion is parity._assert
+    assert primitives.get_json is parity._get_json
+    assert primitives.post_json is parity._post_json
+    assert primitives.create_stateful_proposal is parity._create_stateful_proposal
+
+
+def test_narrative_ai_assistance_is_skipped_without_explicit_opt_in(monkeypatch) -> None:
+    scenario = parity.PortfolioParityScenario("PORTFOLIO", "2026-04-10", "USD", "complete", True)
+    primitives = narrative_flow.LiveNarrativeFlowPrimitives(
+        create_stateful_proposal=MagicMock(),
+        get_json=MagicMock(),
+        post_json=MagicMock(),
+        feature_by_key=MagicMock(),
+        assertion=MagicMock(),
+        extract_snapshot=MagicMock(),
+        extract_ai_lineage_status=MagicMock(),
+    )
+    monkeypatch.delenv("LOTUS_ADVISE_VALIDATE_AI_ASSISTED_NARRATIVE", raising=False)
+
+    result = narrative_flow._assert_ai_assisted_narrative_when_enabled(
+        object(),
+        primitives=primitives,
+        advise_base_url="http://advise",
+        scenario=scenario,
+    )
+
+    assert result == ("SKIPPED_NOT_ENABLED", None)
+    primitives.create_stateful_proposal.assert_not_called()
 
 
 def test_changed_state_workspace_parity_checks_each_selected_security(

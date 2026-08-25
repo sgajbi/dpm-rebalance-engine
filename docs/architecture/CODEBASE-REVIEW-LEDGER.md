@@ -1,5 +1,42 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-948-LIVE-NARRATIVE-FLOW-BOUNDARY
+
+- Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
+  `scripts/live_narrative_flow.py`, focused live-parity tests, and the oversized-code and
+  generated quality evidence for proposal-narrative certification.
+- Pattern: `_assert_live_proposal_narrative_flow` combined deterministic narrative creation,
+  persisted read and non-persistent regeneration proof, advisor review, replay lineage,
+  capability-dependent report packaging, explicit AI-assistance opt-in, and snapshot projection
+  in one validator-owned orchestration boundary.
+- Status: Implemented in the bounded #495 maintainability slice. The validator retains a
+  compatibility adapter while the extracted module owns the ordered narrative proof flow; the
+  adapter passes a frozen typed primitive bundle rather than importing validator internals.
+- Finding Class: CI/live-certification maintainability, advisory evidence-boundary ownership,
+  typed seam quality, and oversized-code regression prevention.
+- Summary: The validator decreases from the prior 2,957-line baseline to its measured 2,776
+  source lines, while the new narrative-flow module is 268 lines. Total Python growth is 138
+  lines over the 198,122-line main baseline, within the hard +200 allowance. The oversized-code
+  baseline is ratcheted to 2,776 with one explicitly inventoried finding, zero new findings, and
+  zero resolved findings; thresholds and unreviewed exceptions remain unchanged.
+- Compatibility: Live-certification tooling only. Deterministic narrative generation, narrative
+  read and non-persistent regeneration behavior, advisor-use review state, replay identity and
+  source-hash lineage, report READY/UNAVAILABLE behavior, explicit AI opt-in and fallback status,
+  snapshot shape, diagnostics, and CLI behavior remain unchanged. No product API/OpenAPI,
+  persistence, migration, runtime, Workbench, or downstream contract changes are in scope.
+- Design decision: The extracted boundary receives a frozen `LiveNarrativeFlowPrimitives`
+  dataclass whose protocols describe proposal creation, HTTP reads/writes, capability lookup,
+  assertions, snapshot projection, and AI-lineage extraction. Validator-owned configuration and
+  transport primitives remain in their existing owner, while the flow has an explicit statically
+  checkable seam and no module-object escape hatch.
+- Evidence: Focused live-parity tests cover adapter wiring and the fail-closed default that does
+  not invoke AI assistance without the explicit validation flag; 10 focused tests, Ruff, format,
+  and configured mypy checks pass. Full native gates, quality-baseline freshness, quality trend,
+  and exact-mainline coverage remain merge prerequisites. No wiki publication is needed because
+  no operator workflow or consumer contract changed.
+- Follow-Up: #495 continues with the next separately bounded CI fitness or maintainability slice;
+  product/evidence issues #481, #485, #491, #554, and #557 remain outside this scope.
+
 ## LA-REV-947-LIVE-POLICY-EVALUATION-FLOW-BOUNDARY
 
 - Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
