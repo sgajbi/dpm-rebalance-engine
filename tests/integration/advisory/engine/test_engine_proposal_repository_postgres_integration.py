@@ -7,7 +7,9 @@ from threading import Barrier
 
 import pytest
 
+from src.core.proposals.create_command import _is_matching_legacy_replay
 from src.core.proposals.exceptions import ProposalStateConflictError
+from src.core.proposals.input_request_models import ProposalCreateRequest
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -863,6 +865,136 @@ def test_live_postgres_lifecycle_identity_replay_and_conflict_contract(
     assert repository.get_version(proposal_id=proposal_id, version_no=1) == version
     assert repository.list_events(proposal_id=proposal_id) == [event]
     assert repository.list_approvals(proposal_id=proposal_id) == [approval]
+
+
+@pytest.mark.skipif(
+    not _DSN,
+    reason="Live Postgres DSN required for preserved proposal replay compatibility.",
+)
+def test_live_postgres_legacy_replay_matches_across_hash_domains(
+    repository: PostgresProposalRepository,
+) -> None:
+    now = datetime.now(timezone.utc)
+    proposal_id = f"pp-{uuid.uuid4().hex}"
+    idempotency_key = f"idem-{uuid.uuid4().hex}"
+    payload = ProposalCreateRequest(
+        created_by="advisor-preserved-replay",
+        input_mode="stateful",
+        stateful_input={
+            "portfolio_id": "pf-preserved-replay",
+            "as_of": "2026-05-20",
+            "household_id": "hh-preserved-replay",
+            "mandate_id": "mandate-preserved-replay",
+            "benchmark_id": "bm-preserved-replay",
+            "narrative_request": {
+                "sections": ["EXECUTIVE_SUMMARY"],
+                "requested_by": "advisor-preserved-replay",
+                "jurisdiction": "SG",
+            },
+        },
+        metadata={
+            "title": "Preserved replay proposal",
+            "advisor_notes": "Historical replay fixture",
+        },
+    )
+    proposal = ProposalRecord(
+        proposal_id=proposal_id,
+        portfolio_id="pf-preserved-replay",
+        mandate_id="mandate-preserved-replay",
+        jurisdiction="SG",
+        created_by="advisor-preserved-replay",
+        created_at=now,
+        last_event_at=now,
+        current_state="DRAFT",
+        current_version_no=1,
+        title="Preserved replay proposal",
+        advisor_notes="Historical replay fixture",
+        lifecycle_origin="WORKSPACE_HANDOFF",
+        source_workspace_id="aws-preserved-replay",
+    )
+    version = ProposalVersionRecord(
+        proposal_version_id=f"ppv-{uuid.uuid4().hex}",
+        proposal_id=proposal_id,
+        version_no=1,
+        created_at=now,
+        request_hash="sha256:resolved-version-domain",
+        artifact_hash="sha256:preserved-artifact",
+        simulation_hash="sha256:preserved-simulation",
+        status_at_creation="READY",
+        proposal_result_json={"status": "READY"},
+        artifact_json={
+            "proposal_narrative": {
+                "audience": "ADVISOR_REVIEW",
+                "narrative_policy": {
+                    "context": {
+                        "jurisdiction": "SG",
+                        "client_audience": "ADVISOR_REVIEW",
+                        "product_types": ["BOND", "CASH", "EQUITY"],
+                    }
+                },
+                "generation_mode": "DETERMINISTIC_TEMPLATE",
+                "sections": [{"section_key": "EXECUTIVE_SUMMARY"}],
+            }
+        },
+        evidence_bundle_json={
+            "context_resolution": {
+                "resolved_context": {
+                    "portfolio_id": "pf-preserved-replay",
+                    "as_of": "2026-05-20",
+                    "household_id": "hh-preserved-replay",
+                    "benchmark_id": "bm-preserved-replay",
+                }
+            }
+        },
+        gate_decision_json=None,
+    )
+    event = ProposalWorkflowEventRecord(
+        event_id=f"pwe-{uuid.uuid4().hex}",
+        proposal_id=proposal_id,
+        event_type="CREATED",
+        from_state=None,
+        to_state="DRAFT",
+        actor_id="advisor-preserved-replay",
+        occurred_at=now,
+        reason_json={"request_hash": version.request_hash},
+        related_version_no=1,
+    )
+    repository.create_proposal(proposal)
+    repository.create_version(version)
+    repository.append_event(event)
+    repository.save_idempotency(
+        ProposalIdempotencyRecord(
+            idempotency_key=idempotency_key,
+            request_hash="sha256:historical-command-domain",
+            proposal_id=proposal_id,
+            proposal_version_no=1,
+            created_at=now,
+        )
+    )
+
+    replay = _is_matching_legacy_replay(
+        repository=repository,
+        payload=payload,
+        proposal_id=proposal_id,
+        proposal_version_no=1,
+    )
+
+    stored_idempotency = repository.get_idempotency(idempotency_key=idempotency_key)
+    stored_version = repository.get_version(proposal_id=proposal_id, version_no=1)
+    assert replay is True
+    assert stored_idempotency is not None
+    assert stored_version is not None
+    assert stored_idempotency.request_hash != stored_version.request_hash
+    proposals, _ = repository.list_proposals(
+        portfolio_id="pf-preserved-replay",
+        state=None,
+        created_by="advisor-preserved-replay",
+        created_from=None,
+        created_to=None,
+        limit=10,
+        cursor=None,
+    )
+    assert [item.proposal_id for item in proposals] == [proposal_id]
 
 
 @pytest.mark.skipif(

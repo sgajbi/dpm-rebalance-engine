@@ -26,6 +26,17 @@ New versions are created through `POST /advisory/proposals/{proposal_id}/version
 
 The model is immutable-by-version. A later version does not overwrite the earlier one. That keeps replay, support, and audit continuity intact.
 
+### Proposal-create replay compatibility
+
+When a preserved proposal-create idempotency key is retried, Advise first checks the canonical
+command hash. For older records whose request-model or narrative enrichment evolved, it may use
+the persisted proposal, resolved context, and narrative request semantics to return the original
+proposal/version. The idempotency command hash and the immutable proposal-version request hash
+describe different canonicalization domains and are not required to be equal. A change to the
+creator, portfolio, lifecycle context, metadata, requested narrative, or other command semantics
+still fails with an idempotency conflict; callers must preserve the original key and must not
+delete durable state or rotate the key to bypass that decision.
+
 ## Transitions And Approvals
 
 The lifecycle API separates:
