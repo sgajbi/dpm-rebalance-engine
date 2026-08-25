@@ -895,6 +895,7 @@ def test_live_postgres_legacy_replay_matches_across_hash_domains(
         metadata={
             "title": "Preserved replay proposal",
             "advisor_notes": "Historical replay fixture",
+            "jurisdiction": "SG",
         },
     )
     proposal = ProposalRecord(
@@ -995,6 +996,21 @@ def test_live_postgres_legacy_replay_matches_across_hash_domains(
         cursor=None,
     )
     assert [item.proposal_id for item in proposals] == [proposal_id]
+
+    omitted_title_payload = payload.model_copy(
+        update={
+            "metadata": payload.metadata.model_copy(update={"title": None}),
+        }
+    )
+    assert (
+        _is_matching_legacy_replay(
+            repository=repository,
+            payload=omitted_title_payload,
+            proposal_id=proposal_id,
+            proposal_version_no=1,
+        )
+        is False
+    )
 
 
 @pytest.mark.skipif(

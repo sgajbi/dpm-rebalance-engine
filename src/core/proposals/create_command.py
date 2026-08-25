@@ -263,7 +263,7 @@ def _legacy_proposal_fields_match(
         "mandate_id": expected_mandate_id,
     }
     return all(
-        expected is None or getattr(proposal, field_name) == expected
+        getattr(proposal, field_name) == expected
         for field_name, expected in expected_fields.items()
     )
 

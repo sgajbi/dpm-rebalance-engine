@@ -24,6 +24,7 @@ from src.core.proposals.idempotency import (
     load_replayed_event,
 )
 from src.core.proposals.idempotency_validation import require_proposal_idempotency_key
+from src.core.proposals.input_context_models import ProposalCreateMetadata
 from src.core.proposals.input_request_models import ProposalCreateRequest
 from src.core.proposals.models import ProposalApprovalRecordData, ProposalWorkflowEventRecord
 from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
@@ -377,6 +378,66 @@ def test_legacy_stateful_create_replay_ignores_version_hash_domain_and_enrichmen
         payload=payload,
         proposal_id="pp_legacy_replay",
         proposal_version_no=1,
+    )
+
+
+@pytest.mark.parametrize("omitted_field", ["title", "advisor_notes", "jurisdiction"])
+def test_legacy_stateful_replay_rejects_omitted_populated_metadata(
+    omitted_field: str,
+) -> None:
+    stateful_input = SimpleNamespace(
+        portfolio_id="pf_legacy_replay",
+        mandate_id="mandate_stateful",
+    )
+    metadata_values = {
+        "title": "Stored proposal",
+        "advisor_notes": "Stored notes",
+        "jurisdiction": "SG",
+        "mandate_id": None,
+    }
+    metadata_values[omitted_field] = None
+    payload = SimpleNamespace(
+        created_by="advisor_legacy",
+        metadata=ProposalCreateMetadata(**metadata_values),
+    )
+    proposal = SimpleNamespace(
+        created_by="advisor_legacy",
+        portfolio_id="pf_legacy_replay",
+        title="Stored proposal",
+        advisor_notes="Stored notes",
+        jurisdiction="SG",
+        mandate_id="mandate_stateful",
+    )
+
+    assert not _legacy_proposal_fields_match(
+        proposal=proposal,
+        payload=payload,
+        stateful_input=stateful_input,
+    )
+
+
+def test_legacy_stateful_replay_matches_metadata_fields_when_both_are_none() -> None:
+    stateful_input = SimpleNamespace(
+        portfolio_id="pf_legacy_replay",
+        mandate_id=None,
+    )
+    payload = SimpleNamespace(
+        created_by="advisor_legacy",
+        metadata=ProposalCreateMetadata(),
+    )
+    proposal = SimpleNamespace(
+        created_by="advisor_legacy",
+        portfolio_id="pf_legacy_replay",
+        title=None,
+        advisor_notes=None,
+        jurisdiction=None,
+        mandate_id=None,
+    )
+
+    assert _legacy_proposal_fields_match(
+        proposal=proposal,
+        payload=payload,
+        stateful_input=stateful_input,
     )
 
 
