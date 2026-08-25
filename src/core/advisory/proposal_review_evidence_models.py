@@ -82,7 +82,7 @@ class ProposalReviewEvidence(_StrictModel):
         }
         return cls(
             benchmark_assignment=BenchmarkAssignmentEvidence(
-                reason_code="BENCHMARK_EVIDENCE_UNAVAILABLE"
+                supportability="UNAVAILABLE", reason_code="BENCHMARK_EVIDENCE_UNAVAILABLE"
             ),
             current_mandate_limits=unavailable_mandate,
             simulated_mandate_limits=unavailable_mandate,
