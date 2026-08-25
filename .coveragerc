@@ -7,7 +7,6 @@ omit =
     src/api/request_models.py
     src/api/routers/integration_capabilities.py
     src/core/engine.py
-    src/core/target_generation.py
     src/core/valuation.py
     src/core/common/workflow_gates.py
     src/infrastructure/postgres_migrations.py

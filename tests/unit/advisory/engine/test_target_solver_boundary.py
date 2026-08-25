@@ -74,6 +74,11 @@ def test_solver_boundary_rejects_non_finite_inputs_and_outputs() -> None:
         solver_output_to_decimal(float("inf"))
 
 
+def test_solver_boundary_rejects_non_numeric_solver_outputs() -> None:
+    with pytest.raises(ValueError, match="solver output must be numeric"):
+        solver_output_to_decimal("not-a-number")
+
+
 def test_solver_boundary_builds_ordered_numeric_vector() -> None:
     np_module = _FakeNumpy()
 

@@ -27,6 +27,9 @@ persistence, migration, or data-model behavior.
 Target-generation solver conversions are kept behind the typed `src/core/target_solver_boundary.py`
 adapter. The guard inventories its one intentional Decimal-to-cvxpy conversion separately from
 domain monetary calculations; its approval carries owner, expiry, and #544 removal evidence.
+The coverage configuration does not omit `src/core/target_generation.py`, so the combined 97%
+coverage gate and the 90% changed-source gate both measure refactored target-generation behavior;
+changed source cannot pass with an empty coverage record caused by a stale omission.
 
 The fast static lanes also run `make dead-code-gate`. It scans `src` and `scripts` with the pinned
 Vulture version and fails on any finding outside the versioned
