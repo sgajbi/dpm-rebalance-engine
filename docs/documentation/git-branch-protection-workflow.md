@@ -171,8 +171,10 @@ gh pr merge <PR_NUMBER> --rebase --delete-branch
 ```
 
 Auto-merge is opt-in via the `automerge` label and is queued through the repository-approved
-rebase merge path using `LOTUS_AUTOMERGE_TOKEN`. If that token is not configured, the helper warns
-and skips so an authorized human or release actor can rebase-merge the PR.
+rebase merge path using `LOTUS_AUTOMERGE_TOKEN`. If that token is not configured, the helper emits
+an actionable GitHub error and fails the Queue Auto Merge check without queuing a merge. The manual
+fallback is for an authorized human or release actor to rebase-merge the PR after required checks
+pass.
 Without the `automerge` label, PRs stay manual even after CI is green.
 Merged PRs dispatch `main-releasability.yml` on `main` through the separate closed-PR dispatch
 workflow so release evidence binds the merged mainline commit.
