@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -625,6 +626,195 @@ def test_live_noop_alternatives_path_rejects_missing_policy_evidence() -> None:
         match="ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE",
     ):
         _run(incomplete_snapshot)
+
+
+def _run_alternatives_validator(
+    validator,
+    proposal_body: dict[str, Any],
+    snapshot: LiveProposalAlternativesSnapshot,
+) -> LiveProposalAlternativesSnapshot:
+    return validator(
+        object(),
+        advise_base_url="http://advise.dev.lotus",
+        complete_scenario=PortfolioParityScenario(
+            "PB_SG_GLOBAL_BAL_001", "2026-05-22", "USD", "complete", True
+        ),
+        simulate_path=lambda *args, **kwargs: (proposal_body, snapshot),
+        collect_statuses=_collect_alternative_statuses,
+        assert_condition=live_parity._assert,
+    )
+
+
+def test_live_concentration_alternatives_path_rejects_missing_policy_block() -> None:
+    proposal_body = {
+        "proposal_alternatives": {
+            "requested_objectives": ["REDUCE_CONCENTRATION"],
+            "alternatives": [
+                {"objective": "REDUCE_CONCENTRATION", "status": "REJECTED_POLICY_BLOCKED"}
+            ],
+            "rejected_candidates": [],
+        }
+    }
+    snapshot = extract_live_proposal_alternatives_snapshot(
+        proposal_body,
+        path_name="concentration_path",
+        latency_ms=10.0,
+    )
+
+    assert (
+        _run_alternatives_validator(
+            alternatives_validation._validate_live_concentration_alternatives_path,
+            proposal_body,
+            snapshot,
+        )
+        is snapshot
+    )
+
+    broken_body = {
+        "proposal_alternatives": {
+            **proposal_body["proposal_alternatives"],
+            "alternatives": [{"objective": "REDUCE_CONCENTRATION", "status": "FEASIBLE"}],
+        }
+    }
+    broken_snapshot = extract_live_proposal_alternatives_snapshot(
+        broken_body,
+        path_name="concentration_path",
+        latency_ms=10.0,
+    )
+    with pytest.raises(
+        live_parity.LiveParityValidationError,
+        match="concentration_path: expected REDUCE_CONCENTRATION statuses",
+    ):
+        _run_alternatives_validator(
+            alternatives_validation._validate_live_concentration_alternatives_path,
+            broken_body,
+            broken_snapshot,
+        )
+
+
+def test_live_cash_raise_alternatives_path_rejects_missing_cash_floor_evidence() -> None:
+    proposal_body = {
+        "proposal_alternatives": {
+            "requested_objectives": ["RAISE_CASH"],
+            "alternatives": [],
+            "rejected_candidates": [{"reason_code": "ALTERNATIVE_CASH_ALREADY_SUFFICIENT"}],
+        }
+    }
+    snapshot = extract_live_proposal_alternatives_snapshot(
+        proposal_body,
+        path_name="cash_raise_path",
+        latency_ms=10.0,
+    )
+
+    assert (
+        _run_alternatives_validator(
+            alternatives_validation._validate_live_cash_raise_alternatives_path,
+            proposal_body,
+            snapshot,
+        )
+        is snapshot
+    )
+
+    with pytest.raises(
+        live_parity.LiveParityValidationError,
+        match="cash_raise_path: expected rejections",
+    ):
+        _run_alternatives_validator(
+            alternatives_validation._validate_live_cash_raise_alternatives_path,
+            proposal_body,
+            replace(snapshot, rejected_reason_codes=()),
+        )
+
+
+def test_live_cross_currency_alternatives_path_rejects_missing_policy_block() -> None:
+    proposal_body = {
+        "proposal_alternatives": {
+            "requested_objectives": ["IMPROVE_CURRENCY_ALIGNMENT"],
+            "alternatives": [
+                {
+                    "objective": "IMPROVE_CURRENCY_ALIGNMENT",
+                    "status": "REJECTED_POLICY_BLOCKED",
+                }
+            ],
+            "rejected_candidates": [],
+        }
+    }
+    snapshot = extract_live_proposal_alternatives_snapshot(
+        proposal_body,
+        path_name="cross_currency_path",
+        latency_ms=10.0,
+    )
+
+    assert (
+        _run_alternatives_validator(
+            alternatives_validation._validate_live_cross_currency_alternatives_path,
+            proposal_body,
+            snapshot,
+        )
+        is snapshot
+    )
+
+    broken_body = {
+        "proposal_alternatives": {
+            **proposal_body["proposal_alternatives"],
+            "alternatives": [
+                {
+                    "objective": "IMPROVE_CURRENCY_ALIGNMENT",
+                    "status": "FEASIBLE_WITH_REVIEW",
+                }
+            ],
+        }
+    }
+    broken_snapshot = extract_live_proposal_alternatives_snapshot(
+        broken_body,
+        path_name="cross_currency_path",
+        latency_ms=10.0,
+    )
+    with pytest.raises(
+        live_parity.LiveParityValidationError,
+        match="cross_currency_path: expected IMPROVE_CURRENCY_ALIGNMENT statuses",
+    ):
+        _run_alternatives_validator(
+            alternatives_validation._validate_live_cross_currency_alternatives_path,
+            broken_body,
+            broken_snapshot,
+        )
+
+
+def test_live_restricted_product_alternatives_path_rejects_missing_evidence() -> None:
+    proposal_body = {
+        "proposal_alternatives": {
+            "requested_objectives": ["AVOID_RESTRICTED_PRODUCTS"],
+            "alternatives": [],
+            "rejected_candidates": [
+                {"reason_code": "ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE"}
+            ],
+        }
+    }
+    snapshot = extract_live_proposal_alternatives_snapshot(
+        proposal_body,
+        path_name="restricted_product_path",
+        latency_ms=10.0,
+    )
+
+    assert (
+        _run_alternatives_validator(
+            alternatives_validation._validate_live_restricted_product_alternatives_path,
+            proposal_body,
+            snapshot,
+        )
+        is snapshot
+    )
+
+    with pytest.raises(
+        live_parity.LiveParityValidationError,
+        match="restricted_product_path: expected rejection",
+    ):
+        _run_alternatives_validator(
+            alternatives_validation._validate_live_restricted_product_alternatives_path,
+            proposal_body,
+            replace(snapshot, rejected_reason_codes=()),
+        )
 
 
 def test_json_safe_value_serializes_decimals_for_http_payloads() -> None:
