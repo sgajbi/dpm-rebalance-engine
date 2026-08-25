@@ -24,7 +24,7 @@
   - tests/unit/scripts/test_check_monetary_float_usage.py passes four focused tests, including
     line-number-only matching and explicit stale-entry detection.
   - quality/baseline_report.md was regenerated for the added regression coverage; the
-    authoritative total Python-line measurement increases from 195238 to 195264.
+    generated artifact remains the authoritative measurement.
   - The six findings are solver-bridge conversions in src/core/target_generation.py; no
     runtime behavior or numeric threshold was changed by this freshness repair.
 - Compatibility: CI/evidence and test-fixture behavior only. Product runtime, APIs/OpenAPI,
