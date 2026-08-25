@@ -10,6 +10,10 @@ import httpx
 
 JsonGetter = Callable[..., dict[str, Any]]
 AssertCondition = Callable[[bool, str], None]
+_DELIVERY_EVENT_TYPES = frozenset(
+    "EXECUTION_REQUESTED EXECUTION_ACCEPTED EXECUTION_PARTIALLY_EXECUTED "
+    "EXECUTION_REJECTED EXECUTION_CANCELLED EXECUTION_EXPIRED EXECUTED REPORT_REQUESTED".split()
+)
 
 
 @dataclass(frozen=True)
@@ -38,12 +42,14 @@ def fetch_persisted_read_surfaces(
     assert_condition: AssertCondition,
 ) -> PersistedReadSurfaces:
     """Fetch the canonical persisted proposal surfaces with their expected statuses."""
-    list_query = (
-        f"{advise_base_url}/advisory/proposals?portfolio_id={expected_portfolio_id}&limit=100"
-    )
+
+    def _get(path: str) -> dict[str, Any]:
+        return get_json(client, url=f"{advise_base_url}{path}", expected_status=200)
+
+    list_query = f"/advisory/proposals?portfolio_id={expected_portfolio_id}&limit=100"
     if created_by_filter:
         list_query += f"&created_by={created_by_filter}"
-    listed = get_json(client, url=list_query, expected_status=200)
+    listed = _get(list_query)
     items = cast(list[dict[str, Any]], listed["items"])
     list_item = next(
         (item for item in items if str(item["proposal_id"]) == proposal_id),
@@ -55,44 +61,16 @@ def fetch_persisted_read_surfaces(
     )
     return PersistedReadSurfaces(
         list_item=cast(dict[str, Any], list_item),
-        detail=get_json(
-            client,
-            url=f"{advise_base_url}/advisory/proposals/{proposal_id}?include_evidence=false",
-            expected_status=200,
+        detail=_get(f"/advisory/proposals/{proposal_id}?include_evidence=false"),
+        version=_get(
+            f"/advisory/proposals/{proposal_id}/versions/"
+            f"{current_version_no}?include_evidence=false"
         ),
-        version=get_json(
-            client,
-            url=(
-                f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-                f"{current_version_no}?include_evidence=false"
-            ),
-            expected_status=200,
-        ),
-        timeline=get_json(
-            client,
-            url=f"{advise_base_url}/advisory/proposals/{proposal_id}/workflow-events",
-            expected_status=200,
-        ),
-        lineage=get_json(
-            client,
-            url=f"{advise_base_url}/advisory/proposals/{proposal_id}/lineage",
-            expected_status=200,
-        ),
-        approvals=get_json(
-            client,
-            url=f"{advise_base_url}/advisory/proposals/{proposal_id}/approvals",
-            expected_status=200,
-        ),
-        delivery_summary=get_json(
-            client,
-            url=f"{advise_base_url}/advisory/proposals/{proposal_id}/delivery-summary",
-            expected_status=200,
-        ),
-        delivery_history=get_json(
-            client,
-            url=f"{advise_base_url}/advisory/proposals/{proposal_id}/delivery-events",
-            expected_status=200,
-        ),
+        timeline=_get(f"/advisory/proposals/{proposal_id}/workflow-events"),
+        lineage=_get(f"/advisory/proposals/{proposal_id}/lineage"),
+        approvals=_get(f"/advisory/proposals/{proposal_id}/approvals"),
+        delivery_summary=_get(f"/advisory/proposals/{proposal_id}/delivery-summary"),
+        delivery_history=_get(f"/advisory/proposals/{proposal_id}/delivery-events"),
     )
 
 
@@ -109,7 +87,6 @@ def assert_persisted_identity_and_version(
     list_item = surfaces.list_item
     detail = surfaces.detail
     version = surfaces.version
-    lineage = surfaces.lineage
     timeline = surfaces.timeline
     delivery_summary = surfaces.delivery_summary
     assert_condition(
@@ -126,7 +103,7 @@ def assert_persisted_identity_and_version(
     assert_condition(
         int(list_item["current_version_no"])
         == int(detail["proposal"]["current_version_no"])
-        == int(lineage["latest_version_no"])
+        == int(surfaces.lineage["latest_version_no"])
         == current_version_no,
         f"{proposal_id}: current version diverged across list/detail/lineage",
     )
@@ -173,17 +150,14 @@ def assert_persisted_identity_and_version(
     )
 
 
-def assert_persisted_lineage_and_timeline(
-    surfaces: PersistedReadSurfaces,
+def _assert_lineage_continuity(
+    lineage: dict[str, Any],
     *,
     proposal_id: str,
     current_version_no: int,
     assert_condition: AssertCondition,
 ) -> None:
-    """Prove lineage continuity and workflow timeline completeness."""
-    lineage = surfaces.lineage
-    timeline = surfaces.timeline
-    delivery_history = surfaces.delivery_history
+    """Prove persisted versions are complete and contiguous."""
     assert_condition(
         int(lineage["version_count"]) == current_version_no,
         f"{proposal_id}: lineage version count did not match latest version",
@@ -202,6 +176,17 @@ def assert_persisted_lineage_and_timeline(
         list(lineage["missing_version_numbers"]) == [],
         f"{proposal_id}: lineage unexpectedly reported missing versions",
     )
+
+
+def _assert_timeline_completeness(
+    timeline: dict[str, Any],
+    delivery_history: dict[str, Any],
+    *,
+    proposal_id: str,
+    current_version_no: int,
+    assert_condition: AssertCondition,
+) -> None:
+    """Prove workflow and delivery histories retain version-creation events."""
     timeline_events = cast(list[dict[str, Any]], timeline["events"])
     delivery_events = cast(list[dict[str, Any]], delivery_history["events"])
     assert_condition(
@@ -239,6 +224,29 @@ def assert_persisted_lineage_and_timeline(
         )
 
 
+def assert_persisted_lineage_and_timeline(
+    surfaces: PersistedReadSurfaces,
+    *,
+    proposal_id: str,
+    current_version_no: int,
+    assert_condition: AssertCondition,
+) -> None:
+    """Prove lineage continuity and workflow timeline completeness."""
+    _assert_lineage_continuity(
+        surfaces.lineage,
+        proposal_id=proposal_id,
+        current_version_no=current_version_no,
+        assert_condition=assert_condition,
+    )
+    _assert_timeline_completeness(
+        surfaces.timeline,
+        surfaces.delivery_history,
+        proposal_id=proposal_id,
+        current_version_no=current_version_no,
+        assert_condition=assert_condition,
+    )
+
+
 def assert_persisted_delivery_and_approval_surfaces(
     surfaces: PersistedReadSurfaces,
     *,
@@ -253,20 +261,7 @@ def assert_persisted_delivery_and_approval_surfaces(
     approvals = surfaces.approvals
     delivery_events = cast(list[dict[str, Any]], delivery_history["events"])
     assert_condition(
-        all(
-            event["event_type"]
-            in {
-                "EXECUTION_REQUESTED",
-                "EXECUTION_ACCEPTED",
-                "EXECUTION_PARTIALLY_EXECUTED",
-                "EXECUTION_REJECTED",
-                "EXECUTION_CANCELLED",
-                "EXECUTION_EXPIRED",
-                "EXECUTED",
-                "REPORT_REQUESTED",
-            }
-            for event in delivery_events
-        ),
+        all(event["event_type"] in _DELIVERY_EVENT_TYPES for event in delivery_events),
         f"{proposal_id}: delivery history contained non-delivery events",
     )
     assert_condition(
@@ -378,32 +373,26 @@ def assert_persisted_read_surfaces(
         get_json=get_json,
         assert_condition=assert_condition,
     )
+    shared: dict[str, Any] = dict(
+        proposal_id=proposal_id,
+        current_version_no=current_version_no,
+        assert_condition=assert_condition,
+    )
     assert_persisted_identity_and_version(
         surfaces,
-        proposal_id=proposal_id,
         expected_portfolio_id=expected_portfolio_id,
-        current_version_no=current_version_no,
         expected_state=expected_state,
-        assert_condition=assert_condition,
+        **shared,
     )
-    assert_persisted_lineage_and_timeline(
-        surfaces,
-        proposal_id=proposal_id,
-        current_version_no=current_version_no,
-        assert_condition=assert_condition,
-    )
+    assert_persisted_lineage_and_timeline(surfaces, **shared)
     assert_persisted_delivery_and_approval_surfaces(
         surfaces,
-        proposal_id=proposal_id,
-        current_version_no=current_version_no,
         expected_report_status=expected_report_status,
-        assert_condition=assert_condition,
+        **shared,
     )
     assert_persisted_replay_surfaces(
         client,
         advise_base_url=advise_base_url,
-        proposal_id=proposal_id,
-        current_version_no=current_version_no,
         get_json=get_json,
-        assert_condition=assert_condition,
+        **shared,
     )
