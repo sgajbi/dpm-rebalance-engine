@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 import src.core.proposals.context as context_facade
+from src.core.proposal_request_models import ProposalSimulateRequest
 from src.core.proposals.context import (
     ProposalContextResolutionError,
     build_create_request_hash,
@@ -13,6 +14,11 @@ from src.core.proposals.context import (
 )
 from src.core.proposals.context_evidence import build_context_resolution_evidence
 from src.core.proposals.context_hashing import build_simulation_request_hash
+from src.core.proposals.context_ports import (
+    ResolvedStatefulProposalContext,
+    configure_proposal_stateful_context_resolver,
+    reset_proposal_stateful_context_resolver_for_tests,
+)
 from src.core.proposals.context_resolution import (
     ResolvedProposalContext,
     ResolvedSimulationContext,
@@ -22,6 +28,7 @@ from src.core.proposals.context_resolution import (
 from src.core.proposals.models import (
     ProposalCreateMetadata,
     ProposalCreateRequest,
+    ProposalResolvedContext,
     ProposalSimulationRequest,
     ProposalStatefulInput,
     ProposalVersionRequest,
@@ -136,6 +143,80 @@ def test_stateless_context_preserves_reference_model_date_as_lifecycle_input():
 
     assert resolved.resolved_context.as_of == "2026-06-15"
     assert resolved.resolved_context.requested_as_of == "2026-06-15"
+
+
+def _stateful_input_for_missing_resolved_as_of() -> ProposalStatefulInput:
+    return ProposalStatefulInput(
+        portfolio_id="pf_stateful_missing_as_of",
+        as_of="2026-06-15",
+    )
+
+
+def _configure_missing_resolved_as_of_context() -> None:
+    configure_proposal_stateful_context_resolver(
+        lambda _stateful_input: ResolvedStatefulProposalContext(
+            simulate_request=ProposalSimulateRequest.model_validate(
+                _simulate_request("pf_stateful_missing_as_of")
+            ),
+            resolved_context=ProposalResolvedContext(
+                portfolio_id="pf_stateful_missing_as_of",
+                as_of=None,
+            ),
+        )
+    )
+
+
+def test_stateful_create_rejects_missing_source_resolved_as_of():
+    _configure_missing_resolved_as_of_context()
+    try:
+        with pytest.raises(
+            ProposalContextResolutionError,
+            match="WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING",
+        ):
+            resolve_create_request(
+                ProposalCreateRequest(
+                    created_by="advisor_context",
+                    input_mode="stateful",
+                    stateful_input=_stateful_input_for_missing_resolved_as_of(),
+                )
+            )
+    finally:
+        reset_proposal_stateful_context_resolver_for_tests()
+
+
+def test_stateful_version_rejects_missing_source_resolved_as_of():
+    _configure_missing_resolved_as_of_context()
+    try:
+        with pytest.raises(
+            ProposalContextResolutionError,
+            match="WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING",
+        ):
+            resolve_version_request(
+                ProposalVersionRequest(
+                    created_by="advisor_context",
+                    input_mode="stateful",
+                    stateful_input=_stateful_input_for_missing_resolved_as_of(),
+                )
+            )
+    finally:
+        reset_proposal_stateful_context_resolver_for_tests()
+
+
+def test_stateful_simulation_rejects_missing_source_resolved_as_of():
+    _configure_missing_resolved_as_of_context()
+    try:
+        with pytest.raises(
+            ProposalContextResolutionError,
+            match="WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING",
+        ):
+            resolve_simulation_request(
+                ProposalSimulationRequest(
+                    input_mode="stateful",
+                    stateful_input=_stateful_input_for_missing_resolved_as_of(),
+                )
+            )
+    finally:
+        reset_proposal_stateful_context_resolver_for_tests()
 
 
 def test_context_resolution_override_preserves_workspace_request_dimensions_and_draft():

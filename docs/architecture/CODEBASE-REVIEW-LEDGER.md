@@ -1,5 +1,34 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-937-PROPOSAL-STATEFUL-AS-OF-GUARD
+
+- Scope: `src/core/proposals/context_resolution.py`, proposal stateful create/version/simulation
+  resolution, focused context tests, and lifecycle guidance.
+- Pattern: The sibling workspace/Core boundary already failed closed when authoritative stateful
+  context omitted its resolved as-of date, but proposal resolution accepted the same missing date
+  and could publish or persist a null lifecycle date.
+- Status: Implemented in the bounded #491 follow-up slice. The shared proposal stateful boundary
+  now requires a typed resolved as-of date before simulation, hashing, policy evidence, or
+  persistence proceeds.
+- Finding Class: proposal lifecycle contract correctness, source-authority enforcement, and
+  fail-closed error behavior.
+- Summary: Proposal create, version, and simulation paths now emit the stable
+  `WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING` domain error when Core-authoritative context omits its
+  required resolved date. Direct/stateless requests retain honest nullable-date behavior when no
+  caller-owned date exists.
+- Evidence: proposal context tests pass 25 tests, including separate stateful create, version, and
+  simulation missing-date regressions plus existing stateless no-inference coverage.
+- Compatibility: Intentional fail-closed correction within the existing typed valuation-context
+  contract. No public request schema, endpoint rename, migration, calculation, downstream field,
+  approval/execution behavior, benchmark/limit/scenario semantics, or Gateway/Workbench behavior.
+- Documentation decision: Updated developer guidance and repo-authored `wiki/Proposal-Lifecycle.md`
+  because the stateful source-date failure contract is consumer/operator truth. Wiki publication and
+  strict parity are required after merge.
+- OpenAPI/migration decision: No changes; the correction uses the existing domain error vocabulary
+  at an internal resolution boundary and does not alter public schemas or persisted structures.
+- Follow-Up: #491 retains the extension-safe missing-evidence count fix, benchmark/limit evidence,
+  and scenario-analysis evidence.
+
 ## LA-REV-936-PROPOSAL-CONTEXT-HANDOFF-REQUEST-DIMENSIONS
 
 - Scope: `src/core/proposals/context_resolution.py`, proposal create/version command context

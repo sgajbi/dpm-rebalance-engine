@@ -326,6 +326,9 @@ Current evaluation rule:
 - stateless workspaces support full deterministic re-evaluation from the embedded simulation context
 - stateful workspaces can resolve deterministic evaluation context through the Lotus Core advisory context seam when it is configured
 - unresolved stateful workspaces fail explicitly with `WORKSPACE_STATEFUL_CONTEXT_RESOLUTION_UNAVAILABLE`
+- proposal stateful create, version, and simulation resolution fails explicitly with
+  `WORKSPACE_STATEFUL_CONTEXT_AS_OF_MISSING` when Lotus Core returns no resolved date; direct/stateless
+  requests remain nullable when no caller-owned date exists
 
 Current saved-version rule:
 - saved workspace versions are retained within the active workspace session and expose replay-safe evidence
@@ -340,6 +343,8 @@ Current handoff rule:
 - stateful workspace handoff preserves explicit requested as-of date and reporting currency in the
   proposal valuation context for both current and simulated states; the workspace's edited
   simulation payload remains the source for draft trades, cash flows, and options
+- proposal stateful handoff resolution fails closed before simulation, hashing, policy evidence, or
+  persistence when the authoritative source omits its required resolved as-of date
 
 Current AI assistance rule:
 - workspace AI rationale is available only for evaluated workspaces
