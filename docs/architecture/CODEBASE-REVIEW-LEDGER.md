@@ -1,5 +1,43 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-944-LIVE-LIFECYCLE-DELIVERY-BOUNDARY
+
+- Scope: `scripts/validate_cross_service_parity_live.py`, the typed
+  `scripts/live_report_delivery.py` boundary, focused live-parity tests, and the oversized-code
+  policy/baseline evidence for lifecycle and delivery certification.
+- Pattern: `_assert_lifecycle_and_delivery_flow` combined synchronous and asynchronous lifecycle
+  creation, execution handoff transitions, report outcome mapping, and persisted read-surface
+  assertions in one 251-line helper. Keeping every extracted helper in the validator also grew the
+  ratcheted module baseline, which the hard oversized-module gate correctly rejected.
+- Status: Implemented in the bounded #495 maintainability slice. Synchronous lifecycle, asynchronous
+  lifecycle, and execution transitions now have named validator boundaries; report success/degraded
+  mapping is owned by a focused module with an explicit typed callback dependency object.
+- Finding Class: CI/live-certification maintainability, validation-boundary ownership, typed seam
+  quality, and oversized-code regression prevention.
+- Summary: The targeted lifecycle helper shrinks from 251 to 38 lines, the validator module shrinks
+  from 3,491 to 3,477 lines, and the report-delivery helper is isolated below the 1,000-line module
+  ceiling. The baseline removes only the resolved lifecycle fingerprint and ratchets the module to
+  the measured 3,477 lines; no threshold or exception is weakened.
+- Compatibility: CI/live-certification tooling only. Synchronous and asynchronous request payloads,
+  idempotency keys, lifecycle/version increments, execution statuses, report READY/503-unavailable
+  semantics, persisted read-surface filters, CLI behavior, and diagnostics remain unchanged. No
+  product API/OpenAPI, persistence, migration, calculation, runtime, Workbench, or downstream
+  contract changes are in scope.
+- Design decision: The extracted report boundary receives a frozen `ReportDeliveryPrimitives`
+  dataclass of named callables rather than the validator module object. This keeps the existing
+  primitive ownership in the validator while making the seam explicit, statically discoverable, and
+  testable; future extractions should use the same typed/shared seam discipline or record a new
+  re-justification on #495.
+- Evidence: Focused tests cover lifecycle phase ordering and both report outcomes, including the
+  fail-closed `LOTUS_REPORT_REQUEST_UNAVAILABLE` 503 and persisted `UNAVAILABLE` status. Ruff,
+  focused tests, quality-baseline regeneration, and oversized-code evidence are required before
+  merge; full native gates remain merge prerequisites.
+- Documentation decision: Updated this ledger, the generated quality baseline, and machine-readable
+  oversized-code evidence because measurable maintainability truth changed. No operator workflow or
+  consumer contract changed, so no wiki publication is required.
+- Follow-Up: #495 continues with the separately bounded `_assert_live_proposal_memo_flow` hotspot;
+  this slice does not claim to resolve it or any product issues.
+
 ## LA-REV-943-LIVE-PARITY-ORCHESTRATION-BOUNDARY
 
 - Scope: `scripts/validate_cross_service_parity_live.py`, the extracted

@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.oversized-code-policy.v1",
-  "policy_version": "lotus-advise-oversized-code.v1+ebb5a76cfdbc",
+  "policy_version": "lotus-advise-oversized-code.v1+da8e5b095810",
   "scan_paths": [
     "src",
     "scripts"
@@ -11,7 +11,7 @@
   },
   "baseline": {
     "path": "quality/oversized-code-baseline.v1.json",
-    "sha256": "30234285b0f2c7078ce13ccb91e48bc61f68f4bf0b162615a947a35f77a73e03",
+    "sha256": "50d34d0ae6d8ff1e2c31b033d7866bfc33aafbf7c75b038569b71e7b98f54c3a",
     "owner": "lotus-advise-quality-governance",
     "reason": "Existing production tooling hotspots are explicitly inventoried while refactoring proceeds; new findings and growth are not permitted.",
     "expires_on": "2027-08-24"

@@ -25,6 +25,10 @@ from scripts.live_policy_evaluation_support import (  # noqa: E402
 from scripts.live_proposal_alternatives_validation import (  # noqa: E402
     validate_live_proposal_alternatives_paths,
 )
+from scripts.live_report_delivery import (  # noqa: E402
+    ReportDeliveryPrimitives,
+    assert_report_delivery,
+)
 from scripts.live_runtime_decision_summary import (  # noqa: E402
     LiveDecisionSnapshot,
     extract_live_decision_snapshot,
@@ -1618,12 +1622,12 @@ def _assert_mixed_approval_routes_remain_version_scoped(
     )
 
 
-def _assert_lifecycle_and_delivery_flow(
+def _assert_synchronous_lifecycle_flow(
     client: httpx.Client,
     *,
     advise_base_url: str,
     scenario: PortfolioParityScenario,
-) -> tuple[str, int, str, str, str]:
+) -> tuple[str, int]:
     created = _create_stateful_proposal(
         client,
         advise_base_url=advise_base_url,
@@ -1653,7 +1657,15 @@ def _assert_lifecycle_and_delivery_flow(
         scenario=scenario,
         proposal_body=version_created["version"]["proposal_result"],
     )
+    return proposal_id, related_version_no
 
+
+def _assert_asynchronous_lifecycle_flow(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    scenario: PortfolioParityScenario,
+) -> None:
     async_created = _submit_async_create(
         client,
         advise_base_url=advise_base_url,
@@ -1708,6 +1720,15 @@ def _assert_lifecycle_and_delivery_flow(
         scenario=scenario,
         proposal_body=async_version_result["version"]["proposal_result"],
     )
+
+
+def _assert_execution_flow(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    proposal_id: str,
+    related_version_no: int,
+) -> dict[str, Any]:
 
     _promote_to_execution_ready(
         client,
@@ -1787,85 +1808,50 @@ def _assert_lifecycle_and_delivery_flow(
         executed_status["handoff_status"] == "EXECUTED",
         f"{proposal_id}: unexpected terminal execution status {executed_status['handoff_status']}",
     )
+    return handoff
 
-    capabilities = _get_json(
+
+def _assert_lifecycle_and_delivery_flow(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    scenario: PortfolioParityScenario,
+) -> tuple[str, int, str, str, str]:
+    proposal_id, related_version_no = _assert_synchronous_lifecycle_flow(
         client,
-        url=f"{advise_base_url}/platform/capabilities",
-        expected_status=200,
+        advise_base_url=advise_base_url,
+        scenario=scenario,
     )
-    report_feature = _feature_by_key(capabilities, "advisory.proposals.reporting")
-    report_response = client.post(
-        f"{advise_base_url}/advisory/proposals/{proposal_id}/report-requests",
-        json={
-            "report_type": "CLIENT_PROPOSAL_SUMMARY",
-            "requested_by": "advisor_1",
-            "related_version_no": related_version_no,
-            "include_execution_summary": True,
-        },
+    _assert_asynchronous_lifecycle_flow(
+        client,
+        advise_base_url=advise_base_url,
+        scenario=scenario,
     )
-    if report_feature["operational_ready"]:
-        _assert(
-            report_response.status_code == 200,
-            (
-                f"{proposal_id}: expected live report request success, got "
-                f"{report_response.status_code} body={report_response.text}"
-            ),
-        )
-        report_body = cast(dict[str, Any], report_response.json())
-        _assert(
-            report_body["report_service"] == "lotus-report",
-            f"{proposal_id}: unexpected report service {report_body['report_service']}",
-        )
-        _assert(
-            report_body["status"] == "READY",
-            f"{proposal_id}: unexpected report status {report_body['status']}",
-        )
-        _assert_persisted_read_surfaces(
-            client,
-            advise_base_url=advise_base_url,
-            proposal_id=proposal_id,
-            expected_portfolio_id=scenario.portfolio_id,
-            created_by_filter="live-parity-validator",
-            current_version_no=related_version_no,
-            expected_state="EXECUTED",
-            expected_report_status=report_body["status"],
-        )
-        return (
-            scenario.portfolio_id,
-            related_version_no,
-            "EXECUTED",
-            handoff["handoff_status"],
-            report_body["status"],
-        )
-
-    _assert(
-        report_response.status_code == 503,
-        (
-            f"{proposal_id}: expected lotus-report degraded 503, got "
-            f"{report_response.status_code} body={report_response.text}"
-        ),
-    )
-    detail = cast(dict[str, Any], report_response.json()).get("detail")
-    _assert(
-        detail == "LOTUS_REPORT_REQUEST_UNAVAILABLE",
-        f"{proposal_id}: unexpected degraded report detail {detail}",
-    )
-    _assert_persisted_read_surfaces(
+    handoff = _assert_execution_flow(
         client,
         advise_base_url=advise_base_url,
         proposal_id=proposal_id,
+        related_version_no=related_version_no,
+    )
+    report_status = assert_report_delivery(
+        client,
+        primitives=ReportDeliveryPrimitives(
+            get_json=_get_json,
+            feature_by_key=_feature_by_key,
+            assertion=_assert,
+            assert_persisted_read_surfaces=_assert_persisted_read_surfaces,
+        ),
+        advise_base_url=advise_base_url,
+        proposal_id=proposal_id,
+        related_version_no=related_version_no,
         expected_portfolio_id=scenario.portfolio_id,
-        created_by_filter="live-parity-validator",
-        current_version_no=related_version_no,
-        expected_state="EXECUTED",
-        expected_report_status="UNAVAILABLE",
     )
     return (
         scenario.portfolio_id,
         related_version_no,
         "EXECUTED",
         handoff["handoff_status"],
-        "UNAVAILABLE",
+        report_status,
     )
 
 
