@@ -29216,6 +29216,47 @@
   OpenAPI response wording, and this ledger because source mapping and failure behavior are
   externally supportable truth. No migration or supported-feature change was required.
 - Follow-Up:
-  - Canonical Workbench revalidation remains required after merge. #554/#491 producer evidence and
-    #495 CI follow-ups remain separate; do not use this mapping as a license to infer missing
-    valuation, benchmark, limit, risk, or scenario evidence.
+- Canonical Workbench revalidation remains required after merge. #554/#491 producer evidence and
+  #495 CI follow-ups remain separate; do not use this mapping as a license to infer missing
+  valuation, benchmark, limit, risk, or scenario evidence.
+
+## LA-REV-931-QUALITY-REPORT-RENDERER-BOUNDARY
+
+- Scope: Decompose the generated refactor-health report renderer under bounded CI quality issue
+  #495.
+- Pattern: A committed quality-evidence generator had a 494-line renderer containing unrelated
+  report sections. That made the CI evidence path itself an oversized maintainability hotspot and
+  made future edits more likely to duplicate or reorder governed evidence.
+- Status: Hardened in the bounded `refactor/495-quality-report-render` slice; umbrella issue #495
+  remains open for its separately tracked CI fitness-function work.
+- Finding Class: CI maintainability, evidence determinism, module ownership, and regression
+  prevention.
+- Summary: `render_refactor_health_report` now delegates to cohesive section builders in
+  `scripts/refactor_health_report.py`. The renderer decreased from 494 to 5 physical lines and
+  `scripts/quality_baseline_report.py` decreased from 1,636 to 1,151 lines. The largest new
+  section builder is 178 lines; the remaining builders are 143, 152, 23, 10, and 9 lines. The
+  committed generated report is byte-identical to the mainline report, so report content, ordering,
+  CLI paths, exit codes, and quality-scorecard inputs remain stable.
+- Evidence:
+  - `tests/unit/scripts/test_quality_baseline_report.py` contains a focused composition regression
+    test for section order, uniqueness, and byte-equivalent committed output; the focused module
+    suite passes 7 tests.
+  - `make quality-baseline-check` passes after regeneration, proving committed quality artifacts
+    remain fresh.
+  - `make oversized-code-gate` passes with 6 findings, 0 new, 0 resolved, under policy
+    `lotus-advise-oversized-code.v1+96acf40429a7`; the resolved renderer function fingerprint is
+    removed while the remaining module finding is retained truthfully.
+  - `make unused-dependency-gate` passes with 13 findings, 0 new, 0 resolved, under policy
+    `lotus-advise-dependency-hygiene.v1+fb921ed832b5`; the new first-party helper import is
+    explicitly represented in `pyproject.toml` rather than hidden by an ignore.
+  - Ruff check/format, both supported renderer CLI entry points, and `git diff --check` pass.
+- Compatibility: No product API, OpenAPI schema, persistence, migration, calculation, runtime,
+  dependency, or Workbench contract changed. The intentional change is internal CI evidence
+  ownership only; generated report bytes and command behavior are preserved.
+- Documentation decision: Updated generated engineering-health, baseline, scorecard, oversized
+  policy/baseline artifacts, and this ledger because measurable maintainability evidence changed.
+  No wiki or operator-guidance change is required; the explicit no-wiki-change decision is recorded
+  in issue #495 and this entry.
+- Follow-Up: Keep #495 open for the next independently bounded fitness-function or hotspot slice;
+  do not weaken the oversized-code gate or treat this renderer decomposition as product-domain
+  modularization.
