@@ -19,6 +19,63 @@ CollectStatuses = Callable[[dict[str, Any]], dict[str, set[str]]]
 AssertCondition = Callable[[bool, str], None]
 
 
+def _validate_path(
+    client: httpx.Client,
+    *,
+    advise_base_url: str,
+    complete_scenario: AlternativesScenario,
+    simulate_path: SimulatePath,
+    collect_statuses: CollectStatuses,
+    assert_condition: AssertCondition,
+    objectives: list[str],
+    max_alternatives: int,
+    constraints: dict[str, Any] | None = None,
+    expected_statuses: dict[str, set[str]] | None = None,
+    required_rejection_codes: tuple[str, ...] = (),
+    exact_rejection_codes: tuple[str, ...] | None = None,
+    expected_counts: tuple[int, int] | None = None,
+    idempotency_prefix: str,
+    path_name: str,
+) -> LiveProposalAlternativesSnapshot:
+    proposal_body, snapshot = simulate_path(
+        client,
+        advise_base_url=advise_base_url,
+        complete_scenario=complete_scenario,
+        idempotency_prefix=idempotency_prefix,
+        path_name=path_name,
+        objectives=objectives,
+        max_alternatives=max_alternatives,
+        constraints=constraints,
+    )
+    assert_condition(
+        snapshot.requested_objectives == tuple(objectives),
+        f"{path_name}: requested objectives drifted, got {snapshot.requested_objectives}",
+    )
+    statuses = collect_statuses(proposal_body)
+    for objective, expected in (expected_statuses or {}).items():
+        assert_condition(
+            statuses.get(objective) == expected,
+            f"{path_name}: expected {objective} statuses {expected}, got {statuses}",
+        )
+    for reason_code in required_rejection_codes:
+        assert_condition(
+            reason_code in snapshot.rejected_reason_codes,
+            f"{path_name}: expected rejection {reason_code}, got {snapshot.rejected_reason_codes}",
+        )
+    if exact_rejection_codes is not None:
+        assert_condition(
+            snapshot.rejected_reason_codes == exact_rejection_codes,
+            f"{path_name}: expected rejections {exact_rejection_codes}, "
+            f"got {snapshot.rejected_reason_codes}",
+        )
+    if expected_counts is not None:
+        assert_condition(
+            (snapshot.feasible_count, snapshot.feasible_with_review_count) == expected_counts,
+            f"{path_name}: expected feasible counts {expected_counts}, got {snapshot}",
+        )
+    return snapshot
+
+
 def _validate_live_noop_alternatives_path(
     client: httpx.Client,
     *,
@@ -28,61 +85,34 @@ def _validate_live_noop_alternatives_path(
     collect_statuses: CollectStatuses,
     assert_condition: AssertCondition,
 ) -> LiveProposalAlternativesSnapshot:
-    objectives = [
-        "REDUCE_CONCENTRATION",
-        "RAISE_CASH",
-        "IMPROVE_CURRENCY_ALIGNMENT",
-        "AVOID_RESTRICTED_PRODUCTS",
-    ]
-    proposal_body, snapshot = simulate_path(
+    return _validate_path(
         client,
         advise_base_url=advise_base_url,
         complete_scenario=complete_scenario,
-        idempotency_prefix="live-alt-noop",
-        path_name="no_op_path",
-        objectives=objectives,
+        simulate_path=simulate_path,
+        collect_statuses=collect_statuses,
+        assert_condition=assert_condition,
+        objectives=[
+            "REDUCE_CONCENTRATION",
+            "RAISE_CASH",
+            "IMPROVE_CURRENCY_ALIGNMENT",
+            "AVOID_RESTRICTED_PRODUCTS",
+        ],
         max_alternatives=3,
         constraints={
-            "cash_floor": {
-                "amount": "25000",
-                "currency": complete_scenario.reporting_currency,
-            }
+            "cash_floor": {"amount": "25000", "currency": complete_scenario.reporting_currency}
         },
-    )
-    statuses = collect_statuses(proposal_body)
-    assert_condition(
-        snapshot.requested_objectives == tuple(objectives),
-        f"no_op_path: requested objectives drifted, got {snapshot.requested_objectives}",
-    )
-    assert_condition(
-        statuses.get("REDUCE_CONCENTRATION") == {"REJECTED_POLICY_BLOCKED"},
-        (
-            "no_op_path: expected concentration objective to surface as policy-blocked under "
-            f"canonical posture, got {statuses}"
+        expected_statuses={
+            "REDUCE_CONCENTRATION": {"REJECTED_POLICY_BLOCKED"},
+            "IMPROVE_CURRENCY_ALIGNMENT": {"REJECTED_POLICY_BLOCKED"},
+        },
+        required_rejection_codes=(
+            "ALTERNATIVE_CASH_ALREADY_SUFFICIENT",
+            "ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE",
         ),
+        idempotency_prefix="live-alt-noop",
+        path_name="no_op_path",
     )
-    assert_condition(
-        statuses.get("IMPROVE_CURRENCY_ALIGNMENT") == {"REJECTED_POLICY_BLOCKED"},
-        (
-            "no_op_path: expected currency objective to surface as policy-blocked under "
-            f"canonical posture, got {statuses}"
-        ),
-    )
-    assert_condition(
-        "ALTERNATIVE_CASH_ALREADY_SUFFICIENT" in snapshot.rejected_reason_codes,
-        (
-            "no_op_path: expected cash-floor rejection evidence, got "
-            f"{snapshot.rejected_reason_codes}"
-        ),
-    )
-    assert_condition(
-        "ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE" in snapshot.rejected_reason_codes,
-        (
-            "no_op_path: expected restricted-product deferred evidence, got "
-            f"{snapshot.rejected_reason_codes}"
-        ),
-    )
-    return snapshot
 
 
 def _validate_live_concentration_alternatives_path(
@@ -94,28 +124,19 @@ def _validate_live_concentration_alternatives_path(
     collect_statuses: CollectStatuses,
     assert_condition: AssertCondition,
 ) -> LiveProposalAlternativesSnapshot:
-    proposal_body, snapshot = simulate_path(
+    return _validate_path(
         client,
         advise_base_url=advise_base_url,
         complete_scenario=complete_scenario,
-        idempotency_prefix="live-alt-concentration",
-        path_name="concentration_path",
+        simulate_path=simulate_path,
+        collect_statuses=collect_statuses,
+        assert_condition=assert_condition,
         objectives=["REDUCE_CONCENTRATION"],
         max_alternatives=1,
+        expected_statuses={"REDUCE_CONCENTRATION": {"REJECTED_POLICY_BLOCKED"}},
+        idempotency_prefix="live-alt-concentration",
+        path_name="concentration_path",
     )
-    statuses = collect_statuses(proposal_body)
-    assert_condition(
-        snapshot.requested_objectives == ("REDUCE_CONCENTRATION",),
-        (
-            "concentration_path: requested objective drifted from concentration posture, got "
-            f"{snapshot.requested_objectives}"
-        ),
-    )
-    assert_condition(
-        statuses.get("REDUCE_CONCENTRATION") == {"REJECTED_POLICY_BLOCKED"},
-        (f"concentration_path: expected policy-blocked concentration alternative, got {statuses}"),
-    )
-    return snapshot
 
 
 def _validate_live_cash_raise_alternatives_path(
@@ -124,31 +145,25 @@ def _validate_live_cash_raise_alternatives_path(
     advise_base_url: str,
     complete_scenario: AlternativesScenario,
     simulate_path: SimulatePath,
+    collect_statuses: CollectStatuses,
     assert_condition: AssertCondition,
 ) -> LiveProposalAlternativesSnapshot:
-    _, snapshot = simulate_path(
+    return _validate_path(
         client,
         advise_base_url=advise_base_url,
         complete_scenario=complete_scenario,
-        idempotency_prefix="live-alt-cash",
-        path_name="cash_raise_path",
+        simulate_path=simulate_path,
+        collect_statuses=collect_statuses,
+        assert_condition=assert_condition,
         objectives=["RAISE_CASH"],
         max_alternatives=1,
         constraints={
-            "cash_floor": {
-                "amount": "25000",
-                "currency": complete_scenario.reporting_currency,
-            }
+            "cash_floor": {"amount": "25000", "currency": complete_scenario.reporting_currency}
         },
+        exact_rejection_codes=("ALTERNATIVE_CASH_ALREADY_SUFFICIENT",),
+        idempotency_prefix="live-alt-cash",
+        path_name="cash_raise_path",
     )
-    assert_condition(
-        snapshot.rejected_reason_codes == ("ALTERNATIVE_CASH_ALREADY_SUFFICIENT",),
-        (
-            "cash_raise_path: expected cash-floor rejection due to already sufficient base cash, "
-            f"got {snapshot.rejected_reason_codes}"
-        ),
-    )
-    return snapshot
 
 
 def _validate_live_cross_currency_alternatives_path(
@@ -160,28 +175,19 @@ def _validate_live_cross_currency_alternatives_path(
     collect_statuses: CollectStatuses,
     assert_condition: AssertCondition,
 ) -> LiveProposalAlternativesSnapshot:
-    proposal_body, snapshot = simulate_path(
+    return _validate_path(
         client,
         advise_base_url=advise_base_url,
         complete_scenario=complete_scenario,
-        idempotency_prefix="live-alt-currency",
-        path_name="cross_currency_path",
+        simulate_path=simulate_path,
+        collect_statuses=collect_statuses,
+        assert_condition=assert_condition,
         objectives=["IMPROVE_CURRENCY_ALIGNMENT"],
         max_alternatives=1,
+        expected_statuses={"IMPROVE_CURRENCY_ALIGNMENT": {"REJECTED_POLICY_BLOCKED"}},
+        idempotency_prefix="live-alt-currency",
+        path_name="cross_currency_path",
     )
-    statuses = collect_statuses(proposal_body)
-    assert_condition(
-        snapshot.requested_objectives == ("IMPROVE_CURRENCY_ALIGNMENT",),
-        (
-            "cross_currency_path: requested objective drifted from currency posture, got "
-            f"{snapshot.requested_objectives}"
-        ),
-    )
-    assert_condition(
-        statuses.get("IMPROVE_CURRENCY_ALIGNMENT") == {"REJECTED_POLICY_BLOCKED"},
-        (f"cross_currency_path: expected policy-blocked currency alternative, got {statuses}"),
-    )
-    return snapshot
 
 
 def _validate_live_restricted_product_alternatives_path(
@@ -190,32 +196,23 @@ def _validate_live_restricted_product_alternatives_path(
     advise_base_url: str,
     complete_scenario: AlternativesScenario,
     simulate_path: SimulatePath,
+    collect_statuses: CollectStatuses,
     assert_condition: AssertCondition,
 ) -> LiveProposalAlternativesSnapshot:
-    _, snapshot = simulate_path(
+    return _validate_path(
         client,
         advise_base_url=advise_base_url,
         complete_scenario=complete_scenario,
-        idempotency_prefix="live-alt-restricted",
-        path_name="restricted_product_path",
+        simulate_path=simulate_path,
+        collect_statuses=collect_statuses,
+        assert_condition=assert_condition,
         objectives=["AVOID_RESTRICTED_PRODUCTS"],
         max_alternatives=1,
+        required_rejection_codes=("ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE",),
+        expected_counts=(0, 0),
+        idempotency_prefix="live-alt-restricted",
+        path_name="restricted_product_path",
     )
-    assert_condition(
-        snapshot.feasible_count == 0 and snapshot.feasible_with_review_count == 0,
-        (
-            "restricted_product_path: deferred restricted-product path unexpectedly produced "
-            f"ranked alternatives {snapshot}"
-        ),
-    )
-    assert_condition(
-        "ALTERNATIVE_OBJECTIVE_PENDING_CANONICAL_EVIDENCE" in snapshot.rejected_reason_codes,
-        (
-            "restricted_product_path: expected deferred canonical-evidence rejection, got "
-            f"{snapshot.rejected_reason_codes}"
-        ),
-    )
-    return snapshot
 
 
 def _assert_alternatives_latency_bound(
@@ -228,10 +225,8 @@ def _assert_alternatives_latency_bound(
     for snapshot in snapshots:
         assert_condition(
             snapshot.latency_ms <= latency_bound_ms,
-            (
-                f"{snapshot.path_name}: alternatives latency exceeded bound "
-                f"{snapshot.latency_ms:.2f}ms > {latency_bound_ms:.2f}ms"
-            ),
+            f"{snapshot.path_name}: alternatives latency exceeded bound "
+            f"{snapshot.latency_ms:.2f}ms > {latency_bound_ms:.2f}ms",
         )
 
 
@@ -251,50 +246,21 @@ def validate_live_proposal_alternatives_paths(
     LiveProposalAlternativesSnapshot,
     LiveProposalAlternativesSnapshot,
 ]:
-    noop_snapshot = _validate_live_noop_alternatives_path(
-        client,
-        advise_base_url=advise_base_url,
-        complete_scenario=complete_scenario,
-        simulate_path=simulate_path,
-        collect_statuses=collect_statuses,
-        assert_condition=assert_condition,
-    )
-    concentration_snapshot = _validate_live_concentration_alternatives_path(
-        client,
-        advise_base_url=advise_base_url,
-        complete_scenario=complete_scenario,
-        simulate_path=simulate_path,
-        collect_statuses=collect_statuses,
-        assert_condition=assert_condition,
-    )
-    cash_raise_snapshot = _validate_live_cash_raise_alternatives_path(
-        client,
-        advise_base_url=advise_base_url,
-        complete_scenario=complete_scenario,
-        simulate_path=simulate_path,
-        assert_condition=assert_condition,
-    )
-    cross_currency_snapshot = _validate_live_cross_currency_alternatives_path(
-        client,
-        advise_base_url=advise_base_url,
-        complete_scenario=complete_scenario,
-        simulate_path=simulate_path,
-        collect_statuses=collect_statuses,
-        assert_condition=assert_condition,
-    )
-    restricted_product_snapshot = _validate_live_restricted_product_alternatives_path(
-        client,
-        advise_base_url=advise_base_url,
-        complete_scenario=complete_scenario,
-        simulate_path=simulate_path,
-        assert_condition=assert_condition,
-    )
+    """Validate all canonical live alternatives scenarios and return their snapshots."""
+    scenario_args = {
+        "client": client,
+        "advise_base_url": advise_base_url,
+        "complete_scenario": complete_scenario,
+        "simulate_path": simulate_path,
+        "collect_statuses": collect_statuses,
+        "assert_condition": assert_condition,
+    }
     snapshots = (
-        noop_snapshot,
-        concentration_snapshot,
-        cash_raise_snapshot,
-        cross_currency_snapshot,
-        restricted_product_snapshot,
+        _validate_live_noop_alternatives_path(**scenario_args),
+        _validate_live_concentration_alternatives_path(**scenario_args),
+        _validate_live_cash_raise_alternatives_path(**scenario_args),
+        _validate_live_cross_currency_alternatives_path(**scenario_args),
+        _validate_live_restricted_product_alternatives_path(**scenario_args),
     )
     _assert_alternatives_latency_bound(
         snapshots,
