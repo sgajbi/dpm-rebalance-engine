@@ -1,8 +1,14 @@
+from datetime import date
 from pathlib import Path
 
+import pytest
+
 from scripts.check_monetary_float_usage import (
+    MONETARY_FLOAT_EXPIRY_WARNING_DAYS,
+    expiring_allowlist_entries,
     finding_code_key,
     load_allowlist,
+    main,
     scan_repo,
 )
 
@@ -83,3 +89,52 @@ def test_load_allowlist_reports_expired_review(tmp_path: Path) -> None:
     assert errors == []
     assert list(entries) == ["src/core/target_generation.py:1:w_model = float(model_weight)"]
     assert stale == ["src/core/target_generation.py:1:w_model = float(model_weight)"]
+
+
+def test_expiry_window_is_inclusive_and_excludes_distant_or_stale_entries() -> None:
+    entries = {
+        "due-today": {"review_by": "2026-06-01"},
+        "seven-days": {"review_by": "2026-06-08"},
+        "eight-days": {"review_by": "2026-06-09"},
+        "stale": {"review_by": "2026-05-31"},
+    }
+
+    assert expiring_allowlist_entries(
+        entries,
+        today=date(2026, 6, 1),
+    ) == [
+        ("due-today", "2026-06-01", 0),
+        ("seven-days", "2026-06-08", MONETARY_FLOAT_EXPIRY_WARNING_DAYS),
+    ]
+
+
+def test_expiry_window_rejects_negative_threshold() -> None:
+    with pytest.raises(ValueError, match="^warning_days must be non-negative$"):
+        expiring_allowlist_entries({}, today=date(2026, 6, 1), warning_days=-1)
+
+
+def test_main_fails_with_expiring_finding_and_actionable_evidence(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    allowlist_path = tmp_path / "allowlist.json"
+    allowlist_path.write_text(
+        '{"allowlist": [{'
+        '"finding": "src/core/target_generation.py:1:w_model = float(model_weight)", '
+        '"justification": "approved", "owner": "owner", "review_by": "2026-06-08"'
+        "}]}",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        "scripts.check_monetary_float_usage.scan_repo",
+        lambda _repo_root: [],
+    )
+
+    result = main(
+        ["--repo-root", str(tmp_path), "--allowlist", "allowlist.json"],
+        today=date(2026, 6, 1),
+    )
+
+    assert result == 1
+    output = capsys.readouterr().out
+    assert "7-day pre-expiry review window" in output
+    assert "days_remaining=7" in output

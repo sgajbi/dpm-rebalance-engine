@@ -1,8 +1,9 @@
 import argparse
 import json
 import re
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import TypeAlias
 
 KEYWORDS = (
     "amount",
@@ -20,6 +21,8 @@ KEYWORDS = (
 IGNORE_DIRS = {"tests", ".venv", "venv", "docs", "rfcs", "output", "build", "dist", "__pycache__"}
 
 FLOAT_ANNOTATION = re.compile(r"\bfloat\b")
+MONETARY_FLOAT_EXPIRY_WARNING_DAYS = 7
+AllowlistEntry: TypeAlias = dict[str, str]
 
 
 def is_candidate(path: Path) -> bool:
@@ -59,15 +62,21 @@ def _parse_review_date(value: str) -> datetime:
         raise ValueError(f"Invalid review_by date format: {value!r}, expected YYYY-MM-DD") from exc
 
 
-def load_allowlist(path: Path) -> tuple[dict[str, dict], list[str], list[str]]:
+def utc_today() -> date:
+    return datetime.now(tz=UTC).date()
+
+
+def load_allowlist(
+    path: Path, *, today: date | None = None
+) -> tuple[dict[str, AllowlistEntry], list[str], list[str]]:
     if not path.exists():
         return {}, [], []
     data = json.loads(path.read_text(encoding="utf-8"))
     raw_entries = data.get("allowlist", [])
-    entries: dict[str, dict] = {}
+    entries: dict[str, AllowlistEntry] = {}
     errors: list[str] = []
     stale: list[str] = []
-    today = datetime.now(tz=UTC).date()
+    today = today or utc_today()
     for item in raw_entries:
         if isinstance(item, str):
             errors.append(f"Legacy allowlist string entry must be migrated: {item}")
@@ -101,6 +110,25 @@ def load_allowlist(path: Path) -> tuple[dict[str, dict], list[str], list[str]]:
     return entries, errors, stale
 
 
+def expiring_allowlist_entries(
+    entries: dict[str, AllowlistEntry],
+    *,
+    today: date,
+    warning_days: int = MONETARY_FLOAT_EXPIRY_WARNING_DAYS,
+) -> list[tuple[str, str, int]]:
+    """Return approvals inside the hard pre-expiry review window."""
+    if warning_days < 0:
+        raise ValueError("warning_days must be non-negative")
+
+    expiring: list[tuple[str, str, int]] = []
+    for finding, entry in entries.items():
+        review_date = _parse_review_date(entry["review_by"]).date()
+        days_remaining = (review_date - today).days
+        if 0 <= days_remaining <= warning_days:
+            expiring.append((finding, entry["review_by"], days_remaining))
+    return sorted(expiring)
+
+
 def finding_code_key(finding: str) -> str:
     """Return a stable key that ignores line-number movement but keeps path and code text."""
     parts = finding.split(":", 2)
@@ -111,10 +139,13 @@ def finding_code_key(finding: str) -> str:
 
 
 def write_allowlist(
-    path: Path, findings: list[str], existing_entries: dict[str, dict], review_by: str
+    path: Path,
+    findings: list[str],
+    existing_entries: dict[str, AllowlistEntry],
+    review_by: str,
 ) -> None:
     generated_at = datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    allowlist_entries: list[dict] = []
+    allowlist_entries: list[AllowlistEntry] = []
     for finding in sorted(set(findings)):
         if finding in existing_entries:
             allowlist_entries.append(existing_entries[finding])
@@ -137,7 +168,7 @@ def write_allowlist(
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None, *, today: date | None = None) -> int:
     parser = argparse.ArgumentParser(description="Guard against unauthorized monetary float usage")
     parser.add_argument("--repo-root", default=".")
     parser.add_argument(
@@ -151,12 +182,15 @@ def main() -> int:
         default=180,
         help="Days until review_by for newly generated allowlist entries.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     repo_root = Path(args.repo_root).resolve()
     allowlist_path = (repo_root / args.allowlist).resolve()
     findings = scan_repo(repo_root)
-    allowlist_entries, allowlist_errors, stale_entries = load_allowlist(allowlist_path)
+    evaluation_date = today or utc_today()
+    allowlist_entries, allowlist_errors, stale_entries = load_allowlist(
+        allowlist_path, today=evaluation_date
+    )
 
     if args.update_allowlist:
         review_deadline = datetime.now(tz=UTC) + timedelta(days=args.default_review_days)
@@ -176,6 +210,23 @@ def main() -> int:
         for item in stale_entries:
             print(f" - {item}")
         print(f"\nUpdate {allowlist_path} with refreshed review dates and remediation status.")
+        return 1
+
+    expiring_entries = expiring_allowlist_entries(
+        allowlist_entries,
+        today=evaluation_date,
+    )
+    if expiring_entries:
+        print(
+            "Allowlist contains entries inside the "
+            f"{MONETARY_FLOAT_EXPIRY_WARNING_DAYS}-day pre-expiry review window:"
+        )
+        for finding, review_by, days_remaining in expiring_entries:
+            print(f" - {finding} (review_by={review_by}, days_remaining={days_remaining})")
+        print(
+            f"\nRefresh or retire these approvals at least "
+            f"{MONETARY_FLOAT_EXPIRY_WARNING_DAYS} days before review_by."
+        )
         return 1
 
     allowlisted_code_keys = {finding_code_key(finding) for finding in allowlist_entries}
