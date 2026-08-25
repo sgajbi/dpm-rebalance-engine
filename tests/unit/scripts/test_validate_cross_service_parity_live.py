@@ -1,4 +1,7 @@
+from types import SimpleNamespace
+
 from scripts import validate_cross_service_parity_live as parity
+from scripts.live_parity_orchestration import run_live_parity
 
 
 def test_live_parity_configuration_prefers_explicit_values_and_normalizes_urls() -> None:
@@ -70,3 +73,126 @@ def test_changed_state_workspace_parity_checks_each_selected_security(
     assert result == ("CHANGED", "CROSS", "SEC_FUND_EM_EQ")
     assert risk_calls == [None, "CROSS", "SEC_FUND_EM_EQ"]
     assert allocation_calls == ["CHANGED", "CROSS", "SEC_FUND_EM_EQ"]
+
+
+def test_live_parity_orchestration_preserves_order_and_result_assembly(monkeypatch) -> None:
+    complete = parity.PortfolioParityScenario(
+        portfolio_id="COMPLETE",
+        as_of_date="2026-04-10",
+        reporting_currency="USD",
+        issuer_coverage_status="complete",
+        risk_available=True,
+    )
+    degraded = parity.PortfolioParityScenario(
+        portfolio_id="DEGRADED",
+        as_of_date="2026-04-10",
+        reporting_currency="USD",
+        issuer_coverage_status="partial",
+        risk_available=False,
+    )
+    calls: list[str] = []
+
+    class FakeClient:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+    monkeypatch.setattr(
+        parity,
+        "httpx",
+        SimpleNamespace(
+            Client=lambda **_kwargs: FakeClient(),
+            Timeout=lambda _seconds: object(),
+        ),
+    )
+
+    def record(name: str, result=None):
+        def _record(*_args, **_kwargs):
+            calls.append(name)
+            return result
+
+        return _record
+
+    monkeypatch.setattr(parity, "_select_scenarios", record("select", (complete, degraded)))
+    monkeypatch.setattr(parity, "_validate_live_scenario_parity", record("scenarios"))
+    monkeypatch.setattr(parity, "_measure_warm_cache", record("warm_cache", (10.0, 2.0)))
+    monkeypatch.setattr(
+        parity,
+        "_validate_live_decision_paths",
+        record("decision", ("READY", "REVIEW", "BLOCKED")),
+    )
+    monkeypatch.setattr(
+        parity,
+        "_validate_live_proposal_alternatives_paths",
+        record("alternatives", ("NOOP", "CONCENTRATION", "CASH", "CURRENCY", "RESTRICTED")),
+    )
+    monkeypatch.setattr(
+        parity,
+        "_assert_lifecycle_and_delivery_flow",
+        record("lifecycle", ("COMPLETE", 2, "APPROVED", "HANDED_OFF", "REPORT_READY")),
+    )
+    monkeypatch.setattr(
+        parity, "_assert_live_proposal_narrative_flow", record("narrative", "NARRATIVE")
+    )
+    monkeypatch.setattr(parity, "_assert_live_proposal_memo_flow", record("memo", "MEMO"))
+    monkeypatch.setattr(parity, "_assert_live_policy_evaluation_flow", record("policy", "POLICY"))
+    monkeypatch.setattr(
+        parity,
+        "_assert_async_lifecycle_read_surfaces",
+        record("async_lifecycle", ("COMPLETE", 2, "APPROVED")),
+    )
+    monkeypatch.setattr(
+        parity,
+        "_assert_new_version_requires_fresh_approvals",
+        record("fresh_approvals"),
+    )
+    monkeypatch.setattr(
+        parity,
+        "_assert_mixed_approval_routes_remain_version_scoped",
+        record("version_scoped_approvals"),
+    )
+    monkeypatch.setattr(
+        parity,
+        "_assert_workspace_flow",
+        record("workspace", ("RUN-1", "RUN-2", "REVIEW", "READY")),
+    )
+    monkeypatch.setattr(
+        parity,
+        "_validate_changed_state_workspace_parity",
+        record("changed_state", ("CHANGED", "CROSS", "NON_HELD")),
+    )
+
+    result = run_live_parity(
+        parity,
+        advise_base_url="http://advise",
+        core_query_base_url="http://core-query",
+        core_control_base_url="http://core-control",
+        risk_base_url="http://risk",
+        candidate_portfolios=("COMPLETE", "DEGRADED"),
+    )
+
+    assert calls == [
+        "select",
+        "scenarios",
+        "warm_cache",
+        "decision",
+        "alternatives",
+        "lifecycle",
+        "narrative",
+        "memo",
+        "policy",
+        "async_lifecycle",
+        "fresh_approvals",
+        "version_scoped_approvals",
+        "workspace",
+        "changed_state",
+    ]
+    assert result.complete_issuer_portfolio == "COMPLETE"
+    assert result.degraded_issuer_portfolio == "DEGRADED"
+    assert result.changed_state_security_id == "CHANGED"
+    assert result.cross_currency_security_id == "CROSS"
+    assert result.non_held_security_id == "NON_HELD"
+    assert result.proposal_memo == "MEMO"
+    assert result.proposal_policy == "POLICY"

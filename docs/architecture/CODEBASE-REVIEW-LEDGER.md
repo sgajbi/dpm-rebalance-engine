@@ -22,9 +22,9 @@
   test and review.
 - Compatibility: Validation-tooling structure only. No product/API/OpenAPI/persistence,
   migration, runtime, Workbench, downstream, or advisory decision behavior changes.
-- Tests: Focused configuration and changed-state selection tests pass; the live E2E test remains
-  environment-gated and skipped when canonical services are unavailable. Full repository gates
-  are required before merge.
+- Tests: Focused configuration, changed-state selection, orchestration-order, and result-assembly
+  tests pass; the live E2E test remains environment-gated and skipped when canonical services are
+  unavailable. Full repository gates are required before merge.
 - Documentation decision: Updated this ledger and the quality scorecard because the reviewed
   maintainability finding and its measurable gate evidence are repository engineering truth. No
   operator workflow or consumer contract changed, so no wiki publication is required.
