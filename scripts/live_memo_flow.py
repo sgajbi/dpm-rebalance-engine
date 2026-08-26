@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any, Callable, cast
+from typing import Any, Protocol, cast
 
 import httpx
 
@@ -17,6 +17,30 @@ from scripts.live_policy_evaluation_support import (
 from scripts.live_runtime_proposal_memo import LiveProposalMemoSnapshot
 
 
+class MemoSnapshotExtractor(Protocol):
+    """Project the fixed memo-certification evidence into its runtime snapshot."""
+
+    def __call__(
+        self,
+        *,
+        proposal_id: str,
+        version_no: int,
+        memo_body: dict[str, Any],
+        projection_body: dict[str, Any],
+        review_body: dict[str, Any],
+        report_status: str,
+        report_body: dict[str, Any] | None,
+        ai_body: dict[str, Any],
+        lineage_body: dict[str, Any],
+        replay_body: dict[str, Any],
+        stale_hash_block_status: str,
+        client_ready_release_block_status: str,
+        client_ready_document_block_status: str,
+        report_degraded_reason: str | None,
+        latency_ms: float,
+    ) -> LiveProposalMemoSnapshot: ...
+
+
 @dataclass(frozen=True)
 class LiveMemoFlowPrimitives:
     """Typed seams for memo certification without importing the live validator module."""
@@ -25,9 +49,7 @@ class LiveMemoFlowPrimitives:
     post_json: PostJson
     get_json: GetJson
     assertion: Assertion
-    # Memo snapshot extraction has a flow-specific keyword set; no shared
-    # Protocol contract exists across the narrative and policy projections.
-    extract_snapshot: Callable[..., LiveProposalMemoSnapshot]
+    extract_snapshot: MemoSnapshotExtractor
 
 
 @dataclass(frozen=True)

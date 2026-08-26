@@ -31,9 +31,27 @@ class NarrativeParityScenario(Protocol):
     def as_of_date(self) -> str: ...
 
 
-# Snapshot projection keyword arguments differ by live flow, so no shared
-# Protocol contract exists for this extractor.
-SnapshotExtractor = Callable[..., LiveProposalNarrativeSnapshot]
+class NarrativeSnapshotExtractor(Protocol):
+    """Project fixed narrative-certification evidence into its runtime snapshot."""
+
+    def __call__(
+        self,
+        *,
+        proposal_id: str,
+        version_no: int,
+        created_version: dict[str, Any],
+        read_body: dict[str, Any],
+        regeneration_body: dict[str, Any],
+        review_body: dict[str, Any],
+        replay_body: dict[str, Any],
+        report_status: str,
+        report_body: dict[str, Any] | None,
+        latency_ms: float,
+        ai_assisted_status: str | None = None,
+        ai_fallback_reason: str | None = None,
+    ) -> LiveProposalNarrativeSnapshot: ...
+
+
 AiLineageStatusExtractor = Callable[[dict[str, Any]], tuple[str, str | None]]
 
 
@@ -46,7 +64,7 @@ class LiveNarrativeFlowPrimitives:
     post_json: PostJson
     feature_by_key: FeatureByKey
     assertion: Assertion
-    extract_snapshot: SnapshotExtractor
+    extract_snapshot: NarrativeSnapshotExtractor
     extract_ai_lineage_status: AiLineageStatusExtractor
 
 
