@@ -7,7 +7,7 @@
       "path": "scripts/validate_cross_service_parity_live.py",
       "symbol": "__module__",
       "fingerprint": "oversized-code.v1|module|scripts/validate_cross_service_parity_live.py",
-      "max_lines": 2524,
+      "max_lines": 2188,
       "owner": "lotus-advise-quality-governance",
       "reason": "Live parity certification retains one explicitly inventoried validator module; policy, narrative, and workspace orchestration are split into typed flow modules and further decomposition is tracked in the CI quality issue.",
       "expires_on": "2027-08-24"

@@ -1,5 +1,28 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-952-ASYNC-LIFECYCLE-FLOW
+
+- Scope: asynchronous proposal create/version, operation and replay surfaces, execution handoff,
+  report readiness/degradation, and persisted read-surface certification in issue #495.
+- Pattern: `validate_cross_service_parity_live.py` still owned the complete async lifecycle proof,
+  mixing operation polling, replay consistency, version progression, and delivery assertions.
+- Status: Implemented as a bounded typed-flow extraction. `live_async_lifecycle_flow.py` now owns
+  the ordered async proof; the validator retains thin adapters for legacy orchestration entry
+  points and the governed `LiveParityValidationError` failure boundary.
+- Finding Class: CI/live-certification maintainability, typed dependency ownership, and
+  cross-service advisory evidence regression protection.
+- Compatibility: Preserves request payloads, actor identifiers, correlation/idempotency headers,
+  operation/replay assertions, version checks, execution handoff, report 200/503 posture,
+  persisted read-surface expectations, result tuple, diagnostics, and CLI behavior. No product
+  API/OpenAPI, persistence, migration, runtime, Workbench, or downstream change.
+- Evidence: Focused async adapter and report-projection regressions, Ruff/format, configured mypy,
+  full native gates, and exact-mainline validation are required. Validator measured 2,524 -> 2,188
+  lines; Python growth is capped at +200 and the oversized baseline is ratcheted to 2,188.
+- Documentation decision: Review ledger and generated quality evidence changed; no wiki update is
+  required because operator workflow and consumer contract truth are unchanged.
+- Follow-Up: Keep scenario Protocol convergence separate from this extraction; any future shared
+  scenario design must prove a simpler contract before tightening the typed seam.
+
 ## LA-REV-951-LOOSE-LIVE-SEAM-RATIONALES
 
 - Scope: the six intentionally broad callable seams in the live report, memo, narrative, and
