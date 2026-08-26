@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+dd1079cdae7e",
+  "policy_version": "lotus-advise-quality-trend.v1+2d655accd0b0",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -43,9 +43,9 @@
       {
         "metric": "total_python_lines",
         "base_sha": "e879984ed78262ff2dc97bb7f345e1209fe53103",
-        "head_python_content_fingerprint": "31d11ffbba054668d04df7a76d9db32c7be2384b4b09577c8fbc2d41f6add186",
-        "allowed_delta": 580,
-        "reason": "Reviewed #584 split: the original +587 production / +664 test batch is not approved as one change. This Core BenchmarkAssignment:v1 adapter is production +313 lines, tests +259 lines, and +8 policy-review test lines; the ProposalReviewEvidence consumer remains a separate #554 follow-up.",
+        "head_python_content_fingerprint": "3d5c2e8b49d2adcdfc8845d4f7ed2d818bb5a2a5deb57c8df215c7e2da0362bf",
+        "allowed_delta": 713,
+        "reason": "Reviewed #584 split: the original +587 production / +664 test batch is not approved as one change. This Core BenchmarkAssignment:v1 adapter is production +313 lines, tests +259 lines, and +8 policy-review test lines; the #495 rebase-mainline provenance correction adds net +55 CI-gate implementation and +78 regression-test lines. The ProposalReviewEvidence consumer remains a separate #554 follow-up.",
         "approver": "sgajbi",
         "expires_on": "2026-09-09"
       }

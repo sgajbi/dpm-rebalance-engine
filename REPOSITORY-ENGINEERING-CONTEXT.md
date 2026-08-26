@@ -460,7 +460,10 @@ Use these commands as the primary local contract:
    stale exception debt fail closed on the documented date. Any tracked Python change invalidates
    the exception; the fingerprint avoids a self-referential policy-commit SHA. Evidence is emitted
    to `output/quality-trend-gate.json` with requested/resolved ref SHAs, the comparison pair,
-   Python-content fingerprint, and metric deltas.
+   Python-content fingerprint, and metric deltas. When Main Releasability's `HEAD^` comparison
+   follows a rebase merge, the gate may use one matching reviewed exception's original base only
+   when that base is an ancestor of the exact head; it records `comparison_base_source` so the
+   evidence distinguishes that approved provenance from the supplied merge base.
 11. dead-code regression gate
    `make dead-code-gate`
    This runs the pinned Vulture scanner against `src` and `scripts`, fails on new or malformed
