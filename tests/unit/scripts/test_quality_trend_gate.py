@@ -11,7 +11,7 @@ from scripts import quality_trend_gate
 from scripts.quality_gate_common import expected_policy_version
 
 BASE_SHA = "a" * 40
-HEAD_SHA = "b" * 40
+HEAD_PYTHON_CONTENT_FINGERPRINT = "b" * 64
 
 
 def _report(
@@ -52,7 +52,7 @@ def test_compare_metrics_passes_within_thresholds_and_reports_deltas() -> None:
         ),
         policy,
         base_sha=BASE_SHA,
-        head_sha=HEAD_SHA,
+        head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
     )
 
     assert failures == []
@@ -78,7 +78,7 @@ def test_compare_metrics_rejects_complexity_and_documentation_regressions() -> N
         ),
         policy,
         base_sha=BASE_SHA,
-        head_sha=HEAD_SHA,
+        head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
     )
 
     assert len(failures) == 4
@@ -108,7 +108,11 @@ def test_compare_metrics_rejects_sub_rounding_interrogate_decrease() -> None:
     )
 
     results, failures = quality_trend_gate.compare_metrics(
-        base, head, policy, base_sha=BASE_SHA, head_sha=HEAD_SHA
+        base,
+        head,
+        policy,
+        base_sha=BASE_SHA,
+        head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
     )
 
     assert base["interrogate_coverage_percent"] == pytest.approx(1.23)
@@ -141,7 +145,7 @@ def test_reviewed_exception_is_visible_and_applies_its_expiring_limit() -> None:
         {
             "metric": "radon_b_ranked_blocks",
             "base_sha": BASE_SHA,
-            "head_sha": HEAD_SHA,
+            "head_python_content_fingerprint": HEAD_PYTHON_CONTENT_FINGERPRINT,
             "allowed_delta": 2,
             "reason": "Reviewed decomposition is scheduled.",
             "approver": "review-lead",
@@ -153,7 +157,7 @@ def test_reviewed_exception_is_visible_and_applies_its_expiring_limit() -> None:
         quality_trend_gate.parse_report(_report(b_ranked_blocks=6)),
         policy,
         base_sha=BASE_SHA,
-        head_sha=HEAD_SHA,
+        head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
     )
 
     assert failures == []
@@ -162,13 +166,13 @@ def test_reviewed_exception_is_visible_and_applies_its_expiring_limit() -> None:
     assert results[1].allowed_delta == 2
 
 
-def test_reviewed_exception_does_not_apply_to_a_different_revision() -> None:
+def test_reviewed_exception_does_not_apply_to_different_python_content() -> None:
     policy = _policy()
     policy["exceptions"]["entries"] = [
         {
             "metric": "radon_b_ranked_blocks",
             "base_sha": BASE_SHA,
-            "head_sha": HEAD_SHA,
+            "head_python_content_fingerprint": HEAD_PYTHON_CONTENT_FINGERPRINT,
             "allowed_delta": 2,
             "reason": "Reviewed decomposition is scheduled.",
             "approver": "review-lead",
@@ -180,7 +184,7 @@ def test_reviewed_exception_does_not_apply_to_a_different_revision() -> None:
         quality_trend_gate.parse_report(_report(b_ranked_blocks=6)),
         policy,
         base_sha=BASE_SHA,
-        head_sha="c" * 40,
+        head_python_content_fingerprint="c" * 64,
     )
 
     assert any("radon_b_ranked_blocks" in failure for failure in failures)
@@ -208,14 +212,14 @@ def test_active_python_growth_threshold_is_a_hard_200_line_boundary() -> None:
         quality_trend_gate.parse_report(_report(total_lines=300)),
         policy,
         base_sha=BASE_SHA,
-        head_sha=HEAD_SHA,
+        head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
     )
     beyond_limit, beyond_failures = quality_trend_gate.compare_metrics(
         base,
         quality_trend_gate.parse_report(_report(total_lines=301)),
         policy,
         base_sha=BASE_SHA,
-        head_sha=HEAD_SHA,
+        head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
     )
 
     assert within_failures == []
@@ -245,7 +249,7 @@ def test_load_policy_rejects_expired_reviewed_exception(tmp_path: Path) -> None:
         {
             "metric": "total_python_lines",
             "base_sha": BASE_SHA,
-            "head_sha": HEAD_SHA,
+            "head_python_content_fingerprint": HEAD_PYTHON_CONTENT_FINGERPRINT,
             "allowed_delta": 501,
             "reason": "Expired test exception.",
             "approver": "review-lead",
@@ -262,7 +266,10 @@ def test_load_policy_rejects_expired_reviewed_exception(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("field", "value"),
-    [("base_sha", ""), ("head_sha", "not-a-sha")],
+    [
+        ("base_sha", ""),
+        ("head_python_content_fingerprint", "not-a-sha"),
+    ],
 )
 def test_load_policy_rejects_unbound_or_malformed_exception_revision(
     tmp_path: Path, field: str, value: str
@@ -271,7 +278,7 @@ def test_load_policy_rejects_unbound_or_malformed_exception_revision(
     entry = {
         "metric": "total_python_lines",
         "base_sha": BASE_SHA,
-        "head_sha": HEAD_SHA,
+        "head_python_content_fingerprint": HEAD_PYTHON_CONTENT_FINGERPRINT,
         "allowed_delta": 501,
         "reason": "Bounded test exception.",
         "approver": "review-lead",
@@ -327,12 +334,15 @@ def test_run_gate_compares_reports_and_preserves_failure_provenance(
     head_sha = subprocess.check_output(
         ["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True
     ).strip()
+    head_python_content_fingerprint = quality_trend_gate._python_content_fingerprint(
+        tmp_path, "HEAD"
+    )
     policy = json.loads(policy_path.read_text(encoding="utf-8"))
     policy["exceptions"]["entries"] = [
         {
             "metric": "radon_b_ranked_blocks",
             "base_sha": comparison_base_sha,
-            "head_sha": head_sha,
+            "head_python_content_fingerprint": head_python_content_fingerprint,
             "allowed_delta": 1,
             "reason": "Bounded comparison-pair regression fixture.",
             "approver": "review-lead",
@@ -359,6 +369,7 @@ def test_run_gate_compares_reports_and_preserves_failure_provenance(
     assert evidence["base_sha"] == comparison_base_sha
     assert evidence["merge_base_sha"] == comparison_base_sha
     assert evidence["head_sha"] == head_sha
+    assert evidence["head_python_content_fingerprint"] == head_python_content_fingerprint
     assert evidence["counts"]["exceptions"] == 1
     assert evidence["supplied_base_ref"] == "main"
     assert evidence["base_ref"] == "main"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import subprocess
 from dataclasses import asdict, dataclass
@@ -17,6 +18,7 @@ DEFAULT_POLICY_PATH = REPO_ROOT / "quality" / "quality-trend-policy.v1.json"
 DEFAULT_OUTPUT_PATH = REPO_ROOT / "output" / "quality-trend-gate.json"
 _POLICY_VERSION = re.compile(r"^.+\+[0-9a-f]{12}$")
 _SHA = re.compile(r"^[0-9a-f]{40}$")
+_CONTENT_FINGERPRINT = re.compile(r"^[0-9a-f]{64}$")
 _REPORT_PATTERNS: dict[str, re.Pattern[str]] = {
     "total_python_lines": re.compile(r"^- Total Python lines: `(?P<reading>\d+)`$", re.MULTILINE),
     "radon_b_ranked_blocks": re.compile(
@@ -59,7 +61,17 @@ def _sha(candidate: object, *, field: str) -> str:
     value = quality_gate_common.non_empty_string(candidate, field=field)
     if _SHA.fullmatch(value) is None:
         raise ValueError(f"Quality-trend field {field!r} must be a 40-character lowercase SHA.")
-    return value
+    return str(value)
+
+
+def _content_fingerprint(candidate: object, *, field: str) -> str:
+    """Validate a SHA-256 fingerprint that binds an exception to measured Python content."""
+    value = quality_gate_common.non_empty_string(candidate, field=field)
+    if _CONTENT_FINGERPRINT.fullmatch(value) is None:
+        raise ValueError(
+            f"Quality-trend field {field!r} must be a 64-character lowercase SHA-256 fingerprint."
+        )
+    return str(value)
 
 
 def load_policy(path: Path) -> dict[str, Any]:
@@ -119,8 +131,11 @@ def load_policy(path: Path) -> dict[str, Any]:
             entry.get("metric"), field="exceptions[].metric"
         )
         base_sha = _sha(entry.get("base_sha"), field="exceptions[].base_sha")
-        head_sha = _sha(entry.get("head_sha"), field="exceptions[].head_sha")
-        identity = (name, base_sha, head_sha)
+        head_python_content_fingerprint = _content_fingerprint(
+            entry.get("head_python_content_fingerprint"),
+            field="exceptions[].head_python_content_fingerprint",
+        )
+        identity = (name, base_sha, head_python_content_fingerprint)
         if name not in names or identity in seen_exceptions:
             raise ValueError(f"Unsupported or duplicate quality-trend exception metric: {name}")
         allowed = _number(entry.get("allowed_delta"), field=f"exceptions[{name}].allowed_delta")
@@ -178,7 +193,7 @@ def compare_metrics(
     policy: dict[str, Any],
     *,
     base_sha: str,
-    head_sha: str,
+    head_python_content_fingerprint: str,
 ) -> tuple[list[MetricResult], list[str]]:
     results: list[MetricResult] = []
     failures: list[str] = []
@@ -196,11 +211,12 @@ def compare_metrics(
             for entry in entries
             if entry["metric"] == name
             and entry["base_sha"] == base_sha
-            and entry["head_sha"] == head_sha
+            and entry["head_python_content_fingerprint"] == head_python_content_fingerprint
         ]
         if len(matching_exceptions) > 1:
             raise ValueError(
-                f"Duplicate applicable quality-trend exceptions for {name} and {head_sha}."
+                "Duplicate applicable quality-trend exceptions for "
+                f"{name} and {head_python_content_fingerprint}."
             )
         exception = matching_exceptions[0] if matching_exceptions else None
         allowed_delta = (
@@ -258,6 +274,38 @@ def _git_sha(repo_root: Path, ref: str) -> str:
     )
 
 
+def _python_content_fingerprint(repo_root: Path, ref: str) -> str:
+    """Fingerprint the complete tracked Python content that drives the line-count metric.
+
+    The policy file is JSON, so this avoids the impossible self-reference created by
+    binding an exception to the SHA of the commit that contains that exception.  Any
+    changed tracked Python blob yields a different fingerprint and invalidates the
+    exception.
+    """
+    completed = subprocess.run(
+        ["git", "ls-tree", "-rz", "--full-tree", ref],
+        cwd=repo_root,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise ValueError(
+            f"Unable to fingerprint Python content at {ref}: {completed.stderr.decode().strip()}"
+        )
+    fingerprint = hashlib.sha256()
+    for entry in completed.stdout.split(b"\0"):
+        if not entry:
+            continue
+        metadata, path = entry.split(b"\t", maxsplit=1)
+        _mode, object_type, object_id = metadata.decode("ascii").split(maxsplit=2)
+        if object_type == "blob" and path.endswith(b".py"):
+            fingerprint.update(path)
+            fingerprint.update(b"\0")
+            fingerprint.update(object_id.encode("ascii"))
+            fingerprint.update(b"\n")
+    return fingerprint.hexdigest()
+
+
 def _git_merge_base(repo_root: Path, base_ref: str, head_ref: str) -> str:
     return _git_output(
         repo_root,
@@ -281,6 +329,7 @@ def run_gate(
     try:
         policy = load_policy(policy_path)
         head_sha = _git_sha(repo_root, head_ref)
+        head_python_content_fingerprint = _python_content_fingerprint(repo_root, head_ref)
         supplied_base_ref = base_ref
         effective_base_ref = base_ref or "origin/main"
         base_ref_fallback = False
@@ -301,7 +350,11 @@ def run_gate(
         base_values = parse_report(_git_file(repo_root, merge_base_sha, report_path))
         head_values = parse_report(_git_file(repo_root, head_ref, report_path))
         results, failures = compare_metrics(
-            base_values, head_values, policy, base_sha=comparison_base_sha, head_sha=head_sha
+            base_values,
+            head_values,
+            policy,
+            base_sha=comparison_base_sha,
+            head_python_content_fingerprint=head_python_content_fingerprint,
         )
         report.update(
             {
@@ -318,6 +371,7 @@ def run_gate(
                 "base_sha": comparison_base_sha,
                 "merge_base_sha": merge_base_sha,
                 "head_sha": head_sha,
+                "head_python_content_fingerprint": head_python_content_fingerprint,
                 "metrics": [asdict(result) for result in results],
                 "counts": {
                     "findings": len(results),
@@ -333,12 +387,14 @@ def run_gate(
     except (OSError, ValueError, KeyError, TypeError) as exc:
         report["failures"] = [str(exc)]
         report["status"] = "failed"
-    return quality_gate_common.finish_gate(
-        report,
-        output_path,
-        "Quality trend gate",
-        "Quality trend gate passed: {findings} metrics, {new} regressions, "
-        "{resolved} resolved, policy={policy}.",
+    return int(
+        quality_gate_common.finish_gate(
+            report,
+            output_path,
+            "Quality trend gate",
+            "Quality trend gate passed: {findings} metrics, {new} regressions, "
+            "{resolved} resolved, policy={policy}.",
+        )
     )
 
 

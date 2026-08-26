@@ -1,13 +1,13 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+f3fd3f0e7c3f",
+  "policy_version": "lotus-advise-quality-trend.v1+0a656e89a73b",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
       "name": "total_python_lines",
       "direction": "increase",
       "allowed_delta": 200,
-      "reason": "Keep src, scripts, and tests in one visible Python-growth budget so generated production code and shallow regression-test bulk cannot hide from review; the 200-line steady-state limit admits the ordinary +12-to-+166-line run observed across merged PRs #526-#535 with 34 lines of measured headroom while requiring exact reviewed exceptions for the +435 and +511 large batches."
+      "reason": "Keep src, scripts, and tests in one visible Python-growth budget so generated production code and shallow regression-test bulk cannot hide from review; the 200-line steady-state limit admits the ordinary +12-to-+166-line run observed across merged PRs #526-#535 with 34 lines of measured headroom while requiring a merge-base- and measured-content-bound, reviewed exception for the +435 and +511 large batches."
     },
     {
       "name": "radon_b_ranked_blocks",
@@ -33,7 +33,7 @@
     "entry_schema": {
       "metric": "quality metric name",
       "base_sha": "40-character lowercase effective comparison base SHA (the measured merge base)",
-      "head_sha": "40-character lowercase comparison head SHA",
+      "head_python_content_fingerprint": "64-character lowercase SHA-256 fingerprint of all tracked Python blobs at the measured head; avoids self-reference while invalidating the exception when any measured Python content changes",
       "allowed_delta": "non-negative number",
       "reason": "reviewed justification",
       "approver": "GitHub identity",
