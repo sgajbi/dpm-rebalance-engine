@@ -12,9 +12,9 @@ import httpx
 
 from scripts.live_policy_evaluation_support import (
     Assertion,
-    JsonGetter,
-    JsonPoster,
+    GetJson,
     PolicyParityScenario,
+    PostJson,
 )
 from scripts.live_runtime_policy_evaluation import LivePolicyEvaluationSnapshot
 
@@ -27,8 +27,8 @@ class EnsurePolicyPackActive(Protocol):
         client: httpx.Client,
         *,
         advise_base_url: str,
-        get_json: JsonGetter,
-        post_json: JsonPoster,
+        get_json: GetJson,
+        post_json: PostJson,
     ) -> None: ...
 
 
@@ -61,8 +61,8 @@ class LivePolicyEvaluationPrimitives:
     """Typed dependencies needed by the policy flow without importing the validator module."""
 
     assertion: Assertion
-    get_json: JsonGetter
-    post_json: JsonPoster
+    get_json: GetJson
+    post_json: PostJson
     ensure_policy_pack_active: EnsurePolicyPackActive
     policy_evidence_bundle: PolicyEvidenceBundle
     request_policy_report: RequestPolicyReport

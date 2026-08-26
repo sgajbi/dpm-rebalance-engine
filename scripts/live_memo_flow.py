@@ -7,6 +7,7 @@ from typing import Any, Callable, cast
 
 import httpx
 
+from scripts.live_policy_evaluation_support import Assertion, GetJson, PostJson
 from scripts.live_runtime_proposal_memo import LiveProposalMemoSnapshot
 
 
@@ -15,9 +16,9 @@ class LiveMemoFlowPrimitives:
     """Typed seams for memo certification without importing the live validator module."""
 
     create_stateful_proposal: Callable[..., dict[str, Any]]
-    post_json: Callable[..., dict[str, Any]]
-    get_json: Callable[..., dict[str, Any]]
-    assertion: Callable[[bool, str], None]
+    post_json: PostJson
+    get_json: GetJson
+    assertion: Assertion
     extract_snapshot: Callable[..., LiveProposalMemoSnapshot]
 
 

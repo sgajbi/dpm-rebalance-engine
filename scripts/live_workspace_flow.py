@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from typing import Any, Callable, Protocol, cast
+from typing import Any, Protocol, cast
 
 import httpx
+
+from scripts.live_policy_evaluation_support import Assertion, PostJson, RequestJson
 
 
 class WorkspaceScenario(Protocol):
@@ -17,35 +19,6 @@ class WorkspaceScenario(Protocol):
 
     @property
     def as_of_date(self) -> str: ...
-
-
-class PostJson(Protocol):
-    """Typed adapter for an expected-status JSON POST."""
-
-    def __call__(
-        self,
-        client: httpx.Client,
-        *,
-        url: str,
-        expected_status: int,
-        json_body: dict[str, Any],
-        headers: dict[str, str] | None = None,
-    ) -> dict[str, Any]: ...
-
-
-class RequestJson(Protocol):
-    """Typed adapter for an expected-status JSON request."""
-
-    def __call__(
-        self,
-        client: httpx.Client,
-        *,
-        method: str,
-        url: str,
-        expected_status: int,
-        json_body: dict[str, Any] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> dict[str, Any]: ...
 
 
 class AssertAuthorityPosture(Protocol):
@@ -60,7 +33,7 @@ class LiveWorkspacePrimitives:
 
     post_json: PostJson
     request_json: RequestJson
-    assertion: Callable[[bool, str], None]
+    assertion: Assertion
     assert_authority_posture: AssertAuthorityPosture
 
 

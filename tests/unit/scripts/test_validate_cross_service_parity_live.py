@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import get_type_hints
 from unittest.mock import MagicMock
 
 import pytest
@@ -9,7 +10,39 @@ from scripts import live_policy_evaluation_flow as policy_flow
 from scripts import live_workspace_flow as workspace_flow
 from scripts import validate_cross_service_parity_live as parity
 from scripts.live_parity_orchestration import run_live_parity
+from scripts.live_policy_evaluation_support import (
+    Assertion,
+    FeatureByKey,
+    GetJson,
+    PostJson,
+    RequestJson,
+)
 from scripts.live_report_delivery import ReportDeliveryPrimitives, assert_report_delivery
+from scripts.live_runtime_persisted_read_surfaces import fetch_persisted_read_surfaces
+
+
+def test_live_flow_primitives_reuse_shared_typed_seam_contracts() -> None:
+    report_types = get_type_hints(ReportDeliveryPrimitives)
+    narrative_types = get_type_hints(narrative_flow.LiveNarrativeFlowPrimitives)
+    policy_types = get_type_hints(policy_flow.LivePolicyEvaluationPrimitives)
+    memo_types = get_type_hints(memo_flow.LiveMemoFlowPrimitives)
+    workspace_types = get_type_hints(workspace_flow.LiveWorkspacePrimitives)
+    persisted_types = get_type_hints(fetch_persisted_read_surfaces)
+
+    assert report_types["get_json"] is GetJson
+    assert report_types["feature_by_key"] == FeatureByKey
+    assert report_types["assertion"] == Assertion
+    assert narrative_types["feature_by_key"] == FeatureByKey
+    assert narrative_types["get_json"] is GetJson
+    assert narrative_types["post_json"] is PostJson
+    assert policy_types["get_json"] is GetJson
+    assert policy_types["post_json"] is PostJson
+    assert memo_types["get_json"] is GetJson
+    assert memo_types["post_json"] is PostJson
+    assert workspace_types["post_json"] is PostJson
+    assert workspace_types["request_json"] is RequestJson
+    assert workspace_types["assertion"] == Assertion
+    assert persisted_types["get_json"] is GetJson
 
 
 def test_policy_flow_adapter_supplies_typed_primitives(monkeypatch) -> None:

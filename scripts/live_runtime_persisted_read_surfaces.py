@@ -8,7 +8,8 @@ from typing import Any, cast
 
 import httpx
 
-JsonGetter = Callable[..., dict[str, Any]]
+from scripts.live_policy_evaluation_support import GetJson
+
 AssertCondition = Callable[[bool, str], None]
 _DELIVERY_EVENT_TYPES = frozenset(
     "EXECUTION_REQUESTED EXECUTION_ACCEPTED EXECUTION_PARTIALLY_EXECUTED "
@@ -38,7 +39,7 @@ def fetch_persisted_read_surfaces(
     expected_portfolio_id: str,
     created_by_filter: str | None,
     current_version_no: int,
-    get_json: JsonGetter,
+    get_json: GetJson,
     assert_condition: AssertCondition,
 ) -> PersistedReadSurfaces:
     """Fetch the canonical persisted proposal surfaces with their expected statuses."""
@@ -321,7 +322,7 @@ def assert_persisted_replay_surfaces(
     advise_base_url: str,
     proposal_id: str,
     current_version_no: int,
-    get_json: JsonGetter,
+    get_json: GetJson,
     assert_condition: AssertCondition,
 ) -> None:
     """Prove replay evidence retains immutable version identity across versions."""
@@ -359,7 +360,7 @@ def assert_persisted_read_surfaces(
     current_version_no: int,
     expected_state: str,
     expected_report_status: str,
-    get_json: JsonGetter,
+    get_json: GetJson,
     assert_condition: AssertCondition,
 ) -> None:
     """Run the complete persisted read-surface proof in cohesive stages."""

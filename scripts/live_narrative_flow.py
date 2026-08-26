@@ -11,7 +11,12 @@ from typing import Any, Protocol, cast
 
 import httpx
 
-from scripts.live_policy_evaluation_support import Assertion, JsonGetter, JsonPoster
+from scripts.live_policy_evaluation_support import (
+    Assertion,
+    FeatureByKey,
+    GetJson,
+    PostJson,
+)
 from scripts.live_runtime_proposal_narrative import LiveProposalNarrativeSnapshot
 
 
@@ -23,7 +28,6 @@ class NarrativeParityScenario(Protocol):
 
 
 CreateStatefulProposal = Callable[..., dict[str, Any]]
-FeatureByKey = Callable[[dict[str, Any], str], dict[str, Any]]
 SnapshotExtractor = Callable[..., LiveProposalNarrativeSnapshot]
 AiLineageStatusExtractor = Callable[[dict[str, Any]], tuple[str, str | None]]
 
@@ -33,8 +37,8 @@ class LiveNarrativeFlowPrimitives:
     """Typed dependencies needed by narrative proof without importing the validator module."""
 
     create_stateful_proposal: CreateStatefulProposal
-    get_json: JsonGetter
-    post_json: JsonPoster
+    get_json: GetJson
+    post_json: PostJson
     feature_by_key: FeatureByKey
     assertion: Assertion
     extract_snapshot: SnapshotExtractor
@@ -120,7 +124,7 @@ def assert_live_proposal_narrative_flow(
         if item.get("status") == "PASS"
     ]
     primitives.assertion(
-        summarize,
+        bool(summarize),
         f"{proposal_id}: deterministic narrative did not emit pass guardrail evidence",
     )
     primitives.assertion(bool(summarize), f"{proposal_id}: guardrail pass posture missing")
