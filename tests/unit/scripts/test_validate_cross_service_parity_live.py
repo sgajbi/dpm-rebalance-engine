@@ -6,6 +6,7 @@ import pytest
 from scripts import live_memo_flow as memo_flow
 from scripts import live_narrative_flow as narrative_flow
 from scripts import live_policy_evaluation_flow as policy_flow
+from scripts import live_workspace_flow as workspace_flow
 from scripts import validate_cross_service_parity_live as parity
 from scripts.live_parity_orchestration import run_live_parity
 from scripts.live_report_delivery import ReportDeliveryPrimitives, assert_report_delivery
@@ -148,6 +149,129 @@ def test_narrative_ai_assistance_is_skipped_without_explicit_opt_in(monkeypatch)
 
     assert result == ("SKIPPED_NOT_ENABLED", None)
     primitives.create_stateful_proposal.assert_not_called()
+
+
+def test_workspace_flow_adapter_supplies_typed_primitives(monkeypatch) -> None:
+    scenario = parity.PortfolioParityScenario("PORTFOLIO", "2026-04-10", "USD", "complete", True)
+    captured: dict[str, object] = {}
+    expected_result = ("RUN-1", "RUN-2", "SUPERSEDED", "HISTORICAL")
+
+    def record_workspace_flow(*args, **kwargs):
+        captured["primitives"] = kwargs["primitives"]
+        return expected_result
+
+    monkeypatch.setattr(parity, "assert_live_workspace_flow", record_workspace_flow)
+
+    result = parity._assert_workspace_flow(
+        object(),
+        advise_base_url="http://advise",
+        scenario=scenario,
+    )
+
+    primitives = captured["primitives"]
+    assert result == expected_result
+    assert isinstance(primitives, workspace_flow.LiveWorkspacePrimitives)
+    assert primitives.assertion is parity._assert
+    assert primitives.post_json is parity._post_json
+    assert primitives.request_json is parity._request_json
+
+
+def test_workspace_flow_preserves_replay_and_rationale_review_contract() -> None:
+    scenario = SimpleNamespace(portfolio_id="PORTFOLIO", as_of_date="2026-04-10")
+    post_calls: list[tuple[str, dict, dict | None]] = []
+    rationale_runs = iter(("RUN-1", "RUN-2"))
+
+    def rationale_response(run_id: str) -> dict:
+        return {
+            "generated_by": "lotus-ai",
+            "evidence": {"workspace_id": "WS-1"},
+            "workflow_pack_run": {
+                "run_id": run_id,
+                "workflow_authority_owner": "lotus-advise",
+                "runtime_state": "COMPLETED",
+                "review_state": "AWAITING_REVIEW",
+                "supportability_status": "ACTION_REQUIRED",
+                "allowed_review_actions": ["REVISE", "SUPERSEDE"],
+            },
+        }
+
+    def post_json(_client, *, url, expected_status, json_body, headers=None):
+        post_calls.append((url, json_body, headers))
+        if url.endswith("/assistant/rationale"):
+            return rationale_response(next(rationale_runs))
+        if url.endswith("/assistant/rationale/review-actions"):
+            return {
+                "workflow_pack_run": {
+                    "run_id": "RUN-1",
+                    "replacement_run_id": "RUN-2",
+                    "review_state": "SUPERSEDED",
+                    "supportability_status": "HISTORICAL",
+                    "superseded": True,
+                },
+                "summary": ["superseded"],
+            }
+        responses = {
+            "/advisory/workspaces": {
+                "workspace": {
+                    "workspace_id": "WS-1",
+                    "resolved_context": {"portfolio_id": "PORTFOLIO"},
+                }
+            },
+            "/evaluate": {"latest_proposal_result": {"authority": "validated"}},
+            "/save": {
+                "saved_version": {
+                    "workspace_version_id": "WV-1",
+                    "replay_evidence": {"risk_lens": {"source_service": "lotus-risk"}},
+                }
+            },
+            "/handoff": {
+                "handoff_action": "CREATED_PROPOSAL",
+                "proposal": {
+                    "version": {"version_no": 1, "proposal_result": {"authority": "validated"}},
+                    "proposal": {"proposal_id": "P-1"},
+                },
+            },
+        }
+        return next(value for suffix, value in responses.items() if url.endswith(suffix))
+
+    def request_json(_client, *, method, url, expected_status, json_body=None, headers=None):
+        assert method == "GET"
+        assert expected_status == 200
+        return {
+            "evidence": {"risk_lens": {"source_service": "lotus-risk"}},
+            "subject": {"proposal_id": "P-1"},
+            "continuity": {"workspace_version_id": "WV-1"},
+            "hashes": {"evaluation_request_hash": "same-hash"},
+        }
+
+    def assertion(condition: bool, message: str) -> None:
+        assert condition, message
+
+    primitives = workspace_flow.LiveWorkspacePrimitives(
+        post_json=post_json,
+        request_json=request_json,
+        assertion=assertion,
+        assert_authority_posture=lambda **kwargs: None,
+    )
+
+    result = workspace_flow.assert_live_workspace_flow(
+        object(),
+        primitives=primitives,
+        advise_base_url="http://advise",
+        scenario=scenario,
+    )
+
+    assert result == ("RUN-1", "RUN-2", "SUPERSEDED", "HISTORICAL")
+    assert [url.rsplit("/", 1)[-1] for url, _, _ in post_calls] == (
+        "workspaces evaluate save handoff rationale rationale review-actions".split()
+    )
+    assert post_calls[0][1]["stateful_input"] == {
+        "portfolio_id": "PORTFOLIO",
+        "as_of": "2026-04-10",
+    }
+    assert post_calls[3][2] and post_calls[3][2]["Idempotency-Key"].startswith(
+        "live-workspace-handoff-"
+    )
 
 
 def test_changed_state_workspace_parity_checks_each_selected_security(

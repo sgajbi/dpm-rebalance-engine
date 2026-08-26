@@ -1,26 +1,26 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-25T23:18:59.082448+00:00`
+- Generated At: `2026-08-26T00:20:30.174943+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
 
 ## Code Size
 
-- Python files: `1096`
+- Python files: `1097`
 - Packages: `42`
-- Modules: `1054`
-- Total Python lines: `198260`
+- Modules: `1055`
+- Total Python lines: `198460`
 
 ## Largest Files
 
 | Rank | File | Lines |
 | ---: | --- | ---: |
 | 1 | `tests/unit/advisory/api/test_api_advisory_proposal_lifecycle.py` | 4043 |
-| 2 | `scripts/validate_cross_service_parity_live.py` | 2776 |
-| 3 | `tests/unit/advisory/engine/test_engine_proposal_workflow_service.py` | 2691 |
-| 4 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2675 |
-| 5 | `tests/unit/advisory/api/test_api_workspace.py` | 2568 |
+| 2 | `tests/unit/advisory/engine/test_engine_proposal_workflow_service.py` | 2691 |
+| 3 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2675 |
+| 4 | `tests/unit/advisory/api/test_api_workspace.py` | 2568 |
+| 5 | `scripts/validate_cross_service_parity_live.py` | 2524 |
 | 6 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 1978 |
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
@@ -38,9 +38,9 @@
 | 5 | `test_proof_pack_indexes_assets_and_blocks_sensitive_committed_material` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_models.py` | 381 | 216 |
 | 6 | `_live_runtime_payload` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_capture.py` | 26 | 187 |
 | 7 | `test_lifecycle_endpoints_use_separate_request_and_response_objects` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 469 | 185 |
-| 8 | `test_openapi_enrichment_adds_operation_docs_tags_errors_and_schema_examples` | `tests/unit/advisory/api/test_openapi_enrichment.py` | 6 | 179 |
-| 9 | `_current_progress_model_and_domain` | `scripts/refactor_health_report.py` | 17 | 178 |
-| 10 | `assert_live_proposal_narrative_flow` | `scripts/live_narrative_flow.py` | 92 | 177 |
+| 8 | `assert_live_workspace_flow` | `scripts/live_workspace_flow.py` | 148 | 181 |
+| 9 | `test_openapi_enrichment_adds_operation_docs_tags_errors_and_schema_examples` | `tests/unit/advisory/api/test_openapi_enrichment.py` | 6 | 179 |
+| 10 | `_current_progress_model_and_domain` | `scripts/refactor_health_report.py` | 17 | 178 |
 
 ## Complexity
 
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5765, missing=5626, covered=139, coverage=2.4%`
+- Interrogate docstring inventory: `total=5775, missing=5629, covered=146, coverage=2.5%`
 - Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;
   absolute public API and module-ownership thresholds remain report-only until
   classified.

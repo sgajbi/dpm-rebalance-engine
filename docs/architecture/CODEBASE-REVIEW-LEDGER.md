@@ -1,5 +1,43 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-949-LIVE-WORKSPACE-FLOW-BOUNDARY
+
+- Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
+  `scripts/live_workspace_flow.py`, focused live-parity tests, and the oversized-code and
+  generated quality evidence for workspace certification.
+- Pattern: `_assert_workspace_flow` combined workspace evaluation, save/handoff replay
+  continuity, lotus-risk evidence, advisor-rationale generation, replacement lineage, and
+  bounded supersede review assertions in the validator module.
+- Status: Implemented in the bounded #495 maintainability slice. The validator retains a
+  compatibility adapter while the extracted module owns the ordered workspace proof flow;
+  the adapter passes a frozen typed primitive bundle rather than importing validator internals.
+- Finding Class: CI/live-certification maintainability, advisory workflow/evidence ownership,
+  typed seam quality, and oversized-code regression prevention.
+- Summary: The validator decreases from the prior 2,776-line baseline to its measured 2,524
+  source lines, while workspace certification is owned by a dedicated 358-line module. Total
+  Python growth is exactly 200 lines over the 198,260-line main baseline, within the hard +200
+  allowance. The oversized-code baseline is ratcheted to 2,524 with one explicitly inventoried
+  finding, zero new findings, and zero resolved findings; thresholds and unreviewed exceptions
+  remain unchanged.
+- Compatibility: Live-certification tooling only. Workspace request payloads, evaluation/save/
+  handoff statuses, idempotency-key behavior, replay subject/continuity/hash checks, lotus-risk
+  evidence, rationale workflow-pack ownership/status, replacement lineage, bounded review
+  actions, diagnostics, and CLI behavior remain unchanged. No product API/OpenAPI, persistence,
+  migration, runtime, Workbench, or downstream contract changes are in scope.
+- Design decision: The extracted boundary receives a frozen `LiveWorkspacePrimitives` dataclass
+  whose protocols describe expected-status JSON requests, assertions, and the shared authority
+  posture check. Validator-owned transport and domain scenario configuration remain in their
+  existing owner; the flow has an explicit statically checkable seam and no module-object escape
+  hatch.
+- Evidence: Focused live-parity tests cover adapter wiring, ordered workspace calls, stateful
+  as-of input, idempotency-key presence, replay continuity, and rationale supersede lineage;
+  12 focused tests, Ruff, format, and changed-boundary typing checks pass. Full native gates,
+  quality-baseline freshness, quality trend, and exact-mainline coverage remain merge
+  prerequisites. No wiki publication is needed because no operator workflow or consumer
+  contract changed.
+- Follow-Up: #495 continues with the next separately bounded CI fitness or maintainability
+  slice; product/evidence issues #481, #485, #491, #554, and #557 remain outside this scope.
+
 ## LA-REV-948-LIVE-NARRATIVE-FLOW-BOUNDARY
 
 - Scope: `scripts/validate_cross_service_parity_live.py`, the extracted
