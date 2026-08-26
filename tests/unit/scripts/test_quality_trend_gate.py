@@ -554,3 +554,40 @@ def test_run_gate_preserves_a_reviewed_pr_base_after_rebase_mainline_validation(
             head_sha="d" * 40,
             head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
         )
+
+
+def test_reviewed_exception_base_requires_ancestry_and_git_failure_is_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    policy = {
+        "exceptions": {
+            "entries": [
+                {
+                    "base_sha": "a" * 40,
+                    "head_python_content_fingerprint": HEAD_PYTHON_CONTENT_FINGERPRINT,
+                }
+            ]
+        }
+    }
+    monkeypatch.setattr(quality_trend_gate, "_git_is_ancestor", lambda *_args: False)
+
+    assert quality_trend_gate._reviewed_exception_comparison_base(
+        repo_root=tmp_path,
+        policy=policy,
+        supplied_merge_base_sha="c" * 40,
+        head_sha="d" * 40,
+        head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
+    ) == ("c" * 40, "supplied_merge_base")
+    monkeypatch.undo()
+
+    def failed_git(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=[], returncode=2, stdout="", stderr="git unavailable"
+        )
+
+    monkeypatch.setattr(quality_trend_gate.subprocess, "run", failed_git)
+
+    with pytest.raises(
+        ValueError, match="Unable to verify reviewed quality-trend exception ancestry"
+    ):
+        quality_trend_gate._git_is_ancestor(tmp_path, "a" * 40, "d" * 40)
