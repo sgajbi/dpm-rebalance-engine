@@ -36,9 +36,11 @@ from scripts.live_policy_evaluation_flow import (  # noqa: E402
     assert_live_policy_evaluation,
 )
 from scripts.live_policy_evaluation_support import (  # noqa: E402
+    StatefulProposalScenario,
     ensure_sg_policy_pack_active,
     live_policy_evidence_bundle,
     request_live_policy_report,
+    stateful_proposal_input,
 )
 from scripts.live_proposal_alternatives_validation import (  # noqa: E402
     validate_live_proposal_alternatives_paths,
@@ -1006,16 +1008,11 @@ def _create_stateful_proposal(
     client: httpx.Client,
     *,
     advise_base_url: str,
-    scenario: PortfolioParityScenario,
+    scenario: StatefulProposalScenario,
     created_by: str,
     narrative_request: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    stateful_input: dict[str, Any] = {
-        "portfolio_id": scenario.portfolio_id,
-        "as_of": scenario.as_of_date,
-    }
-    if narrative_request is not None:
-        stateful_input["narrative_request"] = narrative_request
+    stateful_input = stateful_proposal_input(scenario, narrative_request)
     return _post_json(
         client,
         url=f"{advise_base_url}/advisory/proposals",
@@ -1034,17 +1031,12 @@ def _create_stateful_version(
     *,
     advise_base_url: str,
     proposal_id: str,
-    scenario: PortfolioParityScenario,
+    scenario: StatefulProposalScenario,
     created_by: str,
     expected_current_version_no: int,
     narrative_request: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    stateful_input: dict[str, Any] = {
-        "portfolio_id": scenario.portfolio_id,
-        "as_of": scenario.as_of_date,
-    }
-    if narrative_request is not None:
-        stateful_input["narrative_request"] = narrative_request
+    stateful_input = stateful_proposal_input(scenario, narrative_request)
     return _post_json(
         client,
         url=f"{advise_base_url}/advisory/proposals/{proposal_id}/versions",

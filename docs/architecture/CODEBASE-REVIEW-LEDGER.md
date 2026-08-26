@@ -1,5 +1,29 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-954-STATEFUL-PROPOSAL-CREATION-SEAM
+
+- Scope: shared stateful proposal-creation dependency for memo and narrative live certification in
+  issue #579, including the validator helper's minimum scenario contract.
+- Pattern: both consuming flows used `Callable[..., dict[str, Any]]` and the memo flow accepted
+  `Any` for scenario even though the validator creation helper only reads `portfolio_id` and
+  `as_of_date`.
+- Status: Implemented locally. `StatefulProposalScenario` and `CreateStatefulProposal` own the
+  exact shared dependency; memo and narrative retain their narrower flow-specific scenario
+  contracts while typechecking against the same creation seam. Broad creation-callable seams are
+  reduced from two to zero and the memo scenario `Any` boundary is removed.
+- Finding Class: CI/live-certification maintainability, type safety, and prevention of hidden
+  validator-to-flow contract drift.
+- Compatibility: Preserves proposal/version URLs, stateful input payloads, optional narrative
+  request inclusion, idempotency, product API/OpenAPI contracts, persistence, migrations,
+  runtime, Workbench, and downstream behavior.
+- Evidence: Focused minimal-scenario payload and annotation tests, Ruff/format, configured mypy,
+  and `make check` (2,810 passing unit tests) pass locally. The shared support module owns
+  source-input assembly, removing duplicated proposal/version payload construction and ratcheting
+  the validator's measured oversized-code baseline from 2,163 to 2,155 lines. Flow-specific
+  snapshot extractors remain intentionally unchanged because their keyword shapes differ.
+- Documentation decision: Review ledger and generated quality evidence will be refreshed; no wiki
+  change is required because operator workflow and consumer contract truth are unchanged.
+
 ## LA-REV-953-REPORT-DELIVERY-PERSISTED-SEAM
 
 - Scope: report-delivery certification's persisted proposal read-surface dependency in issue
