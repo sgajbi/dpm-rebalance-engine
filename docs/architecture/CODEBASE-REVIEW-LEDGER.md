@@ -1,5 +1,29 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-953-REPORT-DELIVERY-PERSISTED-SEAM
+
+- Scope: report-delivery certification's persisted proposal read-surface dependency in issue
+  #575, including the shared seam type and validator adapter.
+- Pattern: `live_report_delivery.py` depended on a validator-private wrapper through
+  `Callable[..., None]`, even though the shared persisted-read primitive had a stable
+  ten-parameter contract already used by the async flow.
+- Status: Implemented as a bounded typed-seam cleanup. The shared
+  `AssertPersistedReadSurfaces` Protocol now lives with the common live seam types; report
+  delivery threads its existing `get_json` and assertion dependencies through that contract,
+  and the unused validator-private wrapper is removed.
+- Finding Class: CI/live-certification maintainability, dependency ownership, and prevention of
+  untyped validator-to-flow coupling.
+- Compatibility: Preserves report request payloads, READY/UNAVAILABLE status handling, persisted
+  read-surface expectations, validator orchestration, product API/OpenAPI contracts, persistence,
+  migrations, runtime, Workbench, and downstream behavior.
+- Evidence: Focused report ready/degraded regressions now verify the shared primitive and callback
+  wiring; Ruff/format, configured mypy, full native gates, and exact-mainline validation are
+  required. Validator measured 2,188 -> 2,163 lines; scoped Python growth is -5 against main.
+- Documentation decision: Review ledger and generated quality evidence will be refreshed; no wiki
+  update is required because operator workflow and consumer contract truth are unchanged.
+- Follow-Up: Reassess only if the shared persisted-read contract changes; unrelated loose seams
+  remain separately tracked on #575.
+
 ## LA-REV-952-ASYNC-LIFECYCLE-FLOW
 
 - Scope: asynchronous proposal create/version, operation and replay surfaces, execution handoff,

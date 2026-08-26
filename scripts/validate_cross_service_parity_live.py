@@ -1543,7 +1543,7 @@ def _assert_lifecycle_and_delivery_flow(
             get_json=_get_json,
             feature_by_key=_feature_by_key,
             assertion=_assert,
-            assert_persisted_read_surfaces=_assert_persisted_read_surfaces,
+            assert_persisted_read_surfaces=assert_persisted_read_surfaces,
         ),
         advise_base_url=advise_base_url,
         proposal_id=proposal_id,
@@ -1988,31 +1988,6 @@ def _assert_changed_state_workspace_allocation_parity(
             f"{scenario.portfolio_id}: changed-state workspace after allocation diverged "
             "from direct lotus-core simulation"
         ),
-    )
-
-
-def _assert_persisted_read_surfaces(
-    client: httpx.Client,
-    *,
-    advise_base_url: str,
-    proposal_id: str,
-    expected_portfolio_id: str,
-    created_by_filter: str | None,
-    current_version_no: int,
-    expected_state: str,
-    expected_report_status: str,
-) -> None:
-    assert_persisted_read_surfaces(
-        client,
-        advise_base_url=advise_base_url,
-        proposal_id=proposal_id,
-        expected_portfolio_id=expected_portfolio_id,
-        created_by_filter=created_by_filter,
-        current_version_no=current_version_no,
-        expected_state=expected_state,
-        expected_report_status=expected_report_status,
-        get_json=_get_json,
-        assert_condition=_assert,
     )
 
 
