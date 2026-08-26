@@ -202,6 +202,36 @@ def test_current_policy_has_no_global_python_growth_exception() -> None:
     assert total_lines["allowed_delta"] == 200
 
 
+def test_python_content_fingerprint_excludes_policy_json_but_detects_python_changes(
+    tmp_path: Path,
+) -> None:
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ["git", *arguments], cwd=tmp_path, check=True, capture_output=True, text=True
+        )
+
+    git("init")
+    git("config", "user.name", "Quality Trend Test")
+    git("config", "user.email", "quality-trend-test@example.invalid")
+    (tmp_path / "example.py").write_text("value = 1\n", encoding="utf-8")
+    (tmp_path / "quality-policy.json").write_text('{"entry": 1}\n', encoding="utf-8")
+    git("add", ".")
+    git("commit", "-m", "test: establish measured content")
+    initial = quality_trend_gate._python_content_fingerprint(tmp_path, "HEAD")
+
+    (tmp_path / "quality-policy.json").write_text('{"entry": 2}\n', encoding="utf-8")
+    git("add", "quality-policy.json")
+    git("commit", "-m", "test: amend policy metadata")
+
+    assert quality_trend_gate._python_content_fingerprint(tmp_path, "HEAD") == initial
+
+    (tmp_path / "example.py").write_text("value = 2\n", encoding="utf-8")
+    git("add", "example.py")
+    git("commit", "-m", "test: change measured Python content")
+
+    assert quality_trend_gate._python_content_fingerprint(tmp_path, "HEAD") != initial
+
+
 def test_active_python_growth_threshold_is_a_hard_200_line_boundary() -> None:
     policy = _policy()
     policy["exceptions"]["entries"] = []
