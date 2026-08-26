@@ -454,7 +454,7 @@ def test_run_gate_compares_reports_and_preserves_failure_provenance(
 
 
 def test_run_gate_preserves_a_reviewed_pr_base_after_rebase_mainline_validation(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     quality_dir = tmp_path / "quality"
     quality_dir.mkdir()
@@ -529,3 +529,28 @@ def test_run_gate_preserves_a_reviewed_pr_base_after_rebase_mainline_validation(
     assert evidence["comparison_base_source"] == "reviewed_exception"
     assert evidence["metrics"][0]["delta"] == 204.0
     assert evidence["metrics"][0]["allowed_delta"] == 204.0
+
+    ambiguous_policy = {
+        "exceptions": {
+            "entries": [
+                {
+                    "base_sha": "a" * 40,
+                    "head_python_content_fingerprint": HEAD_PYTHON_CONTENT_FINGERPRINT,
+                },
+                {
+                    "base_sha": "b" * 40,
+                    "head_python_content_fingerprint": HEAD_PYTHON_CONTENT_FINGERPRINT,
+                },
+            ]
+        }
+    }
+    monkeypatch.setattr(quality_trend_gate, "_git_is_ancestor", lambda *_args: True)
+
+    with pytest.raises(ValueError, match="Ambiguous reviewed quality-trend exception bases"):
+        quality_trend_gate._reviewed_exception_comparison_base(
+            repo_root=tmp_path,
+            policy=ambiguous_policy,
+            supplied_merge_base_sha="c" * 40,
+            head_sha="d" * 40,
+            head_python_content_fingerprint=HEAD_PYTHON_CONTENT_FINGERPRINT,
+        )
