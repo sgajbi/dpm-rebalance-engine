@@ -15,10 +15,14 @@ from scripts.live_runtime_proposal_memo import LiveProposalMemoSnapshot
 class LiveMemoFlowPrimitives:
     """Typed seams for memo certification without importing the live validator module."""
 
+    # The validator's concrete scenario is broader than this flow's minimum
+    # Protocol; a shared callable Protocol would over-constrain that boundary.
     create_stateful_proposal: Callable[..., dict[str, Any]]
     post_json: PostJson
     get_json: GetJson
     assertion: Assertion
+    # Memo snapshot extraction has a flow-specific keyword set; no shared
+    # Protocol contract exists across the narrative and policy projections.
     extract_snapshot: Callable[..., LiveProposalMemoSnapshot]
 
 

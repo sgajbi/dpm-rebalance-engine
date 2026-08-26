@@ -53,6 +53,8 @@ class RequestPolicyReport(Protocol):
     ) -> tuple[str, dict[str, Any] | None, str | None]: ...
 
 
+# Snapshot projection keyword arguments differ by live flow, so no shared
+# Protocol contract exists for this extractor.
 SnapshotExtractor = Callable[..., LivePolicyEvaluationSnapshot]
 
 
