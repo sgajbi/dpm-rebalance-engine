@@ -451,3 +451,81 @@ def test_run_gate_compares_reports_and_preserves_failure_provenance(
     assert failure_evidence["base_ref"] == "HEAD^"
     assert failure_evidence["base_ref_fallback"] is True
     assert "missing metric" in failure_evidence["failures"][0]
+
+
+def test_run_gate_preserves_a_reviewed_pr_base_after_rebase_mainline_validation(
+    tmp_path: Path,
+) -> None:
+    quality_dir = tmp_path / "quality"
+    quality_dir.mkdir()
+    policy_path = quality_dir / "quality-trend-policy.v1.json"
+    policy_path.write_text(
+        json.dumps(
+            json.loads(Path("quality/quality-trend-policy.v1.json").read_text(encoding="utf-8"))
+        ),
+        encoding="utf-8",
+    )
+    report_path = quality_dir / "baseline_report.md"
+    report_path.write_text(_report(), encoding="utf-8")
+    source_path = tmp_path / "example.py"
+    source_path.write_text("value = 1\n", encoding="utf-8")
+
+    def git(*arguments: str) -> None:
+        subprocess.run(
+            ["git", *arguments], cwd=tmp_path, check=True, capture_output=True, text=True
+        )
+
+    git("init")
+    git("config", "user.name", "Quality Trend Test")
+    git("config", "user.email", "quality-trend-test@example.invalid")
+    git("add", ".")
+    git("commit", "-m", "test: establish reviewed PR base")
+    reviewed_base_sha = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=tmp_path, text=True
+    ).strip()
+
+    source_path.write_text("value = 1\nvalue += 2\n", encoding="utf-8")
+    git("add", "example.py")
+    git("commit", "-m", "feat: add reviewed source")
+    (tmp_path / "README.md").write_text("intermediate rebase commit\n", encoding="utf-8")
+    git("add", "README.md")
+    git("commit", "-m", "docs: retain intermediate rebase commit")
+
+    head_python_content_fingerprint = quality_trend_gate._python_content_fingerprint(
+        tmp_path, "HEAD"
+    )
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    policy["exceptions"]["entries"] = [
+        {
+            "metric": "total_python_lines",
+            "base_sha": reviewed_base_sha,
+            "head_python_content_fingerprint": head_python_content_fingerprint,
+            "allowed_delta": 204,
+            "reason": "Reviewed rebase-mainline provenance fixture.",
+            "approver": "review-lead",
+            "expires_on": "2099-01-01",
+        }
+    ]
+    policy["policy_version"] = expected_policy_version(policy)
+    policy_path.write_text(json.dumps(policy), encoding="utf-8")
+    report_path.write_text(_report(total_lines=304), encoding="utf-8")
+    git("add", "quality")
+    git("commit", "-m", "build: approve reviewed source growth")
+
+    output_path = tmp_path / "output" / "quality-trend-gate.json"
+    result = quality_trend_gate.run_gate(
+        repo_root=tmp_path,
+        policy_path=policy_path,
+        output_path=output_path,
+        base_ref="HEAD^",
+        head_ref="HEAD",
+    )
+    evidence = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert result == 0
+    assert evidence["status"] == "passed"
+    assert evidence["base_ref_sha"] == evidence["merge_base_sha"]
+    assert evidence["base_sha"] == reviewed_base_sha
+    assert evidence["comparison_base_source"] == "reviewed_exception"
+    assert evidence["metrics"][0]["delta"] == 204.0
+    assert evidence["metrics"][0]["allowed_delta"] == 204.0
