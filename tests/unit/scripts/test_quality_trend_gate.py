@@ -194,8 +194,16 @@ def test_reviewed_exception_does_not_apply_to_different_python_content() -> None
 
 def test_current_policy_has_no_global_python_growth_exception() -> None:
     policy = _policy()
+    entries = policy["exceptions"]["entries"]
 
-    assert policy["exceptions"]["entries"] == []
+    assert len(entries) == 1
+    exception = entries[0]
+    assert exception["metric"] == "total_python_lines"
+    assert exception["base_sha"] == "e879984ed78262ff2dc97bb7f345e1209fe53103"
+    assert exception["allowed_delta"] > 200
+    assert exception["approver"] == "sgajbi"
+    assert "production +313 lines" in exception["reason"]
+    assert "tests +259 lines" in exception["reason"]
     total_lines = next(
         metric for metric in policy["metrics"] if metric["name"] == "total_python_lines"
     )
