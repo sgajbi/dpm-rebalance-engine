@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+80606b6efe48",
+  "policy_version": "lotus-advise-quality-trend.v1+dd1079cdae7e",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -39,6 +39,16 @@
       "approver": "GitHub identity",
       "expires_on": "YYYY-MM-DD deliberate approver-controlled debt expiry; unlike floating tool versions, this intentional date makes stale exception debt fail closed"
     },
-    "entries": []
+    "entries": [
+      {
+        "metric": "total_python_lines",
+        "base_sha": "e879984ed78262ff2dc97bb7f345e1209fe53103",
+        "head_python_content_fingerprint": "31d11ffbba054668d04df7a76d9db32c7be2384b4b09577c8fbc2d41f6add186",
+        "allowed_delta": 580,
+        "reason": "Reviewed #584 split: the original +587 production / +664 test batch is not approved as one change. This Core BenchmarkAssignment:v1 adapter is production +313 lines, tests +259 lines, and +8 policy-review test lines; the ProposalReviewEvidence consumer remains a separate #554 follow-up.",
+        "approver": "sgajbi",
+        "expires_on": "2026-09-09"
+      }
+    ]
   }
 }
