@@ -1,5 +1,25 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-955-LIVE-SNAPSHOT-EXTRACTOR-SEAMS
+
+- Scope: the fixed-shape snapshot-extractor dependencies of the memo, policy-evaluation, and
+  narrative live-certification flows in issue #581.
+- Pattern: the three flows used broad `Callable[..., Snapshot]` seams despite each call site having
+  one stable, flow-owned keyword contract. Differing flow shapes were incorrectly recorded as a
+  reason not to type the seams.
+- Status: Implemented locally. Each flow owns one minimal snapshot-extractor Protocol; no shared
+  Protocol is introduced because the input shapes are intentionally different.
+- Finding Class: CI/live-certification maintainability, executable contract clarity, and prevention
+  of snapshot-construction drift.
+- Compatibility: Preserves snapshot construction, live-certification behavior, product API/OpenAPI
+  contracts, persistence, migrations, runtime, Workbench, and downstream behavior.
+- Evidence: 16 focused parity-validator tests, all 2,811 native unit tests, Ruff/format, configured
+  mypy across 661 source files, quality-trend, and oversized-code gates pass locally. The
+  same-pattern scan shows three broad snapshot extractor callables reduced to zero. Remote CI and
+  exact-main validation remain required before closure.
+- Documentation decision: Review ledger and generated quality evidence will be refreshed; no wiki
+  change is required because operator workflow and consumer contract truth are unchanged.
+
 ## LA-REV-954-STATEFUL-PROPOSAL-CREATION-SEAM
 
 - Scope: shared stateful proposal-creation dependency for memo and narrative live certification in

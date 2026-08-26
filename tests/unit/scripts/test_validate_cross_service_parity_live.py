@@ -1,3 +1,4 @@
+from inspect import Parameter, signature
 from types import SimpleNamespace
 from typing import get_type_hints
 from unittest.mock import MagicMock
@@ -45,11 +46,80 @@ def test_live_flow_primitives_reuse_shared_typed_seam_contracts() -> None:
     assert memo_types["get_json"] is GetJson
     assert memo_types["post_json"] is PostJson
     assert memo_types["create_stateful_proposal"] is CreateStatefulProposal
+    assert memo_types["extract_snapshot"] is memo_flow.MemoSnapshotExtractor
     assert narrative_types["create_stateful_proposal"] is CreateStatefulProposal
+    assert narrative_types["extract_snapshot"] is narrative_flow.NarrativeSnapshotExtractor
+    assert policy_types["extract_snapshot"] is policy_flow.PolicyEvaluationSnapshotExtractor
     assert workspace_types["post_json"] is PostJson
     assert workspace_types["request_json"] is RequestJson
     assert workspace_types["assertion"] == Assertion
     assert persisted_types["get_json"] is GetJson
+
+
+def test_live_snapshot_extractor_protocols_match_each_owning_flow_keyword_contract() -> None:
+    assert tuple(signature(memo_flow.MemoSnapshotExtractor.__call__).parameters) == (
+        "self",
+        "proposal_id",
+        "version_no",
+        "memo_body",
+        "projection_body",
+        "review_body",
+        "report_status",
+        "report_body",
+        "ai_body",
+        "lineage_body",
+        "replay_body",
+        "stale_hash_block_status",
+        "client_ready_release_block_status",
+        "client_ready_document_block_status",
+        "report_degraded_reason",
+        "latency_ms",
+    )
+    assert tuple(signature(policy_flow.PolicyEvaluationSnapshotExtractor.__call__).parameters) == (
+        "self",
+        "created_body",
+        "read_body",
+        "queue_body",
+        "workflow_body",
+        "sign_off_body",
+        "report_status",
+        "report_body",
+        "ai_body",
+        "lineage_body",
+        "replay_body",
+        "stale_hash_block_status",
+        "client_ready_document_block_status",
+        "forbidden_ai_action_block_status",
+        "report_degraded_reason",
+        "latency_ms",
+    )
+    assert tuple(signature(narrative_flow.NarrativeSnapshotExtractor.__call__).parameters) == (
+        "self",
+        "proposal_id",
+        "version_no",
+        "created_version",
+        "read_body",
+        "regeneration_body",
+        "review_body",
+        "replay_body",
+        "report_status",
+        "report_body",
+        "latency_ms",
+        "ai_assisted_status",
+        "ai_fallback_reason",
+    )
+    for extractor in (
+        memo_flow.MemoSnapshotExtractor,
+        policy_flow.PolicyEvaluationSnapshotExtractor,
+        narrative_flow.NarrativeSnapshotExtractor,
+    ):
+        parameters = tuple(signature(extractor.__call__).parameters.values())
+        assert parameters[0].name == "self"
+        assert all(parameter.kind is Parameter.KEYWORD_ONLY for parameter in parameters[1:])
+
+    narrative_parameters = signature(narrative_flow.NarrativeSnapshotExtractor.__call__).parameters
+    assert narrative_parameters["ai_assisted_status"].default is None
+    assert narrative_parameters["ai_fallback_reason"].default is None
 
 
 def test_stateful_proposal_creation_helpers_depend_only_on_shared_scenario_contract(

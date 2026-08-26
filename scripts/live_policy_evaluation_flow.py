@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import time
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, Protocol, cast
 
@@ -53,9 +52,28 @@ class RequestPolicyReport(Protocol):
     ) -> tuple[str, dict[str, Any] | None, str | None]: ...
 
 
-# Snapshot projection keyword arguments differ by live flow, so no shared
-# Protocol contract exists for this extractor.
-SnapshotExtractor = Callable[..., LivePolicyEvaluationSnapshot]
+class PolicyEvaluationSnapshotExtractor(Protocol):
+    """Project fixed policy-certification evidence into its runtime snapshot."""
+
+    def __call__(
+        self,
+        *,
+        created_body: dict[str, Any],
+        read_body: dict[str, Any],
+        queue_body: dict[str, Any],
+        workflow_body: dict[str, Any],
+        sign_off_body: dict[str, Any],
+        report_status: str,
+        report_body: dict[str, Any] | None,
+        ai_body: dict[str, Any],
+        lineage_body: dict[str, Any],
+        replay_body: dict[str, Any],
+        stale_hash_block_status: str,
+        client_ready_document_block_status: str,
+        forbidden_ai_action_block_status: str,
+        report_degraded_reason: str | None,
+        latency_ms: float,
+    ) -> LivePolicyEvaluationSnapshot: ...
 
 
 @dataclass(frozen=True)
@@ -68,7 +86,7 @@ class LivePolicyEvaluationPrimitives:
     ensure_policy_pack_active: EnsurePolicyPackActive
     policy_evidence_bundle: PolicyEvidenceBundle
     request_policy_report: RequestPolicyReport
-    extract_snapshot: SnapshotExtractor
+    extract_snapshot: PolicyEvaluationSnapshotExtractor
 
 
 def _create_live_policy_evaluation(
