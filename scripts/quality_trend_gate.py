@@ -314,6 +314,54 @@ def _git_merge_base(repo_root: Path, base_ref: str, head_ref: str) -> str:
     )
 
 
+def _git_is_ancestor(repo_root: Path, ancestor: str, descendant: str) -> bool:
+    completed = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", ancestor, descendant],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode not in {0, 1}:
+        raise ValueError(
+            "Unable to verify reviewed quality-trend exception ancestry: "
+            f"{completed.stderr.strip()}"
+        )
+    return completed.returncode == 0
+
+
+def _reviewed_exception_comparison_base(
+    *,
+    repo_root: Path,
+    policy: dict[str, Any],
+    supplied_merge_base_sha: str,
+    head_sha: str,
+    head_python_content_fingerprint: str,
+) -> tuple[str, str]:
+    """Retain a reviewed PR comparison after rebase merging it onto main.
+
+    Main releasability validates ``HEAD^`` after a rebase merge, while an exception
+    is deliberately bound to the PR's original merge base.  Use that original base
+    only when the exact measured Python content still matches and it is an ancestor
+    of the checked head.  Ambiguous reviewed bases fail closed rather than choosing
+    a broader allowance.
+    """
+    reviewed_bases = {
+        entry["base_sha"]
+        for entry in policy["exceptions"]["entries"]
+        if entry["head_python_content_fingerprint"] == head_python_content_fingerprint
+        and _git_is_ancestor(repo_root, entry["base_sha"], head_sha)
+    }
+    if not reviewed_bases or supplied_merge_base_sha in reviewed_bases:
+        return supplied_merge_base_sha, "supplied_merge_base"
+    if len(reviewed_bases) != 1:
+        raise ValueError(
+            "Ambiguous reviewed quality-trend exception bases match the measured Python "
+            "content; refuse to select a comparison base."
+        )
+    return reviewed_bases.pop(), "reviewed_exception"
+
+
 def run_gate(
     *, repo_root: Path, policy_path: Path, output_path: Path, base_ref: str, head_ref: str
 ) -> int:
@@ -345,9 +393,15 @@ def run_gate(
             )
             base_sha = _git_sha(repo_root, effective_base_ref)
         merge_base_sha = _git_merge_base(repo_root, effective_base_ref, head_ref)
-        comparison_base_sha = merge_base_sha
+        comparison_base_sha, comparison_base_source = _reviewed_exception_comparison_base(
+            repo_root=repo_root,
+            policy=policy,
+            supplied_merge_base_sha=merge_base_sha,
+            head_sha=head_sha,
+            head_python_content_fingerprint=head_python_content_fingerprint,
+        )
         report_path = policy["report_path"]
-        base_values = parse_report(_git_file(repo_root, merge_base_sha, report_path))
+        base_values = parse_report(_git_file(repo_root, comparison_base_sha, report_path))
         head_values = parse_report(_git_file(repo_root, head_ref, report_path))
         results, failures = compare_metrics(
             base_values,
@@ -370,6 +424,7 @@ def run_gate(
                 "base_ref_sha": base_sha,
                 "base_sha": comparison_base_sha,
                 "merge_base_sha": merge_base_sha,
+                "comparison_base_source": comparison_base_source,
                 "head_sha": head_sha,
                 "head_python_content_fingerprint": head_python_content_fingerprint,
                 "metrics": [asdict(result) for result in results],
