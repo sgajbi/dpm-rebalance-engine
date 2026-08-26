@@ -109,6 +109,8 @@ jobs:
       - name: Wiki Quality Gate
         env:
           LOTUS_PLATFORM_ROOT: ${{ github.workspace }}/lotus-platform
+          QUALITY_BASE_REF: origin/main
+          QUALITY_HEAD_REF: HEAD
         run: make wiki-quality-gate
       - name: Domain Data Products Gate
         env:
