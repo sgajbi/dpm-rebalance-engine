@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from scripts import live_async_lifecycle_flow as async_flow
 from scripts import live_memo_flow as memo_flow
 from scripts import live_narrative_flow as narrative_flow
 from scripts import live_policy_evaluation_flow as policy_flow
@@ -68,6 +69,41 @@ def test_policy_flow_adapter_supplies_typed_primitives(monkeypatch) -> None:
     assert primitives.assertion is parity._assert
     assert primitives.get_json is parity._get_json
     assert primitives.post_json is parity._post_json
+
+
+def test_async_lifecycle_preserves_degraded_report_projection(monkeypatch) -> None:
+    artifacts = SimpleNamespace(
+        create_result={"proposal": {"proposal_id": "P-1", "portfolio_id": "PORTFOLIO"}},
+        version_result={"proposal": {"current_version_no": 2}},
+    )
+    monkeypatch.setattr(async_flow, "_run_async_lifecycle", lambda *_args, **_kwargs: artifacts)
+    client = MagicMock()
+    client.post.return_value = SimpleNamespace(status_code=503, text="report unavailable")
+    persisted = MagicMock()
+    primitives = SimpleNamespace(
+        post_json=MagicMock(
+            side_effect=[
+                {"handoff_status": "REQUESTED", "execution_request_id": "REQ-1"},
+                {"handoff_status": "EXECUTED"},
+            ]
+        ),
+        get_json=lambda *_args, **_kwargs: {},
+        assertion=lambda *_args: None,
+        feature_by_key=lambda *_args: {"operational_ready": False},
+        assert_persisted_read_surfaces=persisted,
+        promote_to_execution_ready=MagicMock(),
+        utc_iso_after=lambda **_kwargs: "2026-04-10T00:00:02Z",
+    )
+
+    result = async_flow.assert_live_async_lifecycle(
+        client,
+        primitives=primitives,
+        advise_base_url="http://advise",
+        scenario=SimpleNamespace(portfolio_id="PORTFOLIO", as_of_date="2026-04-10"),
+    )
+
+    assert result == ("PORTFOLIO", 2, "EXECUTED")
+    assert persisted.call_args.kwargs["expected_report_status"] == "UNAVAILABLE"
 
 
 def test_policy_flow_preserves_phase_order_and_snapshot_projection(monkeypatch) -> None:

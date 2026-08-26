@@ -10,13 +10,19 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from numbers import Real
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal, NoReturn, cast
 
 import httpx
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from scripts.live_async_lifecycle_flow import (  # noqa: E402
+    AsyncLifecycleScenario,
+    LiveAsyncLifecyclePrimitives,
+    assert_async_proposal_lifecycle,
+    assert_live_async_lifecycle,
+)
 from scripts.live_memo_flow import (  # noqa: E402
     LiveMemoFlowPrimitives,
     assert_live_memo_flow,
@@ -101,6 +107,10 @@ _WARM_CACHE_TOLERANCE_ABSOLUTE_MS = 125.0
 
 class LiveParityValidationError(RuntimeError):
     pass
+
+
+def _raise_live_error(message: str) -> NoReturn:
+    raise LiveParityValidationError(message)
 
 
 @dataclass(frozen=True)
@@ -1048,197 +1058,6 @@ def _create_stateful_version(
     )
 
 
-def _submit_async_create(
-    client: httpx.Client,
-    *,
-    advise_base_url: str,
-    scenario: PortfolioParityScenario,
-    created_by: str,
-) -> dict[str, Any]:
-    return _post_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/async",
-        expected_status=202,
-        json_body={
-            "created_by": created_by,
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": scenario.portfolio_id,
-                "as_of": scenario.as_of_date,
-            },
-        },
-        headers={
-            "Idempotency-Key": f"live-async-create-{uuid.uuid4().hex}",
-            "X-Correlation-Id": f"live-async-create-{uuid.uuid4().hex}",
-        },
-    )
-
-
-def _submit_async_version(
-    client: httpx.Client,
-    *,
-    advise_base_url: str,
-    proposal_id: str,
-    scenario: PortfolioParityScenario,
-    created_by: str,
-    expected_current_version_no: int,
-) -> dict[str, Any]:
-    return _post_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/async",
-        expected_status=202,
-        json_body={
-            "created_by": created_by,
-            "expected_current_version_no": expected_current_version_no,
-            "input_mode": "stateful",
-            "stateful_input": {
-                "portfolio_id": scenario.portfolio_id,
-                "as_of": scenario.as_of_date,
-            },
-        },
-        headers={"X-Correlation-Id": f"live-async-version-{uuid.uuid4().hex}"},
-    )
-
-
-def _wait_for_async_success(
-    client: httpx.Client,
-    *,
-    advise_base_url: str,
-    operation_id: str,
-    expected_type: str,
-) -> dict[str, Any]:
-    deadline = time.monotonic() + 45.0
-    while time.monotonic() < deadline:
-        status_body = _get_json(
-            client,
-            url=f"{advise_base_url}/advisory/proposals/operations/{operation_id}",
-            expected_status=200,
-        )
-        _assert(
-            status_body["operation_type"] == expected_type,
-            f"{operation_id}: unexpected operation type {status_body['operation_type']}",
-        )
-        if status_body["status"] == "SUCCEEDED":
-            result = status_body.get("result")
-            _assert(isinstance(result, dict), f"{operation_id}: async success missing result")
-            return cast(dict[str, Any], result)
-        if status_body["status"] == "FAILED":
-            raise LiveParityValidationError(
-                f"{operation_id}: async operation failed {status_body.get('error')}"
-            )
-        time.sleep(0.5)
-    raise LiveParityValidationError(f"{operation_id}: async operation did not finish in time")
-
-
-def _assert_async_operation_surfaces(
-    client: httpx.Client,
-    *,
-    advise_base_url: str,
-    accepted_body: dict[str, Any],
-    expected_type: str,
-    result_body: dict[str, Any],
-) -> None:
-    operation_id = str(accepted_body["operation_id"])
-    correlation_id = str(accepted_body["correlation_id"])
-    operation = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/operations/{operation_id}",
-        expected_status=200,
-    )
-    by_correlation = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/operations/by-correlation/{correlation_id}",
-        expected_status=200,
-    )
-    replay = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/operations/{operation_id}/replay-evidence",
-        expected_status=200,
-    )
-    proposal = cast(dict[str, Any], result_body["proposal"])
-    version = cast(dict[str, Any], result_body["version"])
-    proposal_id = str(proposal["proposal_id"])
-    version_no = int(version["version_no"])
-    version_replay = _get_json(
-        client,
-        url=(
-            f"{advise_base_url}/advisory/proposals/{proposal_id}/versions/"
-            f"{version_no}/replay-evidence"
-        ),
-        expected_status=200,
-    )
-    detail = _get_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{proposal_id}?include_evidence=false",
-        expected_status=200,
-    )
-
-    _assert(
-        operation["operation_type"] == by_correlation["operation_type"] == expected_type,
-        f"{operation_id}: async operation type diverged across read surfaces",
-    )
-    _assert(
-        operation["operation_id"] == by_correlation["operation_id"] == operation_id,
-        f"{operation_id}: operation lookup diverged across id/correlation surfaces",
-    )
-    _assert(
-        operation["correlation_id"] == by_correlation["correlation_id"] == correlation_id,
-        f"{operation_id}: correlation lookup diverged across id/correlation surfaces",
-    )
-    _assert(
-        operation["status"] == by_correlation["status"] == "SUCCEEDED",
-        f"{operation_id}: async operation did not stay in succeeded state",
-    )
-    _assert(
-        str(cast(dict[str, Any], operation["result"])["proposal"]["proposal_id"]) == proposal_id,
-        f"{operation_id}: operation result proposal id diverged from async result",
-    )
-    _assert(
-        int(cast(dict[str, Any], operation["result"])["version"]["version_no"]) == version_no,
-        f"{operation_id}: operation result version diverged from async result",
-    )
-    _assert(
-        replay["subject"]["scope"] == "ASYNC_OPERATION",
-        f"{operation_id}: async replay subject scope was not ASYNC_OPERATION",
-    )
-    _assert(
-        replay["subject"]["operation_id"] == operation_id,
-        f"{operation_id}: async replay subject lost operation id",
-    )
-    _assert(
-        replay["subject"]["proposal_id"] == proposal_id,
-        f"{operation_id}: async replay subject lost proposal id",
-    )
-    _assert(
-        replay["subject"]["proposal_version_no"] == version_no,
-        f"{operation_id}: async replay subject lost proposal version",
-    )
-    _assert(
-        replay["continuity"]["correlation_id"] == correlation_id,
-        f"{operation_id}: async replay continuity lost correlation id",
-    )
-    _assert(
-        replay["continuity"]["async_operation_id"] == operation_id,
-        f"{operation_id}: async replay continuity lost operation id",
-    )
-    _assert(
-        replay["hashes"]["request_hash"] == version_replay["hashes"]["request_hash"],
-        f"{operation_id}: async/proposal replay request hash diverged",
-    )
-    _assert(
-        replay["hashes"]["simulation_hash"] == version_replay["hashes"]["simulation_hash"],
-        f"{operation_id}: async/proposal replay simulation hash diverged",
-    )
-    _assert(
-        replay["resolved_context"] == version_replay["resolved_context"],
-        f"{operation_id}: async/proposal replay resolved context diverged",
-    )
-    _assert(
-        int(detail["proposal"]["current_version_no"]) >= version_no,
-        f"{operation_id}: proposal detail current version regressed behind async result",
-    )
-
-
 def _post_transition(
     client: httpx.Client,
     *,
@@ -1571,65 +1390,39 @@ def _assert_synchronous_lifecycle_flow(
     return proposal_id, related_version_no
 
 
+def _live_async_lifecycle_primitives() -> LiveAsyncLifecyclePrimitives:
+    def assert_async_authority_posture(
+        *, scenario: AsyncLifecycleScenario, proposal_body: dict[str, Any]
+    ) -> None:
+        _assert_authority_posture(
+            scenario=cast(PortfolioParityScenario, scenario),
+            proposal_body=proposal_body,
+        )
+
+    return LiveAsyncLifecyclePrimitives(
+        post_json=_post_json,
+        get_json=_get_json,
+        assertion=_assert,
+        feature_by_key=_feature_by_key,
+        assert_authority_posture=assert_async_authority_posture,
+        assert_persisted_read_surfaces=assert_persisted_read_surfaces,
+        promote_to_execution_ready=_promote_to_execution_ready,
+        fail=_raise_live_error,
+        utc_iso_after=_utc_iso_after,
+    )
+
+
 def _assert_asynchronous_lifecycle_flow(
     client: httpx.Client,
     *,
     advise_base_url: str,
     scenario: PortfolioParityScenario,
 ) -> None:
-    async_created = _submit_async_create(
+    assert_async_proposal_lifecycle(
         client,
+        primitives=_live_async_lifecycle_primitives(),
         advise_base_url=advise_base_url,
         scenario=scenario,
-        created_by="live-parity-validator-async",
-    )
-    async_create_result = _wait_for_async_success(
-        client,
-        advise_base_url=advise_base_url,
-        operation_id=str(async_created["operation_id"]),
-        expected_type="CREATE_PROPOSAL",
-    )
-    _assert_async_operation_surfaces(
-        client,
-        advise_base_url=advise_base_url,
-        accepted_body=async_created,
-        expected_type="CREATE_PROPOSAL",
-        result_body=async_create_result,
-    )
-    async_proposal = async_create_result["proposal"]
-    async_version = async_create_result["version"]
-    async_proposal_id = str(async_proposal["proposal_id"])
-    async_version_no = int(async_version["version_no"])
-    _assert_authority_posture(scenario=scenario, proposal_body=async_version["proposal_result"])
-
-    async_version_created = _submit_async_version(
-        client,
-        advise_base_url=advise_base_url,
-        proposal_id=async_proposal_id,
-        scenario=scenario,
-        created_by="live-parity-validator-async-version",
-        expected_current_version_no=async_version_no,
-    )
-    async_version_result = _wait_for_async_success(
-        client,
-        advise_base_url=advise_base_url,
-        operation_id=str(async_version_created["operation_id"]),
-        expected_type="CREATE_PROPOSAL_VERSION",
-    )
-    _assert_async_operation_surfaces(
-        client,
-        advise_base_url=advise_base_url,
-        accepted_body=async_version_created,
-        expected_type="CREATE_PROPOSAL_VERSION",
-        result_body=async_version_result,
-    )
-    _assert(
-        int(async_version_result["proposal"]["current_version_no"]) == async_version_no + 1,
-        f"{async_proposal_id}: async version did not increment current_version_no",
-    )
-    _assert_authority_posture(
-        scenario=scenario,
-        proposal_body=async_version_result["version"]["proposal_result"],
     )
 
 
@@ -1853,141 +1646,12 @@ def _assert_async_lifecycle_read_surfaces(
     advise_base_url: str,
     scenario: PortfolioParityScenario,
 ) -> tuple[str, int, str]:
-    async_created = _submit_async_create(
+    return assert_live_async_lifecycle(
         client,
+        primitives=_live_async_lifecycle_primitives(),
         advise_base_url=advise_base_url,
         scenario=scenario,
-        created_by="live-parity-validator-async-lifecycle",
     )
-    async_create_result = _wait_for_async_success(
-        client,
-        advise_base_url=advise_base_url,
-        operation_id=str(async_created["operation_id"]),
-        expected_type="CREATE_PROPOSAL",
-    )
-    _assert_async_operation_surfaces(
-        client,
-        advise_base_url=advise_base_url,
-        accepted_body=async_created,
-        expected_type="CREATE_PROPOSAL",
-        result_body=async_create_result,
-    )
-    async_proposal_id = str(async_create_result["proposal"]["proposal_id"])
-    async_portfolio_id = str(async_create_result["proposal"]["portfolio_id"])
-    async_version_no = int(async_create_result["version"]["version_no"])
-
-    async_version_created = _submit_async_version(
-        client,
-        advise_base_url=advise_base_url,
-        proposal_id=async_proposal_id,
-        scenario=scenario,
-        created_by="live-parity-validator-async-lifecycle-version",
-        expected_current_version_no=async_version_no,
-    )
-    async_version_result = _wait_for_async_success(
-        client,
-        advise_base_url=advise_base_url,
-        operation_id=str(async_version_created["operation_id"]),
-        expected_type="CREATE_PROPOSAL_VERSION",
-    )
-    _assert_async_operation_surfaces(
-        client,
-        advise_base_url=advise_base_url,
-        accepted_body=async_version_created,
-        expected_type="CREATE_PROPOSAL_VERSION",
-        result_body=async_version_result,
-    )
-    current_version_no = int(async_version_result["proposal"]["current_version_no"])
-    _assert(
-        current_version_no == async_version_no + 1,
-        f"{async_proposal_id}: async lifecycle version did not increment current_version_no",
-    )
-    _promote_to_execution_ready(
-        client,
-        advise_base_url=advise_base_url,
-        proposal_id=async_proposal_id,
-        related_version_no=current_version_no,
-    )
-    handoff = _post_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{async_proposal_id}/execution-handoffs",
-        expected_status=200,
-        json_body={
-            "actor_id": "ops_async_001",
-            "execution_provider": "lotus-manage",
-            "expected_state": "EXECUTION_READY",
-            "related_version_no": current_version_no,
-            "external_request_id": f"oms_async_req_{uuid.uuid4().hex[:10]}",
-            "notes": {"channel": "OMS", "priority": "STANDARD"},
-        },
-        headers={"Idempotency-Key": f"live-async-lifecycle-handoff-{uuid.uuid4().hex}"},
-    )
-    _assert(
-        handoff["handoff_status"] == "REQUESTED",
-        f"{async_proposal_id}: async lifecycle handoff did not start in REQUESTED",
-    )
-    executed = _post_json(
-        client,
-        url=f"{advise_base_url}/advisory/proposals/{async_proposal_id}/execution-updates",
-        expected_status=200,
-        json_body={
-            "update_id": f"async_exec_done_{uuid.uuid4().hex[:10]}",
-            "actor_id": "lotus-manage",
-            "execution_request_id": handoff["execution_request_id"],
-            "execution_provider": "lotus-manage",
-            "update_status": "EXECUTED",
-            "related_version_no": current_version_no,
-            "external_execution_id": f"oms_async_fill_{uuid.uuid4().hex[:10]}",
-            "occurred_at": _utc_iso_after(seconds=2),
-            "details": {"filled_quantity": "100"},
-        },
-    )
-    _assert(
-        executed["handoff_status"] == "EXECUTED",
-        f"{async_proposal_id}: async lifecycle execution did not reach EXECUTED",
-    )
-    capabilities = _get_json(
-        client,
-        url=f"{advise_base_url}/platform/capabilities",
-        expected_status=200,
-    )
-    report_feature = _feature_by_key(capabilities, "advisory.proposals.reporting")
-    report_response = client.post(
-        f"{advise_base_url}/advisory/proposals/{async_proposal_id}/report-requests",
-        json={
-            "report_type": "CLIENT_PROPOSAL_SUMMARY",
-            "requested_by": "advisor_async_1",
-            "related_version_no": current_version_no,
-            "include_execution_summary": True,
-        },
-    )
-    if report_feature["operational_ready"]:
-        _assert(
-            report_response.status_code == 200,
-            (
-                f"{async_proposal_id}: expected lotus-report ready path for async lifecycle, "
-                f"got {report_response.status_code} body={report_response.text}"
-            ),
-        )
-    else:
-        _assert(
-            report_response.status_code == 503,
-            (
-                f"{async_proposal_id}: expected lotus-report degraded 503 for async lifecycle, "
-                f"got {report_response.status_code} body={report_response.text}"
-            ),
-        )
-    _assert_persisted_read_surfaces(
-        client,
-        advise_base_url=advise_base_url,
-        proposal_id=async_proposal_id,
-        expected_portfolio_id=async_portfolio_id,
-        created_by_filter="live-parity-validator-async-lifecycle",
-        current_version_no=current_version_no,
-        expected_state="EXECUTED",
-        expected_report_status="READY" if report_feature["operational_ready"] else "UNAVAILABLE",
-    )
-    return async_portfolio_id, current_version_no, "EXECUTED"
 
 
 def _assert_new_version_requires_fresh_approvals(
