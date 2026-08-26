@@ -14,10 +14,12 @@ from scripts.live_parity_orchestration import run_live_parity
 from scripts.live_policy_evaluation_support import (
     Assertion,
     AssertPersistedReadSurfaces,
+    CreateStatefulProposal,
     FeatureByKey,
     GetJson,
     PostJson,
     RequestJson,
+    StatefulProposalScenario,
 )
 from scripts.live_report_delivery import ReportDeliveryPrimitives, assert_report_delivery
 from scripts.live_runtime_persisted_read_surfaces import fetch_persisted_read_surfaces
@@ -42,10 +44,73 @@ def test_live_flow_primitives_reuse_shared_typed_seam_contracts() -> None:
     assert policy_types["post_json"] is PostJson
     assert memo_types["get_json"] is GetJson
     assert memo_types["post_json"] is PostJson
+    assert memo_types["create_stateful_proposal"] is CreateStatefulProposal
+    assert narrative_types["create_stateful_proposal"] is CreateStatefulProposal
     assert workspace_types["post_json"] is PostJson
     assert workspace_types["request_json"] is RequestJson
     assert workspace_types["assertion"] == Assertion
     assert persisted_types["get_json"] is GetJson
+
+
+def test_stateful_proposal_creation_helpers_depend_only_on_shared_scenario_contract(
+    monkeypatch,
+) -> None:
+    calls: list[dict[str, object]] = []
+
+    def post_json(_client, *, url, expected_status, json_body, headers=None):
+        calls.append(
+            {
+                "url": url,
+                "expected_status": expected_status,
+                "json_body": json_body,
+                "headers": headers,
+            }
+        )
+        return {"proposal": {"proposal_id": "P-1"}}
+
+    monkeypatch.setattr(parity, "_post_json", post_json)
+    minimal_scenario = SimpleNamespace(portfolio_id="PORTFOLIO", as_of_date="2026-04-10")
+
+    parity._create_stateful_proposal(
+        object(),
+        advise_base_url="http://advise",
+        scenario=minimal_scenario,
+        created_by="advisor",
+        narrative_request={"audience": "ADVISOR_REVIEW"},
+    )
+    parity._create_stateful_version(
+        object(),
+        advise_base_url="http://advise",
+        proposal_id="P-1",
+        scenario=minimal_scenario,
+        created_by="advisor",
+        expected_current_version_no=1,
+    )
+
+    creation_types = get_type_hints(parity._create_stateful_proposal)
+    version_types = get_type_hints(parity._create_stateful_version)
+    assert creation_types["scenario"] is StatefulProposalScenario
+    assert version_types["scenario"] is StatefulProposalScenario
+    assert calls[0]["url"] == "http://advise/advisory/proposals"
+    assert calls[0]["expected_status"] == 200
+    assert calls[0]["json_body"] == {
+        "created_by": "advisor",
+        "input_mode": "stateful",
+        "stateful_input": {
+            "portfolio_id": "PORTFOLIO",
+            "as_of": "2026-04-10",
+            "narrative_request": {"audience": "ADVISOR_REVIEW"},
+        },
+    }
+    assert calls[0]["headers"] is not None
+    assert calls[1]["url"] == "http://advise/advisory/proposals/P-1/versions"
+    assert calls[1]["expected_status"] == 200
+    assert calls[1]["json_body"] == {
+        "created_by": "advisor",
+        "expected_current_version_no": 1,
+        "input_mode": "stateful",
+        "stateful_input": {"portfolio_id": "PORTFOLIO", "as_of": "2026-04-10"},
+    }
 
 
 def test_policy_flow_adapter_supplies_typed_primitives(monkeypatch) -> None:

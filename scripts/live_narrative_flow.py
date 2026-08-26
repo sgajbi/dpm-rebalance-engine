@@ -13,6 +13,7 @@ import httpx
 
 from scripts.live_policy_evaluation_support import (
     Assertion,
+    CreateStatefulProposal,
     FeatureByKey,
     GetJson,
     PostJson,
@@ -23,13 +24,13 @@ from scripts.live_runtime_proposal_narrative import LiveProposalNarrativeSnapsho
 class NarrativeParityScenario(Protocol):
     """Minimum scenario fields required by the narrative certification flow."""
 
-    portfolio_id: str
-    as_of_date: str
+    @property
+    def portfolio_id(self) -> str: ...
+
+    @property
+    def as_of_date(self) -> str: ...
 
 
-# The validator accepts its concrete scenario type while this flow intentionally
-# exposes only its minimal Protocol; a shared callable Protocol would over-constrain it.
-CreateStatefulProposal = Callable[..., dict[str, Any]]
 # Snapshot projection keyword arguments differ by live flow, so no shared
 # Protocol contract exists for this extractor.
 SnapshotExtractor = Callable[..., LiveProposalNarrativeSnapshot]

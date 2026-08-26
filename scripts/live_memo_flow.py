@@ -7,7 +7,13 @@ from typing import Any, Callable, cast
 
 import httpx
 
-from scripts.live_policy_evaluation_support import Assertion, GetJson, PostJson
+from scripts.live_policy_evaluation_support import (
+    Assertion,
+    CreateStatefulProposal,
+    GetJson,
+    PostJson,
+    StatefulProposalScenario,
+)
 from scripts.live_runtime_proposal_memo import LiveProposalMemoSnapshot
 
 
@@ -15,9 +21,7 @@ from scripts.live_runtime_proposal_memo import LiveProposalMemoSnapshot
 class LiveMemoFlowPrimitives:
     """Typed seams for memo certification without importing the live validator module."""
 
-    # The validator's concrete scenario is broader than this flow's minimum
-    # Protocol; a shared callable Protocol would over-constrain that boundary.
-    create_stateful_proposal: Callable[..., dict[str, Any]]
+    create_stateful_proposal: CreateStatefulProposal
     post_json: PostJson
     get_json: GetJson
     assertion: Assertion
@@ -62,7 +66,7 @@ def _create_memo_artifact(
     *,
     primitives: LiveMemoFlowPrimitives,
     advise_base_url: str,
-    scenario: Any,
+    scenario: StatefulProposalScenario,
 ) -> _MemoArtifact:
     """Create the memo and prove its advisor projection and hash continuity."""
     created = primitives.create_stateful_proposal(
@@ -328,7 +332,7 @@ def assert_live_memo_flow(
     *,
     primitives: LiveMemoFlowPrimitives,
     advise_base_url: str,
-    scenario: Any,
+    scenario: StatefulProposalScenario,
 ) -> LiveProposalMemoSnapshot:
     """Run memo certification phases and assemble the persisted evidence snapshot."""
     started = time.perf_counter()

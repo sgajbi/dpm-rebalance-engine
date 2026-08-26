@@ -1,4 +1,4 @@
-"""Support helpers for governed live policy-evaluation parity certification."""
+"""Shared live-parity contracts and policy-evaluation support helpers."""
 
 from __future__ import annotations
 
@@ -78,6 +78,44 @@ class RequestJson(Protocol):
         json_body: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
     ) -> dict[str, Any]: ...
+
+
+class StatefulProposalScenario(Protocol):
+    """Minimum source context needed to create a stateful advisory proposal."""
+
+    @property
+    def portfolio_id(self) -> str: ...
+
+    @property
+    def as_of_date(self) -> str: ...
+
+
+class CreateStatefulProposal(Protocol):
+    """Create a stateful proposal while preserving optional narrative input."""
+
+    def __call__(
+        self,
+        client: httpx.Client,
+        *,
+        advise_base_url: str,
+        scenario: StatefulProposalScenario,
+        created_by: str,
+        narrative_request: dict[str, Any] | None = None,
+    ) -> dict[str, Any]: ...
+
+
+def stateful_proposal_input(
+    scenario: StatefulProposalScenario,
+    narrative_request: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the governed stateful source input shared by proposal and version creation."""
+    stateful_input: dict[str, Any] = {
+        "portfolio_id": scenario.portfolio_id,
+        "as_of": scenario.as_of_date,
+    }
+    if narrative_request is not None:
+        stateful_input["narrative_request"] = narrative_request
+    return stateful_input
 
 
 def ensure_sg_policy_pack_active(
