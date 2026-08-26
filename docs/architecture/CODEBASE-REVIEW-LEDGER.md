@@ -29752,3 +29752,30 @@
   no wiki publication is required because no product or operator workflow truth changed.
 - Follow-Up: Keep #470 open until exact-mainline validation and the post-merge Releasability run
   confirm the warning-free dependency posture, then close with the run evidence.
+
+## LA-REV-495-QUALITY-TREND-REBASE-MAINLINE-PROVENANCE
+
+- Scope: Preserve a reviewed, content-bound Python-growth exception when Main Releasability
+  validates a rebase-merged head as `HEAD^` to `HEAD`.
+- Pattern: The exception correctly named the pull request's measured merge base, but the
+  post-merge lane used the final rebase commit's parent as its comparison base. The otherwise
+  approved exception could not match, so exact-main validation failed despite unchanged measured
+  Python content.
+- Status: Hardened on a bounded #495 follow-up branch; merge, exact-head review, and exact-main
+  validation remain required before closure.
+- Finding Class: CI evidence provenance, exception scope, and rebase-mainline regression
+  prevention.
+- Summary: The gate now selects an exception's original base only when one matching content
+  fingerprint exists and that base is an ancestor of the exact head. Ambiguous candidates,
+  non-ancestor bases, changed Python content, malformed evidence, and expiry remain fail-closed.
+  Evidence separates `merge_base_sha`, effective `base_sha`, and `comparison_base_source`.
+- Evidence: Focused regression coverage creates a multi-commit rebase shape and proves the
+  `HEAD^` lane recovers only its approved original comparison base; direct PR-base and
+  mainline-style local gate runs pass with the same exact fingerprinted exception.
+- Compatibility: CI/evidence behavior only. No advisory API/OpenAPI, recommendation or suitability
+  rule, persistence, migration, runtime, Compose, Workbench, or downstream contract changes.
+- Documentation decision: Updated repository context, this ledger, generated quality evidence,
+  and `wiki/Validation-and-CI.md` because mainline exception provenance is an operator/developer
+  truth. No product API or platform-wide context change is required.
+- Follow-Up: #495 remains the owning quality-gate issue; no actionable rebase-provenance work is
+  left only in chat.
