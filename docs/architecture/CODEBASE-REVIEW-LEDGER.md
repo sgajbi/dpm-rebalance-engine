@@ -1,5 +1,40 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-950-LIVE-TYPED-SEAM-ALIASES
+
+- Scope: `scripts/live_policy_evaluation_support.py`, the live report, narrative, policy,
+  memo, workspace, and persisted-read certification seam modules, plus focused live-parity
+  contract tests for issue #572.
+- Pattern: The shared support module exposed weak `Callable[..., X]` aliases while the workspace
+  flow carried more precise HTTP Protocols locally; report delivery also duplicated the
+  positional `FeatureByKey` shape and used a broad assertion type. Persisted-read surfaces had
+  a duplicate local JSON-getter alias.
+- Status: Implemented in the bounded #572 typed-seam batch. Shared support now owns the precise
+  `GetJson`, `PostJson`, and `RequestJson` Protocols plus `Assertion` and `FeatureByKey`; all
+  consuming live flows import those contracts, and no duplicate `JsonGetter`/`JsonPoster` or
+  local `FeatureByKey` definition remains.
+- Finding Class: CI/live-certification maintainability, seam type safety, module ownership, and
+  AI-generated drift prevention.
+- Summary: Report delivery now rejects incorrect positional assertion and capability-lookup
+  wiring at typecheck time, while the shared HTTP Protocols make keyword-capable transport seams
+  explicit instead of relying on unbounded callables. The persisted-read seam uses the shared
+  GET contract; the report read-surface callback remains broad because its keyword contract is
+  not yet stable across consumers, and the code records that exception at the field boundary.
+- Compatibility: Certification tooling only. HTTP methods, URLs, payloads, status handling,
+  READY/UNAVAILABLE outcomes, persisted-read checks, product API/OpenAPI contracts, persistence,
+  migrations, runtime, Workbench, and downstream behavior are unchanged.
+- Design decision: Keep positional function aliases (`Assertion`, `FeatureByKey`) lightweight and
+  shared; use Protocols where keyword-only parameters and optional headers are part of the seam.
+  This preserves structural compatibility with validator-owned functions while allowing mypy to
+  detect wrong call shapes. Variable-arity proposal creation and snapshot extraction remain
+  broad because their keyword sets differ by flow.
+- Evidence: Focused live-parity tests cover shared annotation ownership and the existing exact
+  validator-function adapter wiring; 13 focused tests, Ruff, format, and configured mypy checks
+  pass. Full native gates and exact-mainline proof remain merge prerequisites. No wiki publication
+  is needed because no operator workflow or consumer contract changed.
+- Follow-Up: If persisted read-surface keyword shapes converge, replace its remaining broad
+  callback with a dedicated Protocol; do not widen this issue without a new bounded selection.
+
 ## LA-REV-949-LIVE-WORKSPACE-FLOW-BOUNDARY
 
 - Scope: `scripts/validate_cross_service_parity_live.py`, the extracted

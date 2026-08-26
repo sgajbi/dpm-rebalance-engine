@@ -16,17 +16,57 @@ class PolicyParityScenario(Protocol):
     reporting_currency: str
 
 
-JsonGetter = Callable[..., dict[str, Any]]
-JsonPoster = Callable[..., dict[str, Any]]
 Assertion = Callable[[bool, str], None]
+FeatureByKey = Callable[[dict[str, Any], str], dict[str, Any]]
+
+
+class GetJson(Protocol):
+    """Typed adapter for an expected-status JSON GET."""
+
+    def __call__(
+        self,
+        client: httpx.Client,
+        *,
+        url: str,
+        expected_status: int,
+    ) -> dict[str, Any]: ...
+
+
+class PostJson(Protocol):
+    """Typed adapter for an expected-status JSON POST."""
+
+    def __call__(
+        self,
+        client: httpx.Client,
+        *,
+        url: str,
+        expected_status: int,
+        json_body: dict[str, Any],
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]: ...
+
+
+class RequestJson(Protocol):
+    """Typed adapter for an expected-status JSON request of any HTTP method."""
+
+    def __call__(
+        self,
+        client: httpx.Client,
+        *,
+        method: str,
+        url: str,
+        expected_status: int,
+        json_body: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]: ...
 
 
 def ensure_sg_policy_pack_active(
     client: httpx.Client,
     *,
     advise_base_url: str,
-    get_json: JsonGetter,
-    post_json: JsonPoster,
+    get_json: GetJson,
+    post_json: PostJson,
 ) -> None:
     """Ensure the governed SG reference policy pack is active before evaluation."""
     detail = get_json(

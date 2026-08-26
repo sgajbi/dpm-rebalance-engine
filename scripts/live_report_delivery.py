@@ -3,14 +3,18 @@ from typing import Any, Callable, cast
 
 import httpx
 
+from scripts.live_policy_evaluation_support import Assertion, FeatureByKey, GetJson
+
 
 @dataclass(frozen=True)
 class ReportDeliveryPrimitives:
     """Dependencies needed to certify report delivery without owning HTTP plumbing."""
 
-    get_json: Callable[..., dict[str, Any]]
-    feature_by_key: Callable[..., dict[str, Any]]
-    assertion: Callable[..., None]
+    get_json: GetJson
+    feature_by_key: FeatureByKey
+    assertion: Assertion
+    # This seam accepts keyword sets that vary by persisted read surface; retain
+    # the broad callable until those calls share a stable Protocol contract.
     assert_persisted_read_surfaces: Callable[..., None]
 
 

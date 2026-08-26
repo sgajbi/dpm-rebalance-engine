@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-26T00:20:30.174943+00:00`
+- Generated At: `2026-08-26T01:01:18.624580+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1097`
 - Packages: `42`
 - Modules: `1055`
-- Total Python lines: `198460`
+- Total Python lines: `198519`
 
 ## Largest Files
 
@@ -38,7 +38,7 @@
 | 5 | `test_proof_pack_indexes_assets_and_blocks_sensitive_committed_material` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_models.py` | 381 | 216 |
 | 6 | `_live_runtime_payload` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_capture.py` | 26 | 187 |
 | 7 | `test_lifecycle_endpoints_use_separate_request_and_response_objects` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 469 | 185 |
-| 8 | `assert_live_workspace_flow` | `scripts/live_workspace_flow.py` | 148 | 181 |
+| 8 | `assert_live_workspace_flow` | `scripts/live_workspace_flow.py` | 121 | 181 |
 | 9 | `test_openapi_enrichment_adds_operation_docs_tags_errors_and_schema_examples` | `tests/unit/advisory/api/test_openapi_enrichment.py` | 6 | 179 |
 | 10 | `_current_progress_model_and_domain` | `scripts/refactor_health_report.py` | 17 | 178 |
 
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5775, missing=5629, covered=146, coverage=2.5%`
+- Interrogate docstring inventory: `total=5776, missing=5629, covered=147, coverage=2.5%`
 - Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;
   absolute public API and module-ownership thresholds remain report-only until
   classified.
