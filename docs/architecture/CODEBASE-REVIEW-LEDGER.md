@@ -1,5 +1,26 @@
 # Lotus Advise Codebase Review Ledger
 
+## LA-REV-951-LOOSE-LIVE-SEAM-RATIONALES
+
+- Scope: the six intentionally broad callable seams in the live report, memo, narrative, and
+  policy certification modules, with issue #575 as the owning follow-up.
+- Pattern: after the shared HTTP and positional seams were tightened, five remaining
+  `Callable[..., X]` seams had no local explanation. A future blanket loose-callable sweep could
+  incorrectly replace them despite their differing scenario and snapshot contracts.
+- Status: Implemented as a bounded rationale/documentation slice. Comments now identify the
+  segregated scenario Protocol constraint for both stateful-proposal seams, the flow-specific
+  snapshot keyword sets for all three extractors, and the persisted-read keyword variation on
+  the report-delivery seam.
+- Finding Class: CI/typed-seam maintainability, module-boundary clarity, and prevention of
+  incorrect automated or AI-generated type tightening.
+- Compatibility: Comments and review evidence only. No behavior, type, HTTP, product API/OpenAPI,
+  persistence, migration, runtime, Workbench, or downstream changes.
+- Evidence: Focused source-contract inspection, Ruff/format, configured mypy, and full native
+  quality gates are required; no wiki publication is needed because no operator workflow or
+  consumer contract changed.
+- Follow-Up: If scenario Protocol ownership later converges, reassess `CreateStatefulProposal`
+  under a separately bounded design issue rather than removing these rationale comments.
+
 ## LA-REV-950-LIVE-TYPED-SEAM-ALIASES
 
 - Scope: `scripts/live_policy_evaluation_support.py`, the live report, narrative, policy,

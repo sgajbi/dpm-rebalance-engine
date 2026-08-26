@@ -27,7 +27,11 @@ class NarrativeParityScenario(Protocol):
     as_of_date: str
 
 
+# The validator accepts its concrete scenario type while this flow intentionally
+# exposes only its minimal Protocol; a shared callable Protocol would over-constrain it.
 CreateStatefulProposal = Callable[..., dict[str, Any]]
+# Snapshot projection keyword arguments differ by live flow, so no shared
+# Protocol contract exists for this extractor.
 SnapshotExtractor = Callable[..., LiveProposalNarrativeSnapshot]
 AiLineageStatusExtractor = Callable[[dict[str, Any]], tuple[str, str | None]]
 
