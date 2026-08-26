@@ -618,6 +618,8 @@ def test_feature_lane_unit_tests_run_in_parallel_with_static_governance() -> Non
     _assert_governance_job_runs_baseline_freshness(workflow, "lint-dependency-governance")
     _assert_governance_job_runs_trust_telemetry_freshness(workflow, "lint-dependency-governance")
     _assert_governance_job_runs_demo_assurance_checks(workflow, "lint-dependency-governance")
+    assert "QUALITY_BASE_REF: origin/main" in workflow
+    assert "QUALITY_HEAD_REF: HEAD" in workflow
     assert "Feature Lane / Tests (unit)" in unit_section
     assert "needs:" not in unit_section
     assert "Feature Lane / Lint Dependency Governance" in workflow
@@ -639,6 +641,18 @@ def test_pr_and_main_runtime_jobs_are_parallelized_without_renaming_required_che
         _assert_governance_job_runs_baseline_freshness(workflow, "lint-typecheck-governance")
         _assert_governance_job_runs_trust_telemetry_freshness(workflow, "lint-typecheck-governance")
         _assert_governance_job_runs_demo_assurance_checks(workflow, "lint-typecheck-governance")
+        expected_wiki_refs = (
+            ("HEAD^", "HEAD")
+            if workflow_name == "main-releasability.yml"
+            else (
+                "${{ github.event_name == 'pull_request' && "
+                "github.event.pull_request.base.sha || 'origin/main' }}",
+                "${{ github.event_name == 'pull_request' && "
+                "github.event.pull_request.head.sha || github.sha }}",
+            )
+        )
+        assert f"QUALITY_BASE_REF: {expected_wiki_refs[0]}" in workflow
+        assert f"QUALITY_HEAD_REF: {expected_wiki_refs[1]}" in workflow
         assert f"{lane_name} / Lint Typecheck Governance" in workflow
         assert f"{lane_name} / Tests (${{{{ matrix.suite }}}})" in workflow
         assert f"{lane_name} / Coverage Gate (Combined)" in workflow
