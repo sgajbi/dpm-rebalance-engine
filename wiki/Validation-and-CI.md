@@ -93,9 +93,11 @@ no increase in Radon B-ranked blocks, no increase in the worst Radon complexity,
 in Interrogate coverage. Interrogate comparisons derive from the exact `covered` and `total`
 counts in the evidence line rather than its one-decimal display percentage; inconsistent or
 zero-total counts fail closed. Any reviewed exception must name the metric, exact effective
-comparison `base_sha` (the measured merge base), and `head_sha`, justification, approver, and
-expiry date; it applies only to that exact comparison. The evidence artifact also reports the
-resolved base-ref SHA separately from the comparison pair. Policy content changes require a
+comparison `base_sha` (the measured merge base), and the deterministic fingerprint of every
+tracked Python blob at the measured head, plus justification, approver, and expiry date. Any
+tracked Python-content change invalidates the exception; this avoids the impossible
+self-reference of embedding a final policy-commit SHA inside that same policy. The evidence
+artifact also reports the resolved base-ref SHA separately from the comparison pair. Policy content changes require a
 matching content-fingerprint version. Feature
 Lane supplies `origin/main`; PR Merge Gate supplies pull-request base/head SHAs on `pull_request`
 and deterministically compares `origin/main` with the selected `github.sha` on `workflow_dispatch`.

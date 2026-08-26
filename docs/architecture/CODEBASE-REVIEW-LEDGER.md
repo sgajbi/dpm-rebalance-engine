@@ -955,22 +955,26 @@
 ## LA-REV-495-QUALITY-TREND-EXCEPTION-BINDING
 
 - Scope: Reviewed exceptions in the machine-readable quality-trend policy.
-- Pattern: Exception identity was keyed only by metric, so an approved allowance could apply to
-  unrelated future revisions until expiry. The policy carried review metadata but not the exact
-  comparison revisions to which the allowance was authorized.
+- Pattern: Exception identity was originally keyed only by metric, so an approved allowance could
+  apply to unrelated future revisions until expiry. The first exact-SHA correction then required
+  the final `head_sha` inside the policy file that changes that SHA, making a legitimate exception
+  cryptographically self-referential and therefore unauthorable.
 - Status: Hardened in the bounded #495 implementation slice; merge authority and exact-mainline
   closure evidence remain governed by the PR and issue lifecycle.
 - Finding Class: CI quality-gate exception scope, fail-closed policy governance, evidence integrity.
 - Summary: Each exception now requires a 40-character lowercase effective comparison `base_sha`
-  (the measured merge base) and `head_sha` in addition to metric, allowance, justification,
-  approver, and expiry. The comparator applies an exception only when all three identity fields
-  match; otherwise the normal policy limit remains in force.
+  (the measured merge base) and a SHA-256 fingerprint of every tracked Python blob at the measured
+  head, in addition to metric, allowance, justification, approver, and expiry. The fingerprint
+  excludes the JSON policy file, avoiding self-reference; any measured Python-content change
+  invalidates the exception. The comparator applies an exception only when both bindings match;
+  otherwise the normal policy limit remains in force.
 - Evidence:
-  - `scripts/quality_trend_gate.py` validates exception SHA bindings, permits multiple bindings for
-    distinct revisions, rejects duplicate identities, selects only an exact comparison-pair match,
-    and emits both the resolved base-ref SHA and measured merge-base SHA.
+  - `scripts/quality_trend_gate.py` validates merge-base and Python-content bindings, permits
+    multiple bindings for distinct measured content, rejects duplicate identities, selects only an
+    exact match, and emits the resolved base-ref SHA, measured merge-base SHA, head SHA, and
+    Python-content fingerprint.
   - `tests/unit/scripts/test_quality_trend_gate.py` proves matching application, non-matching
-    revision rejection, and malformed/unbound SHA rejection.
+    Python-content rejection, and malformed/unbound binding rejection.
   - `quality/quality-trend-policy.v1.json` publishes the binding schema and a refreshed content
     fingerprint.
 - Compatibility: CI/evidence behavior only. No runtime, API/OpenAPI, persistence, migration,

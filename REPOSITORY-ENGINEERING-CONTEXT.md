@@ -454,9 +454,11 @@ Use these commands as the primary local contract:
    governed base/head revisions and the exact head. The versioned policy blocks more than 200
    added Python lines, any new Radon B-ranked block, any increase in worst Radon complexity, or
    any Interrogate coverage decrease; reviewed exceptions require the exact effective comparison
-   `base_sha` (the measured merge base) and `head_sha`, approver, reason, and expiry, and cannot
-   apply to a different comparison. Evidence is emitted to `output/quality-trend-gate.json` with
-   requested/resolved ref SHAs, the comparison pair, and metric deltas.
+   `base_sha` (the measured merge base), the deterministic fingerprint of every tracked Python
+   blob at the measured head, approver, reason, and expiry. Any tracked Python change invalidates
+   the exception; the fingerprint avoids a self-referential policy-commit SHA. Evidence is emitted
+   to `output/quality-trend-gate.json` with requested/resolved ref SHAs, the comparison pair,
+   Python-content fingerprint, and metric deltas.
 11. dead-code regression gate
    `make dead-code-gate`
    This runs the pinned Vulture scanner against `src` and `scripts`, fails on new or malformed
