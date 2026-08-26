@@ -387,6 +387,10 @@ From a sibling `lotus-platform` checkout:
 The repo-local `wiki/` directory is the authored source of truth. The GitHub wiki repository is only
 the publication target.
 
+The PR Merge Gate supplies the full pull-request comparison by binding its GitHub base and head
+SHAs. Main Releasability binds `HEAD^` and `HEAD`, so its wiki audit covers the final mainline
+commit only; it is a post-merge confirmation, not a replacement for the PR gate.
+
 ## What This Page Does Not Claim
 
 Green CI proves the scoped repository gates passed for the tested commit. It does not by itself
