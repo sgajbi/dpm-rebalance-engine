@@ -1,9 +1,14 @@
 from dataclasses import dataclass
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import httpx
 
-from scripts.live_policy_evaluation_support import Assertion, FeatureByKey, GetJson
+from scripts.live_policy_evaluation_support import (
+    Assertion,
+    AssertPersistedReadSurfaces,
+    FeatureByKey,
+    GetJson,
+)
 
 
 @dataclass(frozen=True)
@@ -13,9 +18,7 @@ class ReportDeliveryPrimitives:
     get_json: GetJson
     feature_by_key: FeatureByKey
     assertion: Assertion
-    # This seam accepts keyword sets that vary by persisted read surface; retain
-    # the broad callable until those calls share a stable Protocol contract.
-    assert_persisted_read_surfaces: Callable[..., None]
+    assert_persisted_read_surfaces: AssertPersistedReadSurfaces
 
 
 def assert_report_delivery(
@@ -70,6 +73,8 @@ def assert_report_delivery(
             current_version_no=related_version_no,
             expected_state="EXECUTED",
             expected_report_status=report_body["status"],
+            get_json=primitives.get_json,
+            assert_condition=primitives.assertion,
         )
         return str(report_body["status"])
 
@@ -94,5 +99,7 @@ def assert_report_delivery(
         current_version_no=related_version_no,
         expected_state="EXECUTED",
         expected_report_status="UNAVAILABLE",
+        get_json=primitives.get_json,
+        assert_condition=primitives.assertion,
     )
     return "UNAVAILABLE"

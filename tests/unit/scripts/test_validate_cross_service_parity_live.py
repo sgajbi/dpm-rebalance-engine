@@ -13,6 +13,7 @@ from scripts import validate_cross_service_parity_live as parity
 from scripts.live_parity_orchestration import run_live_parity
 from scripts.live_policy_evaluation_support import (
     Assertion,
+    AssertPersistedReadSurfaces,
     FeatureByKey,
     GetJson,
     PostJson,
@@ -33,6 +34,7 @@ def test_live_flow_primitives_reuse_shared_typed_seam_contracts() -> None:
     assert report_types["get_json"] is GetJson
     assert report_types["feature_by_key"] == FeatureByKey
     assert report_types["assertion"] == Assertion
+    assert report_types["assert_persisted_read_surfaces"] == AssertPersistedReadSurfaces
     assert narrative_types["feature_by_key"] == FeatureByKey
     assert narrative_types["get_json"] is GetJson
     assert narrative_types["post_json"] is PostJson
@@ -472,6 +474,7 @@ def test_live_parity_orchestration_preserves_order_and_result_assembly(monkeypat
 def test_lifecycle_delivery_flow_preserves_phase_order_and_result(monkeypatch) -> None:
     scenario = parity.PortfolioParityScenario("PORTFOLIO", "2026-04-10", "USD", "complete", True)
     calls: list[str] = []
+    captured: dict[str, object] = {}
 
     monkeypatch.setattr(
         parity,
@@ -491,7 +494,11 @@ def test_lifecycle_delivery_flow_preserves_phase_order_and_result(monkeypatch) -
     monkeypatch.setattr(
         parity,
         "assert_report_delivery",
-        lambda *_args, **_kwargs: (calls.append("report"), "READY")[1],
+        lambda *_args, **kwargs: (
+            captured.setdefault("primitives", kwargs["primitives"]),
+            calls.append("report"),
+            "READY",
+        )[2],
     )
 
     result = parity._assert_lifecycle_and_delivery_flow(
@@ -502,6 +509,9 @@ def test_lifecycle_delivery_flow_preserves_phase_order_and_result(monkeypatch) -
 
     assert calls == ["sync", "async", "execution", "report"]
     assert result == ("PORTFOLIO", 2, "EXECUTED", "EXECUTED", "READY")
+    report_primitives = captured["primitives"]
+    assert isinstance(report_primitives, ReportDeliveryPrimitives)
+    assert report_primitives.assert_persisted_read_surfaces is parity.assert_persisted_read_surfaces
 
 
 @pytest.mark.parametrize(
@@ -531,10 +541,10 @@ def test_report_delivery_preserves_ready_and_degraded_outcomes(
         "_feature_by_key",
         lambda *_args, **_kwargs: {"operational_ready": operational_ready},
     )
-    monkeypatch.setattr(
-        parity,
-        "_assert_persisted_read_surfaces",
-        lambda *_args, **kwargs: persisted_statuses.append(kwargs["expected_report_status"]),
+    persisted = MagicMock(
+        side_effect=lambda *_args, **kwargs: persisted_statuses.append(
+            kwargs["expected_report_status"]
+        )
     )
 
     result = assert_report_delivery(
@@ -543,7 +553,7 @@ def test_report_delivery_preserves_ready_and_degraded_outcomes(
             get_json=parity._get_json,
             feature_by_key=parity._feature_by_key,
             assertion=parity._assert,
-            assert_persisted_read_surfaces=parity._assert_persisted_read_surfaces,
+            assert_persisted_read_surfaces=persisted,
         ),
         advise_base_url="http://advise",
         proposal_id="PROPOSAL",
@@ -554,6 +564,8 @@ def test_report_delivery_preserves_ready_and_degraded_outcomes(
     assert result == expected_status
     assert persisted_statuses == [expected_status]
     assert client.post.call_args.kwargs["json"]["related_version_no"] == 2
+    assert persisted.call_args.kwargs["get_json"] is parity._get_json
+    assert persisted.call_args.kwargs["assert_condition"] is parity._assert
 
 
 def test_live_memo_flow_preserves_phase_order_and_snapshot_assembly(monkeypatch) -> None:

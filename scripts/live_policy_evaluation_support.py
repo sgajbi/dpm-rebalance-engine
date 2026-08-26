@@ -32,6 +32,25 @@ class GetJson(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class AssertPersistedReadSurfaces(Protocol):
+    """Typed adapter for the canonical persisted proposal read-surface proof."""
+
+    def __call__(
+        self,
+        client: httpx.Client,
+        *,
+        advise_base_url: str,
+        proposal_id: str,
+        expected_portfolio_id: str,
+        created_by_filter: str | None,
+        current_version_no: int,
+        expected_state: str,
+        expected_report_status: str,
+        get_json: GetJson,
+        assert_condition: Assertion,
+    ) -> None: ...
+
+
 class PostJson(Protocol):
     """Typed adapter for an expected-status JSON POST."""
 
