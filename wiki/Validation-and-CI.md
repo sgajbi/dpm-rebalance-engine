@@ -96,7 +96,9 @@ zero-total counts fail closed. Any reviewed exception must name the metric, exac
 comparison `base_sha` (the measured merge base), and the deterministic fingerprint of every
 tracked Python blob at the measured head, plus justification, approver, and expiry date. Any
 tracked Python-content change invalidates the exception; this avoids the impossible
-self-reference of embedding a final policy-commit SHA inside that same policy. The evidence
+self-reference of embedding a final policy-commit SHA inside that same policy. Its expiry is a
+deliberate approver-controlled debt-retirement date, not uncontrolled external tool-version drift:
+it makes stale exception debt fail closed when the named date arrives. The evidence
 artifact also reports the resolved base-ref SHA separately from the comparison pair. Policy content changes require a
 matching content-fingerprint version. Feature
 Lane supplies `origin/main`; PR Merge Gate supplies pull-request base/head SHAs on `pull_request`
