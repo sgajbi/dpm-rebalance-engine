@@ -9,6 +9,17 @@ change reaches `main`.
 This page is the operating map for local gates, GitHub Actions lanes, release evidence, and
 post-merge wiki publication. It names blocking commands and the evidence each lane protects.
 
+## Reader Map
+
+| Reader | Start here | Decision supported |
+| --- | --- | --- |
+| Agent or developer | Lane Map and Repo-Native Commands | Select the smallest governed local command. |
+| PR reviewer | Blocking Gates and the changed-wiki audit | Confirm a fast lane protects the claimed evidence. |
+| Release operator | Release Image Evidence and Main Releasability Gate | Verify the exact `main` revision and publication sequence. |
+
+The page describes the current enforced CI posture. A green repository gate proves only the named
+commit and controls; it does not promote unsupported advisory, client, or production claims.
+
 The opt-in Queue Auto Merge workflow runs only for ready, internal, non-fork PRs targeting `main`
 with the `automerge` label. It uses `LOTUS_AUTOMERGE_TOKEN` to queue the repository-approved
 rebase merge so post-merge releasability dispatch is triggered by a non-`GITHUB_TOKEN` actor. If
@@ -115,14 +126,6 @@ effective ref and fallback state at the decision boundary, so failed revision or
 preserve truthful fallback provenance as well as successful comparisons. The gate is CI/developer
 evidence only and does not change runtime, API, persistence, migration, or data-model behavior.
 
-## Reader Map
-
-| Reader | Start here |
-| --- | --- |
-| Agent or developer | Lane Map, Repo-Native Commands, Blocking Gates |
-| PR reviewer | Blocking Gates, Pull Request Merge Gate evidence |
-| Release operator | Release Image Evidence, Main Releasability Gate |
-
 ## Lane Map
 
 | Lane | Primary proof | What it protects |
@@ -148,13 +151,21 @@ flowchart LR
 
 ## Repo-Native Commands
 
-Use these commands instead of ad hoc command sequences:
+Use these commands instead of ad hoc command sequences. The repository `Makefile` remains the
+authoritative full inventory; the groups below are the normal entry points.
+
+### Everyday Validation
 
 ```powershell
 make check
 make ci
 make ci-local
 make ci-local-docker
+```
+
+### Quality And Contract Diagnosis
+
+```powershell
 make quality-baseline-check
 make quality-trend-gate
 make dead-code-gate
@@ -162,22 +173,26 @@ make duplicate-code-gate
 make unused-dependency-gate
 make oversized-code-gate
 make proposal-decision-vocabulary-gate
-make demo-assurance-gate
-make demo-certification-live
-make security-audit
-make dependency-lock-gate
-make license-ip-gate
-make bandit-severity-regression-gate
 make openapi-gate
 make no-alias-gate
 make api-vocabulary-gate
 make domain-data-products-gate
 make trust-telemetry-freshness-gate
-make external-adapter-contracts
+```
+
+### Release And Certification Evidence
+
+```powershell
+make security-audit
+make dependency-lock-gate
+make license-ip-gate
+make bandit-severity-regression-gate
 make migration-rollout-contract-gate
 make release-image-provenance-gate
 make observability-diagnostics
 make advisory-domain-golden-regressions
+make demo-assurance-gate
+make demo-certification-live
 ```
 
 The CI-local Docker targets derive one checkout-specific Compose project from the absolute
@@ -348,8 +363,12 @@ This keeps development moving while preserving release evidence.
 
 When `wiki/` changes:
 
-1. run the repo-local docs and workflow contract tests that cover the changed page,
-2. run the platform wiki check before merge:
+1. run `make wiki-quality-gate`; it discovers changed authored wiki Markdown from the governed
+   base/head comparison and delegates the professional-page policy to the Lotus Platform auditor.
+   Hosted CI pins the platform revision. Navigation, rename, and deletion changes expand to a full professional-page audit;
+   missing platform audit source fails closed,
+2. run the repo-local docs and workflow contract tests that cover the changed page,
+3. run the platform wiki check before merge:
 
 From a sibling `lotus-platform` checkout:
 
@@ -357,7 +376,7 @@ From a sibling `lotus-platform` checkout:
 ..\lotus-platform\automation\Sync-RepoWikis.ps1 -CheckOnly -Repository lotus-advise
 ```
 
-3. publish after the merged commit is on `main`:
+4. publish after the merged commit is on `main`:
 
 From a sibling `lotus-platform` checkout:
 

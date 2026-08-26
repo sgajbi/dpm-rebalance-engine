@@ -70,6 +70,8 @@ def test_local_ci_targets_enforce_quality_baseline_freshness() -> None:
     for target in ("check", "ci", "ci-local"):
         assert "quality-baseline-check" in _makefile_target_dependencies(makefile, target)
     for target in ("check", "check-all", "ci", "ci-local"):
+        assert "wiki-quality-gate" in _makefile_target_dependencies(makefile, target)
+    for target in ("check", "check-all", "ci", "ci-local"):
         assert "dead-code-gate" in _makefile_target_dependencies(makefile, target)
         assert "duplicate-code-gate" in _makefile_target_dependencies(makefile, target)
     for target in ("check", "check-all", "ci", "ci-local"):
@@ -578,8 +580,12 @@ def _assert_governance_job_runs_demo_assurance_checks(workflow: str, job_id: str
     )
     assert "Checkout Lotus Platform Contracts" in governance_section
     assert "repository: sgajbi/lotus-platform" in governance_section
+    assert 'LOTUS_PLATFORM_REF: "5d9f9a2b142ff33a98b0e18b79dbe13738843dd6"' in workflow
+    assert "ref: ${{ env.LOTUS_PLATFORM_REF }}" in governance_section
     assert "path: lotus-platform" in governance_section
     assert "LOTUS_PLATFORM_ROOT: ${{ github.workspace }}/lotus-platform" in governance_section
+    assert "Wiki Quality Gate" in governance_section
+    assert "run: make wiki-quality-gate" in governance_section
     assert "run: make domain-data-products-gate" in governance_section
     assert "run: make observability-diagnostics" in governance_section
     assert "run: make advisory-domain-golden-regressions" in governance_section
@@ -760,6 +766,7 @@ def test_validation_wiki_documents_repo_native_ci_enforcement() -> None:
         "Main Releasability Gate",
         "Report-only quality evidence",
         "make quality-baseline-check",
+        "make wiki-quality-gate",
         "make trust-telemetry-freshness-gate",
         "make demo-assurance-gate",
         "make demo-certification-live",
