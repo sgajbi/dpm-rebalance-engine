@@ -24,6 +24,7 @@ env:
   PYTHONUNBUFFERED: "1"
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "22.14.0"
+  LOTUS_PLATFORM_REF: "5d9f9a2b142ff33a98b0e18b79dbe13738843dd6"
   LOTUS_RELEASE_GIT_REF: ${{ inputs.expected_sha && 'main' || github.ref_name }}
 
 jobs:
@@ -145,7 +146,12 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: sgajbi/lotus-platform
+          ref: ${{ env.LOTUS_PLATFORM_REF }}
           path: lotus-platform
+      - name: Wiki Quality Gate
+        env:
+          LOTUS_PLATFORM_ROOT: ${{ github.workspace }}/lotus-platform
+        run: make wiki-quality-gate
       - name: Domain Data Products Gate
         env:
           LOTUS_PLATFORM_ROOT: ${{ github.workspace }}/lotus-platform

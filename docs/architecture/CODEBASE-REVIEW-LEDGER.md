@@ -985,6 +985,35 @@
 - Follow-Up: #495 still owns mandatory-control wording, threshold/rate ratcheting, and hotspot
   decomposition; those remain outside this slice.
 
+## LA-REV-495-WIKI-QUALITY-GATE
+
+- Scope: Professional presentation and navigation evidence for changed repo-authored wiki pages.
+- Pattern: The platform auditor deterministically rejected `wiki/Validation-and-CI.md` after a
+  merged CI-control slice because its reader map was below the first screen and its command block
+  was an oversized dump. The repository exposed the audit as a manual pre-merge practice but did
+  not run it in CI, so a truthful wiki sync could still publish an operator-hostile page.
+- Status: Hardened in the bounded #495 documentation/CI slice; exact-head review, CI, and
+  exact-mainline closure evidence remain governed by the PR and issue lifecycle.
+- Finding Class: CI-enforcement gap, documentation presentation drift, and agent-quality guardrail.
+- Summary: `scripts/wiki_quality_gate.py` derives added, modified, renamed, and deleted Markdown
+  pages from the exact governed Git comparison and delegates the policy to the Lotus Platform
+  auditor. Navigation, rename, and deletion changes widen to a full professional-page audit;
+  absent audit source fails closed. The command is included in local aggregate targets and after a
+  pinned platform checkout in Feature, PR, and Main governance lanes.
+- Evidence:
+  - `tests/unit/scripts/test_wiki_quality_gate.py` proves focused-page scope, deletion widening,
+    platform-auditor invocation, and the explicit unchanged-wiki no-op.
+  - `tests/unit/test_ci_workflow_contracts.py` proves local aggregate enrollment, pinned platform
+    checkout, and every static governance-lane invocation.
+  - `wiki/Validation-and-CI.md` now presents its reader/evidence map in the first screen and groups
+    commands by decision rather than publishing a raw command dump.
+- Compatibility: CI and documentation presentation only. No runtime, API/OpenAPI, persistence,
+  migration, calculation, data-model, dependency, or downstream contract change is intended.
+- Documentation decision: Updated repository context, this ledger, and the changed validation wiki
+  page because developer, reviewer, and release-operator workflows now have a new hard gate. No
+  README, OpenAPI, migration, or product-supported-feature update is needed.
+- Follow-Up: #495 remains the umbrella for other independently selected CI quality controls.
+
 ## LA-REV-495-MANUAL-PR-GATE-REFS
 
 - Scope: Manual `workflow_dispatch` execution of the GitHub Pull Request Merge Gate.

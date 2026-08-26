@@ -469,19 +469,26 @@ Use these commands as the primary local contract:
    follows a rebase merge, the gate may use one matching reviewed exception's original base only
    when that base is an ancestor of the exact head; it records `comparison_base_source` so the
    evidence distinguishes that approved provenance from the supplied merge base.
-11. dead-code regression gate
+11. changed-wiki professional-quality gate
+   `make wiki-quality-gate` discovers authored Markdown changes under `wiki/` from the governed
+   base/head comparison and delegates to the Lotus Platform auditor. Hosted CI uses a pinned
+   platform revision. A changed page must
+   meet first-screen reader/evidence and command-presentation controls; navigation, rename, or
+   deletion changes widen to a full professional-page audit. Missing platform audit source fails
+   closed. This is CI/documentation evidence only and does not alter product contracts.
+12. dead-code regression gate
    `make dead-code-gate`
    This runs the pinned Vulture scanner against `src` and `scripts`, fails on new or malformed
    findings, and permits only fingerprinted compatibility exceptions with owner, reason, and
    expiry metadata in `quality/dead-code-policy.v1.json`. The policy version ends with a
    content fingerprint; changing policy content without updating that version fails closed.
-12. oversized module/function regression gate
+13. oversized module/function regression gate
    `make oversized-code-gate` scans `src` and `scripts` against the 1,000-line module and
    200-line function thresholds, compares stable fingerprints with
    `quality/oversized-code-baseline.v1.json`, and fails on new, grown, resolved, expired, or
    malformed findings. Baseline entries require owner, reason, expiry, and policy/baseline hash
    provenance; this is CI/developer evidence only and does not change product contracts.
-13. proposal decision vocabulary contract
+14. proposal decision vocabulary contract
    `make proposal-decision-vocabulary-gate` validates
    `docs/standards/proposal-decision-vocabulary.v1.json` against the Advise-owned
    `src/core/advisory/decision_summary_status_rules.py` and `src/core/common/workflow_gates.py`
@@ -492,7 +499,7 @@ Use these commands as the primary local contract:
    evidence next actions from the evidence-gap branch map. Its READY/PENDING_REVIEW/BLOCKED
    projections are intentionally documented as reviewed compatibility declarations because no
    separate runtime producer owns that legacy status family.
-13. live demo certification evidence
+15. live demo certification evidence
    `make demo-certification-live`
 
 ## Validation And CI Expectations
