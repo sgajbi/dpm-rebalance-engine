@@ -5,7 +5,6 @@ import json
 import os
 import subprocess
 import sys
-import tomllib
 from email.message import Message
 from pathlib import Path
 from typing import Any
@@ -49,7 +48,7 @@ class FakeDistribution:
         self.requires = requires or []
 
 
-def test_isolated_license_inventory_uses_governed_requirement_install(
+def test_isolated_inventory_regeneration_permits_a_fresh_dependency_topology(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -57,14 +56,11 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     monkeypatch.setenv("PIP_CONFIG_FILE", "ambient-pip.conf")
     monkeypatch.setenv("PYTHONHOME", "ambient-python-home")
     monkeypatch.setenv("PYTHONPATH", "ambient-python-path")
-    lock_packages = tomllib.loads(
-        (Path(__file__).resolve().parents[3] / "uv.lock").read_text(encoding="utf-8")
-    )["package"]
 
     def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append((command, kwargs))
         stdout = (
-            json.dumps({"installed": [{"metadata": package} for package in lock_packages]})
+            json.dumps({"installed": [{"metadata": {"name": "fresh-child", "version": "1.0"}}]})
             if "inspect" in command
             else None
         )
@@ -77,7 +73,7 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
 
     result = _run_in_isolated_environment(
-        _isolated_args("check-inventory"),
+        _isolated_args("write-inventory"),
         venv_root=tmp_path / "venv",
     )
 
@@ -115,9 +111,10 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
         "--disable-pip-version-check",
         "install",
     ]
-    assert calls[3][0][-2] == "-r"
     assert Path(calls[3][0][-1]).name == "requirements-dev.txt"
-    assert "--constraint" in calls[3][0]
+    assert (tmp_path / "license-ip-constraints.txt").read_text(encoding="utf-8") == (
+        "# Fresh inventory resolution.\n"
+    )
     assert calls[4][0][1:4] == ["-X", "utf8", "-I"]
     assert (calls[4][0][-2:], calls[4][1]["capture_output"]) == (["inspect", "--local"], True)
     assert calls[5][0][1] == "-I"
@@ -319,7 +316,7 @@ def test_isolated_license_inventory_returns_two_before_any_install_when_lock_pro
     monkeypatch.setattr("scripts.license_ip_evidence.subprocess.run", fake_run)
 
     result = _run_in_isolated_environment(
-        _isolated_args("write-inventory"),
+        _isolated_args("check-inventory"),
         venv_root=tmp_path / "venv",
     )
 
