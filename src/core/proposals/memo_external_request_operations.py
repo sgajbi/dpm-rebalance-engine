@@ -98,10 +98,13 @@ def request_memo_report_package_operation(
                 report=report_response_from_event(proposal=proposal, event=replayed_event),
                 replayed=True,
             )
-        identity = "\x00".join(
-            ("memo-report-package", proposal.proposal_id, memo.memo_id, idempotency_key)
+        report_request_id = _memo_downstream_operation_identity(
+            prefix="prr",
+            operation="memo-report-package",
+            proposal_id=proposal.proposal_id,
+            memo_id=memo.memo_id,
+            idempotency_key=idempotency_key,
         )
-        report_request_id = f"prr_{sha256(identity.encode()).hexdigest()[:24]}"
     report = request_report_package(
         request={
             "report_request_id": report_request_id,
@@ -206,12 +209,24 @@ def request_memo_ai_commentary_operation(
                 replayed=True,
             )
     memo_evidence = build_memo_ai_evidence(memo=memo, review_posture=review_posture)
+    downstream_idempotency_key = (
+        _memo_downstream_operation_identity(
+            prefix="memo_ai",
+            operation="memo-ai-commentary",
+            proposal_id=proposal.proposal_id,
+            memo_id=memo.memo_id,
+            idempotency_key=idempotency_key,
+        )
+        if idempotency_key
+        else None
+    )
     try:
         commentary = generate_commentary(
             memo_evidence=memo_evidence,
             requested_sections=requested_sections,
             requested_by=payload.requested_by,
             reason=payload.reason,
+            idempotency_key=downstream_idempotency_key,
         )
         ai_status = "REVIEW_REQUIRED"
     except unavailable_error as exc:
@@ -246,3 +261,15 @@ def request_memo_ai_commentary_operation(
         commentary=commentary_from_ai_event(event),
         replayed=replayed,
     )
+
+
+def _memo_downstream_operation_identity(
+    *,
+    prefix: str,
+    operation: str,
+    proposal_id: str,
+    memo_id: str,
+    idempotency_key: str,
+) -> str:
+    identity = "\x00".join((operation, proposal_id, memo_id, idempotency_key))
+    return f"{prefix}_{sha256(identity.encode()).hexdigest()[:24]}"

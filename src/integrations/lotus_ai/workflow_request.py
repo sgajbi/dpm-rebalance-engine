@@ -26,8 +26,9 @@ def build_workflow_pack_execute_request(
     source_refs: list[str],
     expected_output_label: str,
     input_mode: str = _DEFAULT_INPUT_MODE,
+    idempotency_key: str | None = None,
 ) -> dict[str, object]:
-    return {
+    request: dict[str, object] = {
         "pack_id": pack_id,
         "version": version,
         "environment": workflow_pack_environment(),
@@ -50,6 +51,9 @@ def build_workflow_pack_execute_request(
             "expected_output_label": expected_output_label,
         },
     }
+    if idempotency_key is not None:
+        request["idempotency_key"] = idempotency_key
+    return request
 
 
 def workflow_pack_environment() -> str:
