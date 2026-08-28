@@ -55,7 +55,7 @@ def test_external_adapter_contract_manifest_declares_all_authority_seams() -> No
     manifest = _manifest()
 
     assert manifest["manifest_version"] == "lotus-advise.external-adapter-contracts.v1"
-    assert manifest["fixture_revision"] == "2026-07-11.issue-434"
+    assert manifest["fixture_revision"] == "2026-08-28.issue-557"
     assert set(manifest["required_case_ids"]) == REQUIRED_CASE_IDS
     assert set(manifest["adapters"]) == REQUIRED_ADAPTERS
 

@@ -1,6 +1,6 @@
 {
   "manifest_version": "lotus-advise.external-adapter-contracts.v1",
-  "fixture_revision": "2026-07-11.issue-434",
+  "fixture_revision": "2026-08-28.issue-557",
   "required_case_ids": [
     "valid_provider_response",
     "malformed_json",
@@ -20,7 +20,7 @@
         "name": "advisory-simulation",
         "version": "advisory-simulation.v1",
         "schema_ref": "src/integrations/lotus_core/contracts.py",
-        "fixture_revision": "2026-07-11.issue-434"
+        "fixture_revision": "2026-08-28.issue-557"
       },
       "authority": "canonical portfolio state and advisory simulation execution",
       "valid_request": {
@@ -152,7 +152,7 @@
         "name": "risk-concentration",
         "version": "risk-concentration.v1",
         "schema_ref": "src/integrations/lotus_risk/concentration_response.py",
-        "fixture_revision": "2026-07-11.issue-434"
+        "fixture_revision": "2026-08-28.issue-557"
       },
       "authority": "risk-lens concentration enrichment",
       "valid_request": {
@@ -260,7 +260,7 @@
         "name": "portfolio-review-report-package",
         "version": "portfolio-review-report-package.v1",
         "schema_ref": "src/integrations/lotus_report/response_projection.py",
-        "fixture_revision": "2026-07-11.issue-434"
+        "fixture_revision": "2026-08-28.issue-557"
       },
       "authority": "report/render/archive package readiness",
       "valid_request": {
@@ -370,7 +370,7 @@
         "name": "workflow-pack-execution",
         "version": "workflow-pack-execution.v1",
         "schema_ref": "src/integrations/lotus_ai/workflow_request.py",
-        "fixture_revision": "2026-07-11.issue-434"
+        "fixture_revision": "2026-08-28.issue-557"
       },
       "authority": "governed AI workflow-pack execution and model-risk controls",
       "valid_request": {
@@ -449,15 +449,17 @@
         },
         {
           "case_id": "retry",
-          "expected_behavior": "does not replay unsafe AI execution after preflight guardrail rejection",
+          "expected_behavior": "reuses one opaque downstream identity and the original Lotus AI workflow run when keyed memo commentary is retried after local event persistence fails",
           "test_references": [
-            "tests/unit/advisory/api/test_lotus_ai_advisory_copilot.py::test_generate_advisory_copilot_fails_closed_before_unsafe_execution"
+            "tests/unit/advisory/api/test_api_advisory_proposal_memo.py::test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write_failure",
+            "tests/unit/advisory/api/test_lotus_ai_workflow_request.py::test_build_workflow_pack_execute_request_forwards_stable_idempotency_identity"
           ]
         },
         {
           "case_id": "duplicate_response",
-          "expected_behavior": "deduplicates bounded requested outputs and allowed review actions",
+          "expected_behavior": "preserves original AI lineage for same-key same-input memo commentary and rejects changed input before a replacement AI execution",
           "test_references": [
+            "tests/unit/advisory/api/test_api_advisory_proposal_memo.py::test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write_failure",
             "tests/unit/advisory/api/test_lotus_ai_advisory_copilot_request.py::test_requested_outputs_dedupe_and_bound_advisor_requested_keys",
             "tests/unit/advisory/api/test_lotus_ai_rationale.py::test_map_workflow_pack_run_requires_identity_and_list_findings"
           ]
