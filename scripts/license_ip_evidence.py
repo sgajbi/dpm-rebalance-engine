@@ -38,7 +38,6 @@ NOTICE_PATH = Path("NOTICE.md")
 LICENSE_OPERATOR_RE = re.compile(r"\s+(?:AND|OR|WITH)\s+|[()]")
 ISOLATED_ENV_FLAG = "LOTUS_ADVISE_LICENSE_IP_ISOLATED"
 PIP_BOOTSTRAP_PACKAGES = ("pip==25.0.1", "setuptools==83.0.0")
-UTF8_ISOLATED_PYTHON_ARGS = ("-X", "utf8", "-I")
 PIP_ENVIRONMENT = {
     "PIP_CONFIG_FILE": os.devnull,
     "PIP_DISABLE_PIP_VERSION_CHECK": "1",
@@ -745,14 +744,18 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
     venv_python = _venv_python(venv_root)
     constraints_path = venv_root.parent / "license-ip-constraints.txt"
     try:
-        package_constraints = _write_lock_constraints(
-            REPO_ROOT / DEPENDENCY_LOCK_PATH,
-            constraints_path,
-            requirement_paths=(
-                REPO_ROOT / args.runtime_requirements,
-                REPO_ROOT / args.development_requirements,
-            ),
-        )
+        if args.command == "write-inventory":
+            constraints_path.write_text("# Fresh inventory resolution.\n", encoding="utf-8")
+            package_constraints = {}
+        else:
+            package_constraints = _write_lock_constraints(
+                REPO_ROOT / DEPENDENCY_LOCK_PATH,
+                constraints_path,
+                requirement_paths=(
+                    REPO_ROOT / args.runtime_requirements,
+                    REPO_ROOT / args.development_requirements,
+                ),
+            )
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 2
@@ -804,7 +807,7 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
     installed_result = subprocess.run(
         [
             str(venv_python),
-            *UTF8_ISOLATED_PYTHON_ARGS,
+            *("-X", "utf8", "-I"),
             "-m",
             "pip",
             "--isolated",
@@ -822,7 +825,6 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
         return installed_result.returncode
     try:
         inspection = json.loads(installed_result.stdout)
-        installed_packages = [item["metadata"] for item in inspection["installed"]]
         inapplicable_packages = frozenset(
             canonicalize_name(requirement.name)
             for item in inspection["installed"]
@@ -830,11 +832,12 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
             if (requirement := Requirement(requirement_text)).marker is not None
             and not requirement.marker.evaluate()
         )
-        _validate_installed_packages_against_lock(
-            installed_packages,
-            package_constraints,
-            inapplicable_packages=inapplicable_packages,
-        )
+        if args.command == "check-inventory":
+            _validate_installed_packages_against_lock(
+                [item["metadata"] for item in inspection["installed"]],
+                package_constraints,
+                inapplicable_packages=inapplicable_packages,
+            )
     except (json.JSONDecodeError, RuntimeError) as exc:
         print(
             f"Cannot verify isolated dependency graph against the authoritative lock: {exc}",
