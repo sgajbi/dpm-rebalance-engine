@@ -24,11 +24,10 @@ from scripts.license_ip_evidence import (
     validate_license_inventory_against_expected,
 )
 
-CONSTRAINT_CASES = json.loads(
-    (Path(__file__).resolve().parents[2] / "fixtures/dependency_constraint_cases.json").read_text(
-        encoding="utf-8"
-    )
+CONSTRAINT_FIXTURE = (
+    Path(__file__).resolve().parents[2] / "fixtures/dependency_constraint_cases.json"
 )
+CONSTRAINT_CASES = json.loads(CONSTRAINT_FIXTURE.read_text(encoding="utf-8"))
 
 
 class FakeDistribution:
@@ -145,11 +144,7 @@ def test_lock_constraints_project_exact_versions(tmp_path: Path) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    "case",
-    CONSTRAINT_CASES["refresh_cases"],
-    ids=lambda case: case["id"],
-)
+@pytest.mark.parametrize("case", CONSTRAINT_CASES["refresh_cases"], ids=lambda case: case["id"])
 def test_lock_constraint_refresh_is_bounded_by_authoritative_roots(
     tmp_path: Path, case: dict[str, Any]
 ) -> None:
@@ -173,7 +168,10 @@ def test_lock_constraint_refresh_is_bounded_by_authoritative_roots(
 @pytest.mark.parametrize("case", CONSTRAINT_CASES["installed_cases"], ids=lambda case: case["id"])
 def test_installed_dependency_graph_must_be_fully_locked(case: dict[str, Any]) -> None:
     verify = lambda: _validate_installed_packages_against_lock(  # noqa: E731
-        case["packages"], {"direct": "2.0.0", "child": "1.0.0"}
+        case["packages"],
+        case.get("constraints", {"direct": "2.0.0", "child": "1.0.0"}),
+        tuple(case.get("dependency_metadata", ())),
+        frozenset(case.get("direct_names", ())),
     )
     if error := case.get("error"):
         with pytest.raises(RuntimeError, match=error):

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from importlib import metadata
 from pathlib import Path
-from typing import Any, Iterable, cast
+from typing import Any, Iterable
 
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import SpecifierSet
@@ -679,34 +679,26 @@ def _build_inventory_from_args(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _write_lock_constraints(
-    lock_path: Path,
-    output_path: Path,
-    *,
-    requirement_paths: Iterable[Path] = (),
-) -> dict[str, str]:
+    lock_path: Path, output_path: Path, *, requirement_paths: Iterable[Path] = ()
+) -> tuple[dict[str, str], frozenset[str]]:
     refreshed_direct_constraints: dict[str, str] = {}
     for requirement_path in requirement_paths:
         for root in parse_requirement_roots(
-            requirement_path,
-            dependency_group="constraint-refresh",
+            requirement_path, dependency_group="constraint-refresh"
         ):
             if root.pinned_version is not None:
                 previous_version = refreshed_direct_constraints.setdefault(
-                    root.name,
-                    root.pinned_version,
+                    root.name, root.pinned_version
                 )
                 if previous_version != root.pinned_version:
-                    raise RuntimeError(
+                    message = (
                         f"Direct requirement files contain conflicting versions for {root.name}"
                     )
-    return cast(
-        dict[str, str],
-        write_authoritative_lock_constraints(
-            lock_path,
-            output_path,
-            refreshed_direct_constraints=refreshed_direct_constraints,
-        ),
+                    raise RuntimeError(message)
+    constraints = write_authoritative_lock_constraints(
+        lock_path, output_path, refreshed_direct_constraints=refreshed_direct_constraints
     )
+    return constraints, frozenset(refreshed_direct_constraints)
 
 
 def _run_in_isolated_environment(
@@ -743,12 +735,15 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
 
     venv_python = _venv_python(venv_root)
     constraints_path = venv_root.parent / "license-ip-constraints.txt"
+    package_constraints: dict[str, str]
+    direct_requirement_names: frozenset[str]
     try:
         if args.command == "write-inventory":
             constraints_path.write_text("# Fresh inventory resolution.\n", encoding="utf-8")
             package_constraints = {}
+            direct_requirement_names = frozenset()
         else:
-            package_constraints = _write_lock_constraints(
+            package_constraints, direct_requirement_names = _write_lock_constraints(
                 REPO_ROOT / DEPENDENCY_LOCK_PATH,
                 constraints_path,
                 requirement_paths=(
@@ -825,18 +820,12 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
         return installed_result.returncode
     try:
         inspection = json.loads(installed_result.stdout)
-        inapplicable_packages = frozenset(
-            canonicalize_name(requirement.name)
-            for item in inspection["installed"]
-            for requirement_text in item["metadata"].get("requires_dist") or ()
-            if (requirement := Requirement(requirement_text)).marker is not None
-            and not requirement.marker.evaluate()
-        )
         if args.command == "check-inventory":
             _validate_installed_packages_against_lock(
                 [item["metadata"] for item in inspection["installed"]],
                 package_constraints,
-                inapplicable_packages=inapplicable_packages,
+                dependency_metadata=tuple(item["metadata"] for item in inspection["installed"]),
+                direct_requirement_names=direct_requirement_names,
             )
     except (json.JSONDecodeError, RuntimeError) as exc:
         print(
