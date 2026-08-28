@@ -4,10 +4,14 @@ from fastapi.testclient import TestClient
 
 import src.api.main as api_main
 from src.api.main import app
-from src.api.proposals.router import reset_proposal_workflow_service_for_tests
+from src.api.proposals.router import (
+    get_proposal_repository,
+    reset_proposal_workflow_service_for_tests,
+)
 from src.core.proposals import memo_api
 from src.core.proposals.memo_ai_ports import ProposalMemoAiCommentaryDraft
 from src.integrations.lotus_report import LotusReportUnavailableError
+from src.integrations.lotus_report.request_mapping import build_memo_report_package_job_request
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
@@ -347,11 +351,13 @@ def test_proposal_memo_review_and_report_package_events_are_idempotent_and_hash_
         ]
 
 
-def test_proposal_memo_report_package_materialization_records_report_render_archive_refs() -> None:
+def test_proposal_memo_report_package_projects_persisted_version_and_replays_once() -> None:
     captured_requests: list[dict] = []
+    mapped_job_requests: list[dict] = []
 
     def _fake_report_package(request: dict) -> dict:
         captured_requests.append(request)
+        mapped_job_requests.append(build_memo_report_package_job_request(request))
         return {
             "proposal": request["proposal"],
             "report_request_id": request["report_request_id"],
@@ -382,6 +388,13 @@ def test_proposal_memo_report_package_materialization_records_report_render_arch
     with TestClient(app) as client:
         created = _create_proposal(client)
         proposal_id = created["proposal"]["proposal_id"]
+        repository = get_proposal_repository()
+        persisted_version = repository.get_version(proposal_id=proposal_id, version_no=1)
+        assert persisted_version is not None
+        persisted_version.proposal_result_json.setdefault("explanation", {})["risk_lens"] = {
+            "metadata": {"as_of_date": "2026-04-10"}
+        }
+        repository.create_version(persisted_version)
         memo = _create_memo(client, proposal_id)
         review_payload = {
             "action": "APPROVE_FOR_ADVISOR_USE",
@@ -398,15 +411,17 @@ def test_proposal_memo_report_package_materialization_records_report_render_arch
             == 200
         )
 
+        report_payload = {
+            "requested_by": "advisor_1",
+            "source_memo_hash": memo["memo_hash"],
+            "requested_output_formats": ["pdf"],
+            "reason": {"purpose": "advisor-use memo report package"},
+        }
+        report_headers = {"Idempotency-Key": "memo-report-package-materialize"}
         materialized = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
-            json={
-                "requested_by": "advisor_1",
-                "source_memo_hash": memo["memo_hash"],
-                "requested_output_formats": ["pdf"],
-                "reason": {"purpose": "advisor-use memo report package"},
-            },
-            headers={"Idempotency-Key": "memo-report-package-materialize"},
+            json=report_payload,
+            headers=report_headers,
         )
 
         assert materialized.status_code == 200
@@ -423,12 +438,50 @@ def test_proposal_memo_report_package_materialization_records_report_render_arch
         assert (
             captured_requests[0]["proposal_memo_package"]["client_ready_publication"] == "BLOCKED"
         )
+        assert "proposal_result" in captured_requests[0]["proposal_version"]
+        assert "proposal_result_json" not in captured_requests[0]["proposal_version"]
+        assert mapped_job_requests == [
+            {
+                "portfolio_scope": {"portfolio_ids": ["pf_memo_api_1"]},
+                "as_of_date": "2026-04-10",
+                "requested_output_formats": ["pdf"],
+                "reporting_currency": "USD",
+                "options": {},
+                "proposal_memo_package": captured_requests[0]["proposal_memo_package"],
+            }
+        ]
+
+        replayed = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
+            json=report_payload,
+            headers=report_headers,
+        )
+        assert replayed.status_code == 200
+        replayed_body = replayed.json()
+        assert replayed_body["replayed"] is True
+        assert (
+            replayed_body["report_package_event"]["event_id"]
+            == body["report_package_event"]["event_id"]
+        )
+        assert replayed_body["report"]["report_reference_id"] == "rjob_memo_001"
+        assert len(captured_requests) == 1
+        assert len(mapped_job_requests) == 1
 
         lineage = client.get(f"/advisory/proposals/{proposal_id}/memos/lineage")
         assert lineage.status_code == 200
         lineage_memo = lineage.json()["memos"][0]
         assert lineage_memo["report_package_posture"]["report_status"] == "ARCHIVED"
         assert lineage_memo["archive_refs"][0]["document_id"] == "doc_memo_001"
+
+        replay_evidence = client.get(
+            f"/advisory/proposals/{proposal_id}/versions/1/memo/replay-evidence"
+        )
+        assert replay_evidence.status_code == 200
+        assert [
+            event["event_type"]
+            for event in replay_evidence.json()["audit_events"]
+            if event["event_type"] == "MEMO_REPORT_PACKAGE_RECORDED"
+        ] == ["MEMO_REPORT_PACKAGE_RECORDED"]
 
 
 def test_proposal_memo_report_package_blocks_without_review_and_client_ready_request() -> None:
