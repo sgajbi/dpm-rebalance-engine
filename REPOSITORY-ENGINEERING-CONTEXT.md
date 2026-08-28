@@ -362,6 +362,11 @@ Boundary rules:
 20. outbound `lotus-report` and `lotus-ai` calls must fail closed when tenant or actor identity is
    missing, malformed, over-length, or control-character-bearing; do not reintroduce synthetic
    production defaults such as a hardcoded tenant or service actor,
+   and retryable proposal-memo AI commentary must forward the opaque Advise-derived
+   business-operation identity as the Lotus AI workflow-pack `idempotency_key`. A retry after an
+   acknowledged AI response but before local memo-event persistence must receive the original AI
+   request/run lineage; it must not create replacement generated content. The raw caller key must
+   not cross the service boundary,
 21. policy-control write routes must resolve `PolicyControlPrincipal` at the API boundary before
     application commands run through the shared proposal-principal resolver; do not pass
     caller-supplied actor strings into policy-pack or evaluation state transitions unless they

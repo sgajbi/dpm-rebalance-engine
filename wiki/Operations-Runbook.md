@@ -449,6 +449,14 @@ back the memo, idempotency, and event evidence together. Preserve the memo id, p
 version number, event id, idempotency key when supplied, request hash, and failed operation; do not
 repair memo lifecycle gaps by inserting isolated rows.
 
+For keyed proposal-memo AI commentary, Advise reserves the local memo operation before calling
+Lotus AI and sends an opaque deterministic workflow-pack idempotency identity. If the AI response
+is acknowledged but `MEMO_AI_REFERENCE_RECORDED` is not appended, retry the exact original Advise
+payload and key so Lotus AI returns the retained request/run lineage. Do not mint a replacement key
+or change the payload. Changed input is a local idempotency conflict; active, indeterminate, or
+integrity-invalid AI outcomes remain fail-closed for source-service investigation rather than
+starting a second model run.
+
 Proposal transition writes use an adapter-owned compare-and-set boundary on the proposal aggregate
 state and current version. When two callers race from the same lifecycle state, the first committed
 transition wins and a stale writer fails closed with

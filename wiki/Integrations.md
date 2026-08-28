@@ -212,3 +212,10 @@ Boundary rule:
 - proposal narrative and memo AI calls are selected through Advise-owned ports. Lotus AI adapter
   errors are translated into core unavailable outcomes before proposal narrative or memo
   orchestration handles fallback posture.
+- keyed proposal-memo AI commentary derives one opaque downstream identity from the Advise memo
+  operation, proposal, memo, and caller key, then sends it as the Lotus AI workflow-pack
+  `idempotency_key`. If AI succeeds but the local append-only memo event is not persisted, a retry
+  with the original Advise key and payload receives Lotus AI's retained original request/run
+  lineage. A changed payload remains an Advise `409` conflict before another AI request, and the
+  raw caller key is not disclosed downstream. Calls without an Advise idempotency key retain the
+  existing one-request/one-run compatibility posture.
