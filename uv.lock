@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "2b1f119f24b1c6c2778d33c2ad44cc9fa106d1168987204bd2dcf1edd1f356b6"
+license-inventory-sha256 = "e2f38ce50cb7543827674dac5fb00a5415c92ff12a9a976ee514ce0806ffc888"
 
 [[requirement-files]]
 group = "development"
@@ -14,12 +14,12 @@ sha256 = "d0a1926551495f17adf24a60a101c2ecdc933cfae34111f3f1aa319af28a5eff"
 [[requirement-files]]
 group = "install"
 path = "requirements.txt"
-sha256 = "7e4643f6aa78e056f536b8174977faacbee3f96b5c1e6df100f5fcd1224a0b78"
+sha256 = "ac1655034e0c41bf7456e05cfd8c2eaa3c6e7ba458bb72ebec45663a3f799a69"
 
 [[requirement-files]]
 group = "runtime"
 path = "requirements-prod.txt"
-sha256 = "43891e3575c1f0c2ca8f64b36d75a639588b54ded728f40035d7494bacfb3432"
+sha256 = "19eb08d43c8e0c66549af8fa26539d70ed39d0dc77dd769320216309337878e8"
 
 [[package]]
 name = "annotated-doc"
@@ -203,7 +203,7 @@ requirement-hashes = ["0f940ebfb8bf2679f96c96fe73fc7937362c493ff2666e33833d6975a
 
 [[package]]
 name = "filelock"
-version = "3.32.3"
+version = "3.32.4"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -212,7 +212,7 @@ requirement-hashes = []
 
 [[package]]
 name = "grimp"
-version = "3.15"
+version = "3.16"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -383,7 +383,7 @@ requirement-hashes = []
 
 [[package]]
 name = "msgpack"
-version = "1.2.1"
+version = "1.2.2"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -491,7 +491,7 @@ requirement-hashes = []
 
 [[package]]
 name = "platformdirs"
-version = "4.11.3"
+version = "4.11.5"
 direct = false
 groups = ["development"]
 requirement-files = []
@@ -572,16 +572,16 @@ requirement-hashes = []
 
 [[package]]
 name = "pydantic"
-version = "2.13.4"
+version = "2.13.5"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["ef3359e4f1ef2f2420c267c3b87df123e4e4e71f9779a671cd8df6637c88dc79"]
+requirement-hashes = ["c8deef00978d330b7b02d64a0573359a99f6b8360389b22a87dc82609d265ecd"]
 
 [[package]]
 name = "pydantic-core"
-version = "2.46.4"
+version = "2.46.5"
 direct = false
 groups = ["development", "runtime"]
 requirement-files = []

@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-28T00:37:24Z",
-  "git_commit_sha": "ee68523095949687da8ebc96bb27204526e791bc",
+  "generated_at_utc": "2026-08-28T14:44:06Z",
+  "git_commit_sha": "9348cde8f8a6e5ac00164d1ef6dcdc88a4f34e6e",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -402,7 +402,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "3.32.3",
+      "installed_version": "3.32.4",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -410,7 +410,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "3.32.3"
+      "version": "3.32.4"
     },
     {
       "declared_name": "grimp",
@@ -420,7 +420,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "3.15",
+      "installed_version": "3.16",
       "license_term": "BSD 2-Clause License",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -428,7 +428,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "3.15"
+      "version": "3.16"
     },
     {
       "declared_name": "h11",
@@ -786,7 +786,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "1.2.1",
+      "installed_version": "1.2.2",
       "license_term": "Apache-2.0",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -794,7 +794,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "1.2.1"
+      "version": "1.2.2"
     },
     {
       "declared_name": "mypy",
@@ -1013,7 +1013,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "4.11.3",
+      "installed_version": "4.11.5",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1021,7 +1021,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "4.11.3"
+      "version": "4.11.5"
     },
     {
       "declared_name": "pluggy",
@@ -1189,7 +1189,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "2.13.4",
+      "installed_version": "2.13.5",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1199,7 +1199,7 @@
       "source_files": [
         "requirements-prod.txt"
       ],
-      "version": "2.13.4"
+      "version": "2.13.5"
     },
     {
       "declared_name": "pydantic-core",
@@ -1210,7 +1210,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "2.46.4",
+      "installed_version": "2.46.5",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1218,7 +1218,7 @@
       "policy_classification": "ALLOWED",
       "relationship": "transitive",
       "source_files": [],
-      "version": "2.46.4"
+      "version": "2.46.5"
     },
     {
       "declared_name": "pygments",
