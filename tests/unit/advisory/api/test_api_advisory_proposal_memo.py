@@ -691,6 +691,113 @@ def test_proposal_memo_ai_commentary_is_review_gated_idempotent_and_non_authorit
         assert ai_posture["authoritative_for_memo_status"] is False
 
 
+def test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    downstream_runs: dict[str, str] = {}
+    received_idempotency_keys: list[str] = []
+
+    def _fake_keyed_ai_commentary(**kwargs: object) -> ProposalMemoAiCommentaryDraft:
+        idempotency_key = kwargs.get("idempotency_key")
+        assert isinstance(idempotency_key, str)
+        received_idempotency_keys.append(idempotency_key)
+        workflow_run_id = downstream_runs.setdefault(
+            idempotency_key, "packrun_memo_commentary_original"
+        )
+        return ProposalMemoAiCommentaryDraft(
+            status="REVIEW_REQUIRED",
+            sections=(
+                {
+                    "section_key": "EXECUTIVE_SUMMARY",
+                    "title": "Executive Summary",
+                    "text": "Advisor-use commentary from the retained AI response.",
+                    "review_state": "REVIEW_REQUIRED",
+                },
+            ),
+            lineage={
+                "workflow_pack_id": "proposal_memo_commentary.pack",
+                "workflow_pack_version": "v1",
+                "workflow_run_id": workflow_run_id,
+                "fallback_reason": None,
+            },
+            review_guidance=("Review against persisted memo evidence.",),
+        )
+
+    monkeypatch.setattr(
+        memo_api,
+        "generate_proposal_memo_commentary_with_lotus_ai",
+        _fake_keyed_ai_commentary,
+    )
+
+    with TestClient(app) as client:
+        proposal_id, memo = _create_proposal_memo(client)
+        _approve_memo(
+            client,
+            proposal_id,
+            memo,
+            idempotency_key="memo-ai-gap-review",
+        )
+        repository = get_proposal_repository()
+        append_memo_event = repository.append_memo_event
+        failed_once = False
+
+        def _fail_first_ai_event(event: ProposalMemoEventRecord) -> None:
+            nonlocal failed_once
+            if event.event_type == "MEMO_AI_REFERENCE_RECORDED" and not failed_once:
+                failed_once = True
+                raise RuntimeError("simulated AI event persistence failure")
+            append_memo_event(event)
+
+        monkeypatch.setattr(repository, "append_memo_event", _fail_first_ai_event)
+        payload = {
+            "requested_by": "advisor_1",
+            "source_memo_hash": memo["memo_hash"],
+            "requested_sections": ["EXECUTIVE_SUMMARY"],
+            "reason": {"purpose": "advisor-use commentary"},
+        }
+        headers = {"Idempotency-Key": "memo-ai-persistence-gap"}
+
+        with pytest.raises(RuntimeError, match="simulated AI event persistence failure"):
+            client.post(
+                f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
+                json=payload,
+                headers=headers,
+            )
+
+        conflict = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
+            json={**payload, "reason": {"purpose": "changed commentary request"}},
+            headers=headers,
+        )
+        assert conflict.status_code == 409
+        assert conflict.json()["detail"] == "MEMO_EVENT_IDEMPOTENCY_KEY_CONFLICT"
+        assert len(received_idempotency_keys) == 1
+
+        retried = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
+            json=payload,
+            headers=headers,
+        )
+
+        assert retried.status_code == 200
+        assert retried.json()["replayed"] is False
+        assert (
+            retried.json()["commentary"]["lineage"]["workflow_run_id"]
+            == "packrun_memo_commentary_original"
+        )
+        assert len(received_idempotency_keys) == 2
+        assert len(set(received_idempotency_keys)) == 1
+        assert len(downstream_runs) == 1
+        assert received_idempotency_keys[0].startswith("memo_ai_")
+        assert "memo-ai-persistence-gap" not in received_idempotency_keys[0]
+        events = repository.list_memo_events(memo_id=memo["memo_id"])
+        ai_events = [event for event in events if event.event_type == "MEMO_AI_REFERENCE_RECORDED"]
+        assert len(ai_events) == 1
+        assert ai_events[0].reason_json["lineage"]["workflow_run_id"] == (
+            "packrun_memo_commentary_original"
+        )
+
+
 def test_proposal_memo_ai_commentary_rejects_empty_requested_sections() -> None:
     with TestClient(app) as client:
         proposal_id, memo = _create_proposal_memo(client)

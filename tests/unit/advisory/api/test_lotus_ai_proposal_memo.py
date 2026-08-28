@@ -73,6 +73,7 @@ def test_workflow_pack_request_uses_bounded_memo_evidence_without_raw_prompt(
         requested_sections=["EXECUTIVE_SUMMARY"],
         requested_by="advisor_123",
         reason={"purpose": "advisor-review"},
+        idempotency_key="memo_ai_0123456789abcdef01234567",
     )
 
     task_request = request_payload["task_request"]
@@ -87,6 +88,7 @@ def test_workflow_pack_request_uses_bounded_memo_evidence_without_raw_prompt(
     assert request_payload["pack_id"] == "proposal_memo_commentary.pack"
     assert request_payload["version"] == "v1"
     assert request_payload["workflow_surface"] == "advisor-proposal-memo-commentary"
+    assert request_payload["idempotency_key"] == "memo_ai_0123456789abcdef01234567"
     assert task_request["input_mode"] == "STRUCTURED_CONTEXT"
     assert task_request["expected_output_label"] == "EXPLANATION_ONLY"
     assert caller["tenant_id"] == "tenant-private-bank-001"
