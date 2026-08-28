@@ -13,28 +13,22 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from importlib import metadata
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, cast
 
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import SpecifierSet
 from packaging.utils import canonicalize_name
 
-try:
-    from scripts.dependency_constraint_evidence import (
-        validate_authoritative_lock,
-        write_authoritative_lock_constraints,
-    )
-    from scripts.dependency_constraint_evidence import (
-        validate_installed_packages_against_lock as _validate_installed_packages_against_lock,
-    )
-except ModuleNotFoundError:
-    from dependency_constraint_evidence import (  # type: ignore[no-redef]
-        validate_authoritative_lock,
-        write_authoritative_lock_constraints,
-    )
-    from dependency_constraint_evidence import (  # type: ignore[no-redef]
-        validate_installed_packages_against_lock as _validate_installed_packages_against_lock,
-    )
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from scripts.dependency_constraint_evidence import (  # noqa: E402
+    validate_authoritative_lock,
+    write_authoritative_lock_constraints,
+)
+from scripts.dependency_constraint_evidence import (
+    validate_installed_packages_against_lock as _validate_installed_packages_against_lock,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SERVICE_NAME = "lotus-advise"
@@ -707,10 +701,13 @@ def _write_lock_constraints(
                     raise RuntimeError(
                         f"Direct requirement files contain conflicting versions for {root.name}"
                     )
-    return write_authoritative_lock_constraints(
-        lock_path,
-        output_path,
-        refreshed_direct_constraints=refreshed_direct_constraints,
+    return cast(
+        dict[str, str],
+        write_authoritative_lock_constraints(
+            lock_path,
+            output_path,
+            refreshed_direct_constraints=refreshed_direct_constraints,
+        ),
     )
 
 
