@@ -12,7 +12,7 @@ httpx==0.28.1
 idna==3.19
 numpy==2.4.6
 packaging==26.3
-pydantic==2.13.4
+pydantic==2.13.5
 prometheus-fastapi-instrumentator==8.1.0
 prometheus-client==0.26.0
 psycopg[binary]==3.3.4
