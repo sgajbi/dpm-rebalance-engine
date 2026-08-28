@@ -1,16 +1,16 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-08-28T15:23:32.083862+00:00`
+- Generated At: `2026-08-28T16:24:52.634113+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
 
 ## Code Size
 
-- Python files: `1101`
+- Python files: `1103`
 - Packages: `42`
-- Modules: `1059`
-- Total Python lines: `200211`
+- Modules: `1061`
+- Total Python lines: `200404`
 
 ## Largest Files
 
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5831, missing=5660, covered=171, coverage=2.9%`
+- Interrogate docstring inventory: `total=5835, missing=5661, covered=174, coverage=3.0%`
 - Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;
   absolute public API and module-ownership thresholds remain report-only until
   classified.
