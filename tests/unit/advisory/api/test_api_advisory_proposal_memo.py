@@ -12,13 +12,19 @@ from src.api.proposals.router import (
 )
 from src.core.proposals import memo_api
 from src.core.proposals.memo_ai_ports import ProposalMemoAiCommentaryDraft
-from src.core.proposals.memo_persistence_models import ProposalMemoEventRecord
+from src.core.proposals.memo_persistence_models import (
+    ProposalMemoEventRecord,
+    ProposalMemoEventType,
+)
+from src.core.proposals.repository import ProposalRepository
 from src.integrations.lotus_report import LotusReportUnavailableError
 from src.integrations.lotus_report.request_mapping import build_memo_report_package_job_request
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 REPORT_RESPONSE_FIXTURE = REPO_ROOT / "tests/fixtures/memo_report_archived_response.json"
 ARCHIVED_REPORT_RESPONSE = json.loads(REPORT_RESPONSE_FIXTURE.read_text(encoding="utf-8"))
+AI_DRAFT_FIXTURE = REPO_ROOT / "tests/fixtures/memo_ai_commentary_draft.json"
+AI_COMMENTARY_DRAFT = json.loads(AI_DRAFT_FIXTURE.read_text(encoding="utf-8"))
 
 
 def setup_function() -> None:
@@ -217,6 +223,32 @@ def _approve_memo(
     assert response.status_code == 200
 
 
+def _create_reviewed_memo(
+    client: TestClient, idempotency_key: str | None = None
+) -> tuple[str, dict]:
+    proposal_id, memo = _create_proposal_memo(client)
+    _approve_memo(client, proposal_id, memo, idempotency_key=idempotency_key)
+    return proposal_id, memo
+
+
+def _fail_first_event(
+    monkeypatch: pytest.MonkeyPatch,
+    repository: ProposalRepository,
+    event_type: ProposalMemoEventType,
+) -> None:
+    append_memo_event = repository.append_memo_event
+    failed = False
+
+    def _append(event: ProposalMemoEventRecord) -> None:
+        nonlocal failed
+        if event.event_type == event_type and not failed:
+            failed = True
+            raise RuntimeError("simulated event persistence failure")
+        append_memo_event(event)
+
+    monkeypatch.setattr(repository, "append_memo_event", _append)
+
+
 def _archived_report_response(request: dict) -> dict:
     return {
         **ARCHIVED_REPORT_RESPONSE,
@@ -225,10 +257,26 @@ def _archived_report_response(request: dict) -> dict:
     }
 
 
-def _post_report_package(
-    client: TestClient, proposal_id: str, payload: dict, headers: dict | None = None
+def _ai_commentary_draft(
+    *, workflow_run_id: str, text: str, review_guidance: str
+) -> ProposalMemoAiCommentaryDraft:
+    payload = json.loads(json.dumps(AI_COMMENTARY_DRAFT))
+    payload["sections"][0]["text"] = text
+    payload["lineage"]["workflow_run_id"] = workflow_run_id
+    payload["review_guidance"] = [review_guidance]
+    payload["sections"] = tuple(payload["sections"])
+    payload["review_guidance"] = tuple(payload["review_guidance"])
+    return ProposalMemoAiCommentaryDraft(**payload)
+
+
+def _post_memo_action(
+    client: TestClient,
+    proposal_id: str,
+    action: str,
+    payload: dict,
+    headers: dict | None = None,
 ):
-    url = f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages"
+    url = f"/advisory/proposals/{proposal_id}/versions/1/memo/{action}"
     return client.post(url, json=payload, headers=headers)
 
 
@@ -425,7 +473,9 @@ def test_proposal_memo_report_package_projects_persisted_version_and_replays_onc
             "reason": {"purpose": "advisor-use memo report package"},
         }
         report_headers = {"Idempotency-Key": "memo-report-package-materialize"}
-        materialized = _post_report_package(client, proposal_id, report_payload, report_headers)
+        materialized = _post_memo_action(
+            client, proposal_id, "report-packages", report_payload, report_headers
+        )
 
         assert materialized.status_code == 200
         body = materialized.json()
@@ -433,25 +483,20 @@ def test_proposal_memo_report_package_projects_persisted_version_and_replays_onc
         assert body["report_package_event"]["reason"]["report_package_id"] == "rjob_memo_001"
         assert body["report_package_event"]["reason"]["render"]["render_job_id"] == "rdr_memo_001"
         assert body["report_package_event"]["reason"]["archive"]["document_id"] == "doc_memo_001"
-        assert captured_requests[0]["proposal_memo_package"]["memo_id"] == memo["memo_id"]
-        assert (
-            captured_requests[0]["proposal_memo_package"]["review"]["review_action"]
-            == "APPROVE_FOR_ADVISOR_USE"
-        )
-        assert (
-            captured_requests[0]["proposal_memo_package"]["client_ready_publication"] == "BLOCKED"
-        )
+        memo_package = captured_requests[0]["proposal_memo_package"]
+        assert memo_package["memo_id"] == memo["memo_id"]
+        assert memo_package["review"]["review_action"] == "APPROVE_FOR_ADVISOR_USE"
+        assert memo_package["client_ready_publication"] == "BLOCKED"
         assert "proposal_result" in captured_requests[0]["proposal_version"]
         assert "proposal_result_json" not in captured_requests[0]["proposal_version"]
         mapped_job_request = build_memo_report_package_job_request(captured_requests[0])
         assert mapped_job_request["as_of_date"] == "2026-04-10"
         assert mapped_job_request["reporting_currency"] == "USD"
-        assert (
-            mapped_job_request["proposal_memo_package"]
-            == captured_requests[0]["proposal_memo_package"]
-        )
+        assert mapped_job_request["proposal_memo_package"] == memo_package
 
-        replayed = _post_report_package(client, proposal_id, report_payload, report_headers)
+        replayed = _post_memo_action(
+            client, proposal_id, "report-packages", report_payload, report_headers
+        )
         assert replayed.status_code == 200
         replayed_body = replayed.json()
         assert replayed_body["replayed"] is True
@@ -481,26 +526,12 @@ def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write
     api_main.request_proposal_memo_report_package_with_lotus_report = _fake_report_package
 
     with TestClient(app) as client:
-        proposal_id, memo = _create_proposal_memo(client)
-        _approve_memo(
-            client,
-            proposal_id,
-            memo,
-            idempotency_key="memo-report-retry-review",
+        proposal_id, memo = _create_reviewed_memo(
+            client, idempotency_key="memo-report-retry-review"
         )
 
         repository = get_proposal_repository()
-        append_memo_event = repository.append_memo_event
-        failed_once = False
-
-        def _fail_first_report_event(event: ProposalMemoEventRecord) -> None:
-            nonlocal failed_once
-            if event.event_type == "MEMO_REPORT_PACKAGE_RECORDED" and not failed_once:
-                failed_once = True
-                raise RuntimeError("simulated event persistence failure")
-            append_memo_event(event)
-
-        monkeypatch.setattr(repository, "append_memo_event", _fail_first_report_event)
+        _fail_first_event(monkeypatch, repository, "MEMO_REPORT_PACKAGE_RECORDED")
         payload = {
             "requested_by": "advisor_1",
             "source_memo_hash": memo["memo_hash"],
@@ -510,11 +541,12 @@ def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write
         headers = {"Idempotency-Key": "memo-report-persistence-gap"}
 
         with pytest.raises(RuntimeError, match="simulated event persistence failure"):
-            _post_report_package(client, proposal_id, payload, headers)
+            _post_memo_action(client, proposal_id, "report-packages", payload, headers)
 
-        conflict = _post_report_package(
+        conflict = _post_memo_action(
             client,
             proposal_id,
+            "report-packages",
             {**payload, "reason": {"purpose": "different advisor-use report package"}},
             headers,
         )
@@ -522,7 +554,7 @@ def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write
         assert conflict.json()["detail"] == "MEMO_EVENT_IDEMPOTENCY_KEY_CONFLICT"
         assert len(captured_report_request_ids) == 1
 
-        retried = _post_report_package(client, proposal_id, payload, headers)
+        retried = _post_memo_action(client, proposal_id, "report-packages", payload, headers)
 
         assert retried.status_code == 200
         assert retried.json()["replayed"] is False
@@ -570,8 +602,7 @@ def test_proposal_memo_report_package_maps_runtime_provider_failure_to_503(monke
     )
 
     with TestClient(app) as client:
-        proposal_id, memo = _create_proposal_memo(client)
-        _approve_memo(client, proposal_id, memo)
+        proposal_id, memo = _create_reviewed_memo(client)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
@@ -587,8 +618,7 @@ def test_proposal_memo_report_package_maps_runtime_provider_failure_to_503(monke
 
 def test_proposal_memo_report_package_rejects_empty_output_formats() -> None:
     with TestClient(app) as client:
-        proposal_id, memo = _create_proposal_memo(client)
-        _approve_memo(client, proposal_id, memo)
+        proposal_id, memo = _create_reviewed_memo(client)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
@@ -610,23 +640,10 @@ def test_proposal_memo_ai_commentary_is_review_gated_idempotent_and_non_authorit
 
     def _fake_ai_commentary(**kwargs) -> ProposalMemoAiCommentaryDraft:
         captured_requests.append(kwargs)
-        return ProposalMemoAiCommentaryDraft(
-            status="REVIEW_REQUIRED",
-            sections=(
-                {
-                    "section_key": "EXECUTIVE_SUMMARY",
-                    "title": "Executive Summary",
-                    "text": "Advisor-use commentary from bounded memo evidence.",
-                    "review_state": "REVIEW_REQUIRED",
-                },
-            ),
-            lineage={
-                "workflow_pack_id": "proposal_memo_commentary.pack",
-                "workflow_pack_version": "v1",
-                "workflow_run_id": "packrun_memo_commentary_001",
-                "fallback_reason": None,
-            },
-            review_guidance=("Review against persisted memo hash before advisor use.",),
+        return _ai_commentary_draft(
+            workflow_run_id="packrun_memo_commentary_001",
+            text="Advisor-use commentary from bounded memo evidence.",
+            review_guidance="Review against persisted memo hash before advisor use.",
         )
 
     monkeypatch.setattr(
@@ -704,23 +721,10 @@ def test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write
         workflow_run_id = downstream_runs.setdefault(
             idempotency_key, "packrun_memo_commentary_original"
         )
-        return ProposalMemoAiCommentaryDraft(
-            status="REVIEW_REQUIRED",
-            sections=(
-                {
-                    "section_key": "EXECUTIVE_SUMMARY",
-                    "title": "Executive Summary",
-                    "text": "Advisor-use commentary from the retained AI response.",
-                    "review_state": "REVIEW_REQUIRED",
-                },
-            ),
-            lineage={
-                "workflow_pack_id": "proposal_memo_commentary.pack",
-                "workflow_pack_version": "v1",
-                "workflow_run_id": workflow_run_id,
-                "fallback_reason": None,
-            },
-            review_guidance=("Review against persisted memo evidence.",),
+        return _ai_commentary_draft(
+            workflow_run_id=workflow_run_id,
+            text="Advisor-use commentary from the retained AI response.",
+            review_guidance="Review against persisted memo evidence.",
         )
 
     monkeypatch.setattr(
@@ -730,25 +734,9 @@ def test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write
     )
 
     with TestClient(app) as client:
-        proposal_id, memo = _create_proposal_memo(client)
-        _approve_memo(
-            client,
-            proposal_id,
-            memo,
-            idempotency_key="memo-ai-gap-review",
-        )
+        proposal_id, memo = _create_reviewed_memo(client, idempotency_key="memo-ai-gap-review")
         repository = get_proposal_repository()
-        append_memo_event = repository.append_memo_event
-        failed_once = False
-
-        def _fail_first_ai_event(event: ProposalMemoEventRecord) -> None:
-            nonlocal failed_once
-            if event.event_type == "MEMO_AI_REFERENCE_RECORDED" and not failed_once:
-                failed_once = True
-                raise RuntimeError("simulated AI event persistence failure")
-            append_memo_event(event)
-
-        monkeypatch.setattr(repository, "append_memo_event", _fail_first_ai_event)
+        _fail_first_event(monkeypatch, repository, "MEMO_AI_REFERENCE_RECORDED")
         payload = {
             "requested_by": "advisor_1",
             "source_memo_hash": memo["memo_hash"],
@@ -757,27 +745,21 @@ def test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write
         }
         headers = {"Idempotency-Key": "memo-ai-persistence-gap"}
 
-        with pytest.raises(RuntimeError, match="simulated AI event persistence failure"):
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
-                json=payload,
-                headers=headers,
-            )
+        with pytest.raises(RuntimeError, match="simulated event persistence failure"):
+            _post_memo_action(client, proposal_id, "ai-commentary", payload, headers)
 
-        conflict = client.post(
-            f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
-            json={**payload, "reason": {"purpose": "changed commentary request"}},
-            headers=headers,
+        conflict = _post_memo_action(
+            client,
+            proposal_id,
+            "ai-commentary",
+            {**payload, "reason": {"purpose": "changed commentary request"}},
+            headers,
         )
         assert conflict.status_code == 409
         assert conflict.json()["detail"] == "MEMO_EVENT_IDEMPOTENCY_KEY_CONFLICT"
         assert len(received_idempotency_keys) == 1
 
-        retried = client.post(
-            f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
-            json=payload,
-            headers=headers,
-        )
+        retried = _post_memo_action(client, proposal_id, "ai-commentary", payload, headers)
 
         assert retried.status_code == 200
         assert retried.json()["replayed"] is False
@@ -800,8 +782,7 @@ def test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write
 
 def test_proposal_memo_ai_commentary_rejects_empty_requested_sections() -> None:
     with TestClient(app) as client:
-        proposal_id, memo = _create_proposal_memo(client)
-        _approve_memo(client, proposal_id, memo)
+        proposal_id, memo = _create_reviewed_memo(client)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
@@ -818,8 +799,7 @@ def test_proposal_memo_ai_commentary_rejects_empty_requested_sections() -> None:
 
 def test_proposal_memo_ai_commentary_records_deterministic_unavailable_posture() -> None:
     with TestClient(app) as client:
-        proposal_id, memo = _create_proposal_memo(client)
-        _approve_memo(client, proposal_id, memo)
+        proposal_id, memo = _create_reviewed_memo(client)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",

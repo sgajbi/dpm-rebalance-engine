@@ -452,7 +452,7 @@
           "expected_behavior": "reuses one opaque downstream identity and the original Lotus AI workflow run when keyed memo commentary is retried after local event persistence fails",
           "test_references": [
             "tests/unit/advisory/api/test_api_advisory_proposal_memo.py::test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write_failure",
-            "tests/unit/advisory/api/test_lotus_ai_workflow_request.py::test_build_workflow_pack_execute_request_forwards_stable_idempotency_identity"
+            "tests/unit/advisory/api/test_lotus_ai_workflow_request.py::test_build_workflow_pack_execute_request_applies_governed_caller_envelope"
           ]
         },
         {
