@@ -9,7 +9,7 @@ from src.core.proposals.exceptions import ProposalValidationError
 from src.core.proposals.memo_ai_ports import ProposalMemoAiCommentaryDraft
 from src.core.proposals.memo_event_recording import (
     append_or_replay_memo_event,
-    find_replayed_memo_event,
+    find_or_reserve_memo_event,
     memo_event_request_hash,
 )
 from src.core.proposals.memo_external_packages import (
@@ -83,11 +83,13 @@ def request_memo_report_package_operation(
         }
     )
     if idempotency_key:
-        replayed_event = find_replayed_memo_event(
+        replayed_event = find_or_reserve_memo_event(
             repository=repository,
             memo=memo,
+            event_type="MEMO_REPORT_PACKAGE_RECORDED",
             idempotency_key=idempotency_key,
             request_hash=request_hash,
+            occurred_at=occurred_at,
         )
         if replayed_event is not None:
             return ProposalMemoReportPackageResponse(
@@ -188,11 +190,13 @@ def request_memo_ai_commentary_operation(
         }
     )
     if idempotency_key:
-        replayed_event = find_replayed_memo_event(
+        replayed_event = find_or_reserve_memo_event(
             repository=repository,
             memo=memo,
+            event_type="MEMO_AI_REFERENCE_RECORDED",
             idempotency_key=idempotency_key,
             request_hash=request_hash,
+            occurred_at=occurred_at,
         )
         if replayed_event is not None:
             return ProposalMemoAiCommentaryResponse(
@@ -201,7 +205,6 @@ def request_memo_ai_commentary_operation(
                 commentary=commentary_from_ai_event(replayed_event),
                 replayed=True,
             )
-
     memo_evidence = build_memo_ai_evidence(memo=memo, review_posture=review_posture)
     try:
         commentary = generate_commentary(
