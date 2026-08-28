@@ -32,8 +32,10 @@ def validate_installed_packages_against_lock(
 ) -> None:
     if not isinstance(installed_packages, list):
         raise RuntimeError("Installed dependency inventory is not a package list")
+    installed_names: set[str] = set()
     for package in installed_packages:
         name, version = _package_identity(package, source="Installed dependency inventory")
+        installed_names.add(name)
         locked_version = constraints.get(name)
         if locked_version is None:
             raise RuntimeError(f"Installed dependency {name}=={version} is absent from the lock")
@@ -41,6 +43,13 @@ def validate_installed_packages_against_lock(
             raise RuntimeError(
                 f"Installed dependency {name}=={version} does not match {locked_version}"
             )
+    missing_names = sorted(set(constraints) - installed_names)
+    if missing_names:
+        missing_name = missing_names[0]
+        raise RuntimeError(
+            f"Locked dependency {missing_name}=={constraints[missing_name]} "
+            "is absent from the installed graph"
+        )
 
 
 def _read_authoritative_lock(lock_path: Path) -> tuple[dict[str, str], set[str]]:

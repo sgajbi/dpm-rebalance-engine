@@ -39,6 +39,11 @@
       "id": "version-drift",
       "packages": [{"name": "child", "version": "1.1.0"}],
       "error": "child==1.1.0 does not match"
+    },
+    {
+      "id": "missing-locked-package",
+      "packages": [{"name": "direct", "version": "2.0.0"}],
+      "error": "Locked dependency child==1.0.0 is absent from the installed graph"
     }
   ]
 }
