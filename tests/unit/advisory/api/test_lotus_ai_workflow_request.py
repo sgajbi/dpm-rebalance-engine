@@ -37,6 +37,7 @@ def test_build_workflow_pack_execute_request_applies_governed_caller_envelope(
 
     assert request["environment"] == "UAT"
     assert request["caller_identity_class"] == "INTERNAL_SERVICE"
+    assert "idempotency_key" not in request
     assert task_request["input_mode"] == "STRUCTURED_CONTEXT"
     assert caller == {
         "caller_app": "lotus-advise",
@@ -49,6 +50,28 @@ def test_build_workflow_pack_execute_request_applies_governed_caller_envelope(
         "payload": {"evidence_packet_id": "copilot_packet_pb_sg_001"},
         "source_refs": ["lotus-advise:proposal:proposal_001"],
     }
+
+
+def test_build_workflow_pack_execute_request_forwards_stable_idempotency_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("LOTUS_ADVISE_TENANT_ID", "tenant-private-bank-001")
+
+    request = build_workflow_pack_execute_request(
+        pack_id="proposal_memo_commentary.pack",
+        version="v1",
+        workflow_surface="advisor-proposal-memo-commentary",
+        task_id="explain.v1",
+        correlation_id="proposal-memo-commentary-memo-001",
+        requested_by="advisor_001",
+        context_summary="Draft advisor-use commentary.",
+        context_payload={"memo_id": "memo-001"},
+        source_refs=["lotus-advise:memo:memo-001"],
+        expected_output_label="EXPLANATION_ONLY",
+        idempotency_key="memo_ai_0123456789abcdef01234567",
+    )
+
+    assert request["idempotency_key"] == "memo_ai_0123456789abcdef01234567"
 
 
 def test_workflow_pack_authenticated_headers_bind_declared_lotus_advise_caller() -> None:
