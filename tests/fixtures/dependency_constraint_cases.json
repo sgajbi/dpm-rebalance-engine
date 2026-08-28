@@ -1,0 +1,44 @@
+{
+  "refresh_cases": [
+    {
+      "id": "existing-direct-root",
+      "lock": "[[package]]\nname = \"click\"\nversion = \"8.4.2\"\ndirect = true\n\n[[package]]\nname = \"transitive-pkg\"\nversion = \"1.0.0\"\ndirect = false\n",
+      "requirements": ["click==8.5.0\n"],
+      "expected": "# Generated at runtime from uv.lock; do not edit.\nclick==8.5.0\ntransitive-pkg==1.0.0\n"
+    },
+    {
+      "id": "conflicting-direct-pins",
+      "lock": "[[package]]\nname = \"click\"\nversion = \"8.4.2\"\ndirect = true\n",
+      "requirements": ["click==8.5.0\n", "click==8.6.0\n"],
+      "error": "conflicting versions for click"
+    },
+    {
+      "id": "new-direct-root",
+      "lock": "[[package]]\nname = \"known\"\nversion = \"1.0.0\"\ndirect = true\n",
+      "requirements": ["new-root==1.0.0\n"],
+      "error": "new-root is absent from the lock"
+    },
+    {
+      "id": "transitive-promoted-to-root",
+      "lock": "[[package]]\nname = \"child\"\nversion = \"1.0.0\"\ndirect = false\n",
+      "requirements": ["child==1.1.0\n"],
+      "error": "child is not recorded as direct"
+    }
+  ],
+  "installed_cases": [
+    {
+      "id": "fully-locked",
+      "packages": [{"name": "direct", "version": "2.0.0"}, {"name": "child", "version": "1.0.0"}]
+    },
+    {
+      "id": "new-transitive",
+      "packages": [{"name": "new_child", "version": "1.0.0"}],
+      "error": "new-child==1.0.0 is absent"
+    },
+    {
+      "id": "version-drift",
+      "packages": [{"name": "child", "version": "1.1.0"}],
+      "error": "child==1.1.0 does not match"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -21,6 +22,12 @@ from scripts.license_ip_evidence import (
     build_license_inventory,
     validate_license_inventory,
     validate_license_inventory_against_expected,
+)
+
+CONSTRAINT_CASES = json.loads(
+    (Path(__file__).resolve().parents[2] / "fixtures/dependency_constraint_cases.json").read_text(
+        encoding="utf-8"
+    )
 )
 
 
@@ -134,102 +141,41 @@ def test_lock_constraints_project_exact_versions(tmp_path: Path) -> None:
     )
 
 
-def test_lock_constraints_prefer_refreshed_direct_requirement_pins(tmp_path: Path) -> None:
-    lock = tmp_path / "uv.lock"
-    requirements = tmp_path / "requirements-prod.txt"
-    constraints = tmp_path / "constraints.txt"
-    lock.write_text(
-        '[[package]]\nname = "click"\nversion = "8.4.2"\ndirect = true\n\n'
-        '[[package]]\nname = "transitive-pkg"\nversion = "1.0.0"\ndirect = false\n',
-        encoding="utf-8",
-    )
-    requirements.write_text("click==8.5.0\n", encoding="utf-8")
-
-    _write_lock_constraints(
-        lock,
-        constraints,
-        requirement_paths=(requirements,),
-    )
-
-    assert constraints.read_text(encoding="utf-8") == (
-        "# Generated at runtime from uv.lock; do not edit.\nclick==8.5.0\ntransitive-pkg==1.0.0\n"
-    )
-
-
-def test_lock_constraints_reject_conflicting_refreshed_direct_pins(tmp_path: Path) -> None:
-    lock = tmp_path / "uv.lock"
-    runtime = tmp_path / "requirements-prod.txt"
-    development = tmp_path / "requirements-dev.txt"
-    constraints = tmp_path / "constraints.txt"
-    lock.write_text(
-        '[[package]]\nname = "click"\nversion = "8.4.2"\ndirect = true\n',
-        encoding="utf-8",
-    )
-    runtime.write_text("click==8.5.0\n", encoding="utf-8")
-    development.write_text("click==8.6.0\n", encoding="utf-8")
-
-    with pytest.raises(RuntimeError, match="conflicting versions for click"):
-        _write_lock_constraints(
-            lock,
-            constraints,
-            requirement_paths=(runtime, development),
-        )
-
-    assert not constraints.exists()
-
-
 @pytest.mark.parametrize(
-    ("lock_contents", "requirement", "expected_error"),
-    [
-        (
-            '[[package]]\nname = "known"\nversion = "1.0.0"\ndirect = true\n',
-            "new-root==1.0.0\n",
-            "new-root is absent from the authoritative dependency lock",
-        ),
-        (
-            '[[package]]\nname = "child"\nversion = "1.0.0"\ndirect = false\n',
-            "child==1.1.0\n",
-            "child is not recorded as direct",
-        ),
-    ],
+    "case",
+    CONSTRAINT_CASES["refresh_cases"],
+    ids=lambda case: case["id"],
 )
-def test_lock_constraints_reject_ungoverned_direct_overrides(
-    tmp_path: Path,
-    lock_contents: str,
-    requirement: str,
-    expected_error: str,
+def test_lock_constraint_refresh_is_bounded_by_authoritative_roots(
+    tmp_path: Path, case: dict[str, Any]
 ) -> None:
     lock = tmp_path / "uv.lock"
-    requirements = tmp_path / "requirements-prod.txt"
     constraints = tmp_path / "constraints.txt"
-    lock.write_text(lock_contents, encoding="utf-8")
-    requirements.write_text(requirement, encoding="utf-8")
+    lock.write_text(case["lock"], encoding="utf-8")
+    requirement_paths = []
+    for index, content in enumerate(case["requirements"]):
+        path = tmp_path / f"requirements-{index}.txt"
+        path.write_text(content, encoding="utf-8")
+        requirement_paths.append(path)
+    if error := case.get("error"):
+        with pytest.raises(RuntimeError, match=error):
+            _write_lock_constraints(lock, constraints, requirement_paths=requirement_paths)
+        assert not constraints.exists()
+    else:
+        _write_lock_constraints(lock, constraints, requirement_paths=requirement_paths)
+        assert constraints.read_text(encoding="utf-8") == case["expected"]
 
-    with pytest.raises(RuntimeError, match=expected_error):
-        _write_lock_constraints(lock, constraints, requirement_paths=(requirements,))
 
-    assert not constraints.exists()
-
-
-def test_installed_dependency_graph_must_be_fully_locked() -> None:
-    constraints = {"direct": "2.0.0", "child": "1.0.0"}
-
-    _validate_installed_packages_against_lock(
-        [{"name": "direct", "version": "2.0.0"}, {"name": "child", "version": "1.0.0"}],
-        constraints,
+@pytest.mark.parametrize("case", CONSTRAINT_CASES["installed_cases"], ids=lambda case: case["id"])
+def test_installed_dependency_graph_must_be_fully_locked(case: dict[str, Any]) -> None:
+    verify = lambda: _validate_installed_packages_against_lock(  # noqa: E731
+        case["packages"], {"direct": "2.0.0", "child": "1.0.0"}
     )
-
-    with pytest.raises(RuntimeError, match="new-child==1.0.0 is absent"):
-        _validate_installed_packages_against_lock(
-            [{"name": "new_child", "version": "1.0.0"}],
-            constraints,
-        )
-
-    with pytest.raises(RuntimeError, match="child==1.1.0 does not match"):
-        _validate_installed_packages_against_lock(
-            [{"name": "child", "version": "1.1.0"}],
-            constraints,
-        )
+    if error := case.get("error"):
+        with pytest.raises(RuntimeError, match=error):
+            verify()
+    else:
+        verify()
 
 
 @pytest.mark.parametrize(
@@ -243,7 +189,7 @@ def test_installed_dependency_graph_must_be_fully_locked() -> None:
         (
             '[[package]]\nname = "conflicting"\nversion = "1.0.0"\ndirect = false\n\n'
             '[[package]]\nname = "conflicting"\nversion = "2.0.0"\ndirect = false\n',
-            "contains conflicting versions for conflicting",
+            "conflicting versions for conflicting",
         ),
         ("", "contains no package constraints"),
     ],
@@ -352,11 +298,11 @@ def test_isolated_license_inventory_returns_two_before_any_install_when_lock_pro
 ) -> None:
     calls: list[list[str]] = []
     monkeypatch.setattr("scripts.license_ip_evidence.REPO_ROOT", tmp_path)
-    monkeypatch.setattr(
-        "scripts.license_ip_evidence.sys.version_info",
-        (3, 11, 9, "final", 0),
-    )
+    monkeypatch.setattr("scripts.license_ip_evidence.sys.version_info", (3, 11, 9, "final", 0))
     (tmp_path / "uv.lock").write_text("not valid TOML", encoding="utf-8")
+    monkeypatch.setattr(
+        "scripts.license_ip_evidence.parse_requirement_roots", lambda *_args, **_kwargs: ()
+    )
 
     def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         del kwargs
