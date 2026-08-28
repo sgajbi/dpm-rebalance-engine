@@ -29,6 +29,7 @@ def write_authoritative_lock_constraints(
 def validate_installed_packages_against_lock(
     installed_packages: object,
     constraints: dict[str, str],
+    inapplicable_packages: frozenset[str] = frozenset(),
 ) -> None:
     if not isinstance(installed_packages, list):
         raise RuntimeError("Installed dependency inventory is not a package list")
@@ -43,7 +44,7 @@ def validate_installed_packages_against_lock(
             raise RuntimeError(
                 f"Installed dependency {name}=={version} does not match {locked_version}"
             )
-    missing_names = sorted(set(constraints) - installed_names)
+    missing_names = sorted(set(constraints) - installed_names - inapplicable_packages)
     if missing_names:
         missing_name = missing_names[0]
         raise RuntimeError(
