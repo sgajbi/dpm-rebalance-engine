@@ -70,6 +70,7 @@ def find_or_reserve_memo_event(
     request_hash: str,
     occurred_at: datetime,
 ) -> ProposalMemoEventRecord | None:
+    """Replay a matching event or durably reserve its request identity before delivery."""
     for event in repository.list_memo_events(memo_id=memo.memo_id):
         if event.reason_json.get("idempotency_key") != idempotency_key:
             continue
