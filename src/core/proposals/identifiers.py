@@ -1,4 +1,3 @@
-from hashlib import sha256
 from threading import Lock
 from time import time_ns
 from uuid import uuid4
@@ -33,16 +32,6 @@ def new_approval_id() -> str:
 
 def new_report_request_id() -> str:
     return _new_prefixed_id("prr")
-
-
-def stable_memo_report_request_id(
-    *,
-    proposal_id: str,
-    memo_id: str,
-    idempotency_key: str,
-) -> str:
-    identity = f"memo-report-package\x00{proposal_id}\x00{memo_id}\x00{idempotency_key}"
-    return f"prr_{sha256(identity.encode('utf-8')).hexdigest()[:24]}"
 
 
 def new_memo_event_id() -> str:

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import datetime
+from hashlib import sha256
 
 from src.core.common.idempotency import normalize_optional_idempotency_key
 from src.core.proposals.exceptions import ProposalValidationError
-from src.core.proposals.identifiers import stable_memo_report_request_id
 from src.core.proposals.memo_ai_ports import ProposalMemoAiCommentaryDraft
 from src.core.proposals.memo_event_recording import (
     append_or_replay_memo_event,
@@ -96,11 +96,10 @@ def request_memo_report_package_operation(
                 report=report_response_from_event(proposal=proposal, event=replayed_event),
                 replayed=True,
             )
-        report_request_id = stable_memo_report_request_id(
-            proposal_id=proposal.proposal_id,
-            memo_id=memo.memo_id,
-            idempotency_key=idempotency_key,
+        identity = "\x00".join(
+            ("memo-report-package", proposal.proposal_id, memo.memo_id, idempotency_key)
         )
+        report_request_id = f"prr_{sha256(identity.encode()).hexdigest()[:24]}"
     report = request_report_package(
         request={
             "report_request_id": report_request_id,
