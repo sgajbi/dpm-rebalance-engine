@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-08-25T13:44:49Z",
-  "git_commit_sha": "928c1f958e0fde35a92b3ba607f3da321bd3cfcd",
+  "generated_at_utc": "2026-08-28T00:37:24Z",
+  "git_commit_sha": "ee68523095949687da8ebc96bb27204526e791bc",
   "image_digest": "unknown",
   "notice_file": "NOTICE.md",
   "packages": [
@@ -243,7 +243,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "8.4.2",
+      "installed_version": "8.5.0",
       "license_term": "BSD-3-Clause",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -253,7 +253,7 @@
       "source_files": [
         "requirements-prod.txt"
       ],
-      "version": "8.4.2"
+      "version": "8.5.0"
     },
     {
       "declared_name": "colorama",
@@ -1415,7 +1415,7 @@
       "exception_expires_on": null,
       "exception_id": null,
       "exception_owner": null,
-      "installed_version": "0.16.4",
+      "installed_version": "0.16.5",
       "license_term": "MIT",
       "metadata_available": true,
       "metadata_matches_requirement_pin": true,
@@ -1425,7 +1425,7 @@
       "source_files": [
         "requirements-dev.txt"
       ],
-      "version": "0.16.4"
+      "version": "0.16.5"
     },
     {
       "declared_name": "scipy",

@@ -4,22 +4,22 @@ requires-python = ">=3.11"
 authoritative-source = "requirements"
 generated-by = "scripts/dependency_lock_evidence.py"
 license-inventory = "docs/standards/license-ip-inventory.v1.json"
-license-inventory-sha256 = "32e3b7283174483b0c29cdd07471ab8b74746b3a2427e9d3805e6d81412de08d"
+license-inventory-sha256 = "2b1f119f24b1c6c2778d33c2ad44cc9fa106d1168987204bd2dcf1edd1f356b6"
 
 [[requirement-files]]
 group = "development"
 path = "requirements-dev.txt"
-sha256 = "1ce9ba32f64a1ff0d5ed5c5a49900c3f24bf947e00add0138ac561bed9a65288"
+sha256 = "d0a1926551495f17adf24a60a101c2ecdc933cfae34111f3f1aa319af28a5eff"
 
 [[requirement-files]]
 group = "install"
 path = "requirements.txt"
-sha256 = "516d5472fa883bf0868c3d31e8bbe9f395c0b38b94489cb24e4cf69b0a9941fc"
+sha256 = "7e4643f6aa78e056f536b8174977faacbee3f96b5c1e6df100f5fcd1224a0b78"
 
 [[requirement-files]]
 group = "runtime"
 path = "requirements-prod.txt"
-sha256 = "f19d975ee4b90549748bd478c37c5500e56179400581ae98a7de9d714ca526c5"
+sha256 = "43891e3575c1f0c2ca8f64b36d75a639588b54ded728f40035d7494bacfb3432"
 
 [[package]]
 name = "annotated-doc"
@@ -131,12 +131,12 @@ requirement-hashes = []
 
 [[package]]
 name = "click"
-version = "8.4.2"
+version = "8.5.0"
 direct = true
 groups = ["development", "install", "runtime"]
 requirement-files = ["requirements-prod.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["43d413e934181b5f5120b59e5b6fd67db4d6d25e892805251e4660fddd923b7b"]
+requirement-hashes = ["fd92772b8e9b092abcf4192503b3a93b6e398532ee244471b437c15c8f2afbe0"]
 
 [[package]]
 name = "colorama"
@@ -680,12 +680,12 @@ requirement-hashes = []
 
 [[package]]
 name = "ruff"
-version = "0.16.4"
+version = "0.16.5"
 direct = true
 groups = ["development", "install"]
 requirement-files = ["requirements-dev.txt", "requirements.txt"]
 extras = []
-requirement-hashes = ["ef8151dc0bc84dee275bee796aa83c13ec10c04e5df152efce42ae344056a9fb"]
+requirement-hashes = ["a143e34e96fefdf8ff5ede54aab272cd930ce45e3ac5f924777b7b8c9c499d09"]
 
 [[package]]
 name = "scipy"

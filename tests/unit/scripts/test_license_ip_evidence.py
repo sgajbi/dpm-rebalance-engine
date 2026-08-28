@@ -130,6 +130,50 @@ def test_lock_constraints_project_exact_versions(tmp_path: Path) -> None:
     )
 
 
+def test_lock_constraints_prefer_refreshed_direct_requirement_pins(tmp_path: Path) -> None:
+    lock = tmp_path / "uv.lock"
+    requirements = tmp_path / "requirements-prod.txt"
+    constraints = tmp_path / "constraints.txt"
+    lock.write_text(
+        '[[package]]\nname = "click"\nversion = "8.4.2"\n\n'
+        '[[package]]\nname = "transitive-pkg"\nversion = "1.0.0"\n',
+        encoding="utf-8",
+    )
+    requirements.write_text("click==8.5.0\n", encoding="utf-8")
+
+    _write_lock_constraints(
+        lock,
+        constraints,
+        requirement_paths=(requirements,),
+    )
+
+    assert constraints.read_text(encoding="utf-8") == (
+        "# Generated at runtime from uv.lock; do not edit.\nclick==8.5.0\ntransitive-pkg==1.0.0\n"
+    )
+
+
+def test_lock_constraints_reject_conflicting_refreshed_direct_pins(tmp_path: Path) -> None:
+    lock = tmp_path / "uv.lock"
+    runtime = tmp_path / "requirements-prod.txt"
+    development = tmp_path / "requirements-dev.txt"
+    constraints = tmp_path / "constraints.txt"
+    lock.write_text(
+        '[[package]]\nname = "click"\nversion = "8.4.2"\n',
+        encoding="utf-8",
+    )
+    runtime.write_text("click==8.5.0\n", encoding="utf-8")
+    development.write_text("click==8.6.0\n", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="conflicting versions for click"):
+        _write_lock_constraints(
+            lock,
+            constraints,
+            requirement_paths=(runtime, development),
+        )
+
+    assert not constraints.exists()
+
+
 @pytest.mark.parametrize(
     ("lock_contents", "expected_error"),
     [
