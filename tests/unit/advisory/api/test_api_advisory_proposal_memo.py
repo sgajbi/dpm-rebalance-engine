@@ -99,7 +99,7 @@ def test_memo_api_delegates_event_recording_helpers() -> None:
     assert "from src.core.proposals.memo_event_recording import" in source
     for helper_name in (
         "append_or_replay_memo_event",
-        "find_replayed_memo_event",
+        "find_or_reserve_memo_event",
         "memo_event_request_hash",
     ):
         assert f"def {helper_name}(" not in source
@@ -223,6 +223,13 @@ def _archived_report_response(request: dict) -> dict:
         "proposal": request["proposal"],
         "report_request_id": request["report_request_id"],
     }
+
+
+def _post_report_package(
+    client: TestClient, proposal_id: str, payload: dict, headers: dict | None = None
+):
+    url = f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages"
+    return client.post(url, json=payload, headers=headers)
 
 
 def test_proposal_memo_api_create_read_project_lineage_and_replay() -> None:
@@ -418,11 +425,7 @@ def test_proposal_memo_report_package_projects_persisted_version_and_replays_onc
             "reason": {"purpose": "advisor-use memo report package"},
         }
         report_headers = {"Idempotency-Key": "memo-report-package-materialize"}
-        materialized = client.post(
-            f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
-            json=report_payload,
-            headers=report_headers,
-        )
+        materialized = _post_report_package(client, proposal_id, report_payload, report_headers)
 
         assert materialized.status_code == 200
         body = materialized.json()
@@ -448,11 +451,7 @@ def test_proposal_memo_report_package_projects_persisted_version_and_replays_onc
             == captured_requests[0]["proposal_memo_package"]
         )
 
-        replayed = client.post(
-            f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
-            json=report_payload,
-            headers=report_headers,
-        )
+        replayed = _post_report_package(client, proposal_id, report_payload, report_headers)
         assert replayed.status_code == 200
         replayed_body = replayed.json()
         assert replayed_body["replayed"] is True
@@ -511,17 +510,19 @@ def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write
         headers = {"Idempotency-Key": "memo-report-persistence-gap"}
 
         with pytest.raises(RuntimeError, match="simulated event persistence failure"):
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
-                json=payload,
-                headers=headers,
-            )
+            _post_report_package(client, proposal_id, payload, headers)
 
-        retried = client.post(
-            f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
-            json=payload,
-            headers=headers,
+        conflict = _post_report_package(
+            client,
+            proposal_id,
+            {**payload, "reason": {"purpose": "different advisor-use report package"}},
+            headers,
         )
+        assert conflict.status_code == 409
+        assert conflict.json()["detail"] == "MEMO_EVENT_IDEMPOTENCY_KEY_CONFLICT"
+        assert len(captured_report_request_ids) == 1
+
+        retried = _post_report_package(client, proposal_id, payload, headers)
 
         assert retried.status_code == 200
         assert retried.json()["replayed"] is False
