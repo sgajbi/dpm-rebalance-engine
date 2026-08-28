@@ -209,16 +209,12 @@ def request_memo_ai_commentary_operation(
                 replayed=True,
             )
     memo_evidence = build_memo_ai_evidence(memo=memo, review_posture=review_posture)
-    downstream_idempotency_key = (
-        _memo_downstream_operation_identity(
-            prefix="memo_ai",
-            operation="memo-ai-commentary",
-            proposal_id=proposal.proposal_id,
-            memo_id=memo.memo_id,
-            idempotency_key=idempotency_key,
-        )
-        if idempotency_key
-        else None
+    downstream_idempotency_key = _optional_memo_downstream_operation_identity(
+        prefix="memo_ai",
+        operation="memo-ai-commentary",
+        proposal_id=proposal.proposal_id,
+        memo_id=memo.memo_id,
+        idempotency_key=idempotency_key,
     )
     try:
         commentary = generate_commentary(
@@ -273,3 +269,22 @@ def _memo_downstream_operation_identity(
 ) -> str:
     identity = "\x00".join((operation, proposal_id, memo_id, idempotency_key))
     return f"{prefix}_{sha256(identity.encode()).hexdigest()[:24]}"
+
+
+def _optional_memo_downstream_operation_identity(
+    *,
+    prefix: str,
+    operation: str,
+    proposal_id: str,
+    memo_id: str,
+    idempotency_key: str | None,
+) -> str | None:
+    if idempotency_key is None:
+        return None
+    return _memo_downstream_operation_identity(
+        prefix=prefix,
+        operation=operation,
+        proposal_id=proposal_id,
+        memo_id=memo_id,
+        idempotency_key=idempotency_key,
+    )
