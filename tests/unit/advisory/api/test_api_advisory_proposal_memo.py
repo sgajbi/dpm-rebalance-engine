@@ -223,11 +223,9 @@ def _approve_memo(
     assert response.status_code == 200
 
 
-def _create_reviewed_memo(
-    client: TestClient, idempotency_key: str | None = None
-) -> tuple[str, dict]:
+def _reviewed_memo(client: TestClient, key: str | None = None) -> tuple[str, dict]:
     proposal_id, memo = _create_proposal_memo(client)
-    _approve_memo(client, proposal_id, memo, idempotency_key=idempotency_key)
+    _approve_memo(client, proposal_id, memo, idempotency_key=key)
     return proposal_id, memo
 
 
@@ -257,13 +255,11 @@ def _archived_report_response(request: dict) -> dict:
     }
 
 
-def _ai_commentary_draft(
-    *, workflow_run_id: str, text: str, review_guidance: str
-) -> ProposalMemoAiCommentaryDraft:
+def _ai_draft(run_id: str, text: str, guidance: str) -> ProposalMemoAiCommentaryDraft:
     payload = json.loads(json.dumps(AI_COMMENTARY_DRAFT))
     payload["sections"][0]["text"] = text
-    payload["lineage"]["workflow_run_id"] = workflow_run_id
-    payload["review_guidance"] = [review_guidance]
+    payload["lineage"]["workflow_run_id"] = run_id
+    payload["review_guidance"] = [guidance]
     payload["sections"] = tuple(payload["sections"])
     payload["review_guidance"] = tuple(payload["review_guidance"])
     return ProposalMemoAiCommentaryDraft(**payload)
@@ -526,9 +522,7 @@ def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write
     api_main.request_proposal_memo_report_package_with_lotus_report = _fake_report_package
 
     with TestClient(app) as client:
-        proposal_id, memo = _create_reviewed_memo(
-            client, idempotency_key="memo-report-retry-review"
-        )
+        proposal_id, memo = _reviewed_memo(client, key="memo-report-retry-review")
 
         repository = get_proposal_repository()
         _fail_first_event(monkeypatch, repository, "MEMO_REPORT_PACKAGE_RECORDED")
@@ -602,7 +596,7 @@ def test_proposal_memo_report_package_maps_runtime_provider_failure_to_503(monke
     )
 
     with TestClient(app) as client:
-        proposal_id, memo = _create_reviewed_memo(client)
+        proposal_id, memo = _reviewed_memo(client)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
@@ -618,7 +612,7 @@ def test_proposal_memo_report_package_maps_runtime_provider_failure_to_503(monke
 
 def test_proposal_memo_report_package_rejects_empty_output_formats() -> None:
     with TestClient(app) as client:
-        proposal_id, memo = _create_reviewed_memo(client)
+        proposal_id, memo = _reviewed_memo(client)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
@@ -640,10 +634,10 @@ def test_proposal_memo_ai_commentary_is_review_gated_idempotent_and_non_authorit
 
     def _fake_ai_commentary(**kwargs) -> ProposalMemoAiCommentaryDraft:
         captured_requests.append(kwargs)
-        return _ai_commentary_draft(
-            workflow_run_id="packrun_memo_commentary_001",
-            text="Advisor-use commentary from bounded memo evidence.",
-            review_guidance="Review against persisted memo hash before advisor use.",
+        return _ai_draft(
+            "packrun_memo_commentary_001",
+            "Advisor-use commentary from bounded memo evidence.",
+            "Review against persisted memo hash before advisor use.",
         )
 
     monkeypatch.setattr(
@@ -721,10 +715,10 @@ def test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write
         workflow_run_id = downstream_runs.setdefault(
             idempotency_key, "packrun_memo_commentary_original"
         )
-        return _ai_commentary_draft(
-            workflow_run_id=workflow_run_id,
-            text="Advisor-use commentary from the retained AI response.",
-            review_guidance="Review against persisted memo evidence.",
+        return _ai_draft(
+            workflow_run_id,
+            "Advisor-use commentary from the retained AI response.",
+            "Review against persisted memo evidence.",
         )
 
     monkeypatch.setattr(
@@ -734,7 +728,7 @@ def test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write
     )
 
     with TestClient(app) as client:
-        proposal_id, memo = _create_reviewed_memo(client, idempotency_key="memo-ai-gap-review")
+        proposal_id, memo = _reviewed_memo(client, key="memo-ai-gap-review")
         repository = get_proposal_repository()
         _fail_first_event(monkeypatch, repository, "MEMO_AI_REFERENCE_RECORDED")
         payload = {
@@ -782,7 +776,7 @@ def test_proposal_memo_ai_retry_reuses_original_downstream_run_after_event_write
 
 def test_proposal_memo_ai_commentary_rejects_empty_requested_sections() -> None:
     with TestClient(app) as client:
-        proposal_id, memo = _create_reviewed_memo(client)
+        proposal_id, memo = _reviewed_memo(client)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
@@ -799,7 +793,7 @@ def test_proposal_memo_ai_commentary_rejects_empty_requested_sections() -> None:
 
 def test_proposal_memo_ai_commentary_records_deterministic_unavailable_posture() -> None:
     with TestClient(app) as client:
-        proposal_id, memo = _create_reviewed_memo(client)
+        proposal_id, memo = _reviewed_memo(client)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
