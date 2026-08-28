@@ -63,7 +63,11 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
 
     def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append((command, kwargs))
-        stdout = json.dumps(lock_packages) if "list" in command else None
+        stdout = (
+            json.dumps({"installed": [{"metadata": package} for package in lock_packages]})
+            if "inspect" in command
+            else None
+        )
         return subprocess.CompletedProcess(command, 0, stdout=stdout)
 
     monkeypatch.setattr(
@@ -114,8 +118,8 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     assert calls[3][0][-2] == "-r"
     assert Path(calls[3][0][-1]).name == "requirements-dev.txt"
     assert "--constraint" in calls[3][0]
-    assert calls[4][0][-2:] == ["list", "--format=json"]
-    assert calls[4][1]["capture_output"] is True
+    assert calls[4][0][1:4] == ["-X", "utf8", "-I"]
+    assert (calls[4][0][-2:], calls[4][1]["capture_output"]) == (["inspect", "--local"], True)
     assert calls[5][0][1] == "-I"
     assert calls[5][0][2].endswith("scripts/license_ip_evidence.py") or calls[5][0][2].endswith(
         "scripts\\license_ip_evidence.py"
@@ -125,8 +129,7 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     for pip_call in calls[1:4]:
         assert pip_call[1]["env"]["PIP_CONFIG_FILE"] == os.devnull
     for _, kwargs in calls:
-        assert "PYTHONHOME" not in kwargs["env"]
-        assert "PYTHONPATH" not in kwargs["env"]
+        assert {"PYTHONHOME", "PYTHONPATH"}.isdisjoint(kwargs["env"])
 
 
 def test_lock_constraints_project_exact_versions(tmp_path: Path) -> None:

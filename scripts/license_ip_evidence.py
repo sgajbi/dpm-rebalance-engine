@@ -38,6 +38,7 @@ NOTICE_PATH = Path("NOTICE.md")
 LICENSE_OPERATOR_RE = re.compile(r"\s+(?:AND|OR|WITH)\s+|[()]")
 ISOLATED_ENV_FLAG = "LOTUS_ADVISE_LICENSE_IP_ISOLATED"
 PIP_BOOTSTRAP_PACKAGES = ("pip==25.0.1", "setuptools==83.0.0")
+UTF8_ISOLATED_PYTHON_ARGS = ("-X", "utf8", "-I")
 PIP_ENVIRONMENT = {
     "PIP_CONFIG_FILE": os.devnull,
     "PIP_DISABLE_PIP_VERSION_CHECK": "1",
@@ -803,25 +804,37 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
     installed_result = subprocess.run(
         [
             str(venv_python),
-            "-I",
+            *UTF8_ISOLATED_PYTHON_ARGS,
             "-m",
             "pip",
             "--isolated",
             "--disable-pip-version-check",
-            "list",
-            "--format=json",
+            "inspect",
+            "--local",
         ],
         cwd=REPO_ROOT,
         env=install_env,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         check=False,
     )
     if installed_result.returncode != 0:
         return installed_result.returncode
     try:
-        installed_packages = json.loads(installed_result.stdout)
-        _validate_installed_packages_against_lock(installed_packages, package_constraints)
+        inspection = json.loads(installed_result.stdout)
+        installed_packages = [item["metadata"] for item in inspection["installed"]]
+        inapplicable_packages = frozenset(
+            canonicalize_name(requirement.name)
+            for item in inspection["installed"]
+            for requirement_text in item["metadata"].get("requires_dist") or ()
+            if (requirement := Requirement(requirement_text)).marker is not None
+            and not requirement.marker.evaluate()
+        )
+        _validate_installed_packages_against_lock(
+            installed_packages,
+            package_constraints,
+            inapplicable_packages=inapplicable_packages,
+        )
     except (json.JSONDecodeError, RuntimeError) as exc:
         print(
             f"Cannot verify isolated dependency graph against the authoritative lock: {exc}",
