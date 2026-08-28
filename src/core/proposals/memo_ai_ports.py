@@ -24,7 +24,7 @@ class ProposalMemoAiCommentaryDraft:
 
 
 ProposalMemoAiCommentaryGenerator: TypeAlias = Callable[
-    [dict[str, Any], list[str], str, dict[str, Any]],
+    [dict[str, Any], list[str], str, dict[str, Any], str | None],
     ProposalMemoAiCommentaryDraft,
 ]
 
@@ -44,10 +44,17 @@ def generate_proposal_memo_ai_commentary(
     requested_sections: list[str],
     requested_by: str,
     reason: dict[str, Any],
+    idempotency_key: str | None = None,
 ) -> ProposalMemoAiCommentaryDraft:
     if _commentary_generator is None:
         raise ProposalMemoAiCommentaryUnavailableError("LOTUS_AI_MEMO_COMMENTARY_UNAVAILABLE")
-    return _commentary_generator(memo_evidence, requested_sections, requested_by, reason)
+    return _commentary_generator(
+        memo_evidence,
+        requested_sections,
+        requested_by,
+        reason,
+        idempotency_key,
+    )
 
 
 def build_proposal_memo_ai_unavailable_commentary(

@@ -157,6 +157,7 @@ def _generate_memo_commentary_with_lotus_ai_port(
     requested_sections: list[str],
     requested_by: str,
     reason: dict[str, object],
+    idempotency_key: str | None,
 ) -> ProposalMemoAiCommentaryDraft:
     try:
         return generate_proposal_memo_commentary_with_lotus_ai(
@@ -164,6 +165,7 @@ def _generate_memo_commentary_with_lotus_ai_port(
             requested_sections=requested_sections,
             requested_by=requested_by,
             reason=reason,
+            idempotency_key=idempotency_key,
         )
     except LotusAIProposalMemoUnavailableError as exc:
         raise ProposalMemoAiCommentaryUnavailableError(str(exc)) from exc

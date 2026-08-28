@@ -58,6 +58,7 @@ def generate_proposal_memo_commentary_with_lotus_ai(
     requested_sections: list[str],
     requested_by: str,
     reason: dict[str, Any],
+    idempotency_key: str | None = None,
 ) -> ProposalMemoAiCommentaryDraft:
     base_url = _resolve_base_url()
     try:
@@ -66,6 +67,7 @@ def generate_proposal_memo_commentary_with_lotus_ai(
             requested_sections=requested_sections,
             requested_by=requested_by,
             reason=reason,
+            idempotency_key=idempotency_key,
         )
     except LotusAITenantIdentityError as exc:
         raise LotusAIProposalMemoUnavailableError("LOTUS_AI_MEMO_COMMENTARY_UNAVAILABLE") from exc
@@ -143,6 +145,7 @@ def _build_workflow_pack_request(
     requested_sections: list[str],
     requested_by: str,
     reason: dict[str, Any],
+    idempotency_key: str | None = None,
 ) -> dict[str, object]:
     return build_workflow_pack_execute_request(
         pack_id=WORKFLOW_PACK_ID,
@@ -172,6 +175,7 @@ def _build_workflow_pack_request(
         },
         source_refs=_source_refs(memo_evidence),
         expected_output_label="EXPLANATION_ONLY",
+        idempotency_key=idempotency_key,
     )
 
 
