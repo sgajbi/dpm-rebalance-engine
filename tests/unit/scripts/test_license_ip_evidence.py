@@ -16,6 +16,7 @@ from scripts.license_ip_evidence import (
     LicensePolicy,
     _governed_python_command,
     _run_in_isolated_environment,
+    _validate_installed_packages_against_lock,
     _write_lock_constraints,
     build_license_inventory,
     validate_license_inventory,
@@ -51,7 +52,8 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
 
     def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append((command, kwargs))
-        return subprocess.CompletedProcess(command, 0)
+        stdout = '[{"name":"pip","version":"25.0.1"}]' if "list" in command else None
+        return subprocess.CompletedProcess(command, 0, stdout=stdout)
 
     monkeypatch.setattr(
         "scripts.license_ip_evidence.sys.version_info",
@@ -101,12 +103,14 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     assert calls[3][0][-2] == "-r"
     assert Path(calls[3][0][-1]).name == "requirements-dev.txt"
     assert "--constraint" in calls[3][0]
-    assert calls[4][0][1] == "-I"
-    assert calls[4][0][2].endswith("scripts/license_ip_evidence.py") or calls[4][0][2].endswith(
+    assert calls[4][0][-2:] == ["list", "--format=json"]
+    assert calls[4][1]["capture_output"] is True
+    assert calls[5][0][1] == "-I"
+    assert calls[5][0][2].endswith("scripts/license_ip_evidence.py") or calls[5][0][2].endswith(
         "scripts\\license_ip_evidence.py"
     )
-    assert "--no-isolation" in calls[4][0]
-    assert calls[4][1]["env"][ISOLATED_ENV_FLAG] == "1"
+    assert "--no-isolation" in calls[5][0]
+    assert calls[5][1]["env"][ISOLATED_ENV_FLAG] == "1"
     for pip_call in calls[1:4]:
         assert pip_call[1]["env"]["PIP_CONFIG_FILE"] == os.devnull
     for _, kwargs in calls:
@@ -118,8 +122,8 @@ def test_lock_constraints_project_exact_versions(tmp_path: Path) -> None:
     lock = tmp_path / "uv.lock"
     constraints = tmp_path / "constraints.txt"
     lock.write_text(
-        '[[package]]\nname = "zeta-pkg"\nversion = "2.0.0"\n\n'
-        '[[package]]\nname = "alpha_pkg"\nversion = "1.0.0"\n',
+        '[[package]]\nname = "zeta-pkg"\nversion = "2.0.0"\ndirect = false\n\n'
+        '[[package]]\nname = "alpha_pkg"\nversion = "1.0.0"\ndirect = false\n',
         encoding="utf-8",
     )
 
@@ -135,8 +139,8 @@ def test_lock_constraints_prefer_refreshed_direct_requirement_pins(tmp_path: Pat
     requirements = tmp_path / "requirements-prod.txt"
     constraints = tmp_path / "constraints.txt"
     lock.write_text(
-        '[[package]]\nname = "click"\nversion = "8.4.2"\n\n'
-        '[[package]]\nname = "transitive-pkg"\nversion = "1.0.0"\n',
+        '[[package]]\nname = "click"\nversion = "8.4.2"\ndirect = true\n\n'
+        '[[package]]\nname = "transitive-pkg"\nversion = "1.0.0"\ndirect = false\n',
         encoding="utf-8",
     )
     requirements.write_text("click==8.5.0\n", encoding="utf-8")
@@ -158,7 +162,7 @@ def test_lock_constraints_reject_conflicting_refreshed_direct_pins(tmp_path: Pat
     development = tmp_path / "requirements-dev.txt"
     constraints = tmp_path / "constraints.txt"
     lock.write_text(
-        '[[package]]\nname = "click"\nversion = "8.4.2"\n',
+        '[[package]]\nname = "click"\nversion = "8.4.2"\ndirect = true\n',
         encoding="utf-8",
     )
     runtime.write_text("click==8.5.0\n", encoding="utf-8")
@@ -175,6 +179,60 @@ def test_lock_constraints_reject_conflicting_refreshed_direct_pins(tmp_path: Pat
 
 
 @pytest.mark.parametrize(
+    ("lock_contents", "requirement", "expected_error"),
+    [
+        (
+            '[[package]]\nname = "known"\nversion = "1.0.0"\ndirect = true\n',
+            "new-root==1.0.0\n",
+            "new-root is absent from the authoritative dependency lock",
+        ),
+        (
+            '[[package]]\nname = "child"\nversion = "1.0.0"\ndirect = false\n',
+            "child==1.1.0\n",
+            "child is not recorded as direct",
+        ),
+    ],
+)
+def test_lock_constraints_reject_ungoverned_direct_overrides(
+    tmp_path: Path,
+    lock_contents: str,
+    requirement: str,
+    expected_error: str,
+) -> None:
+    lock = tmp_path / "uv.lock"
+    requirements = tmp_path / "requirements-prod.txt"
+    constraints = tmp_path / "constraints.txt"
+    lock.write_text(lock_contents, encoding="utf-8")
+    requirements.write_text(requirement, encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match=expected_error):
+        _write_lock_constraints(lock, constraints, requirement_paths=(requirements,))
+
+    assert not constraints.exists()
+
+
+def test_installed_dependency_graph_must_be_fully_locked() -> None:
+    constraints = {"direct": "2.0.0", "child": "1.0.0"}
+
+    _validate_installed_packages_against_lock(
+        [{"name": "direct", "version": "2.0.0"}, {"name": "child", "version": "1.0.0"}],
+        constraints,
+    )
+
+    with pytest.raises(RuntimeError, match="new-child==1.0.0 is absent"):
+        _validate_installed_packages_against_lock(
+            [{"name": "new_child", "version": "1.0.0"}],
+            constraints,
+        )
+
+    with pytest.raises(RuntimeError, match="child==1.1.0 does not match"):
+        _validate_installed_packages_against_lock(
+            [{"name": "child", "version": "1.1.0"}],
+            constraints,
+        )
+
+
+@pytest.mark.parametrize(
     ("lock_contents", "expected_error"),
     [
         ("not valid TOML", "Cannot read authoritative dependency lock"),
@@ -183,8 +241,8 @@ def test_lock_constraints_reject_conflicting_refreshed_direct_pins(tmp_path: Pat
             "packages must include name and version",
         ),
         (
-            '[[package]]\nname = "conflicting"\nversion = "1.0.0"\n\n'
-            '[[package]]\nname = "conflicting"\nversion = "2.0.0"\n',
+            '[[package]]\nname = "conflicting"\nversion = "1.0.0"\ndirect = false\n\n'
+            '[[package]]\nname = "conflicting"\nversion = "2.0.0"\ndirect = false\n',
             "contains conflicting versions for conflicting",
         ),
         ("", "contains no package constraints"),

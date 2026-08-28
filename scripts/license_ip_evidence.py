@@ -9,7 +9,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import tomllib
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from importlib import metadata
@@ -19,6 +18,23 @@ from typing import Any, Iterable
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.specifiers import SpecifierSet
 from packaging.utils import canonicalize_name
+
+try:
+    from scripts.dependency_constraint_evidence import (
+        validate_authoritative_lock,
+        write_authoritative_lock_constraints,
+    )
+    from scripts.dependency_constraint_evidence import (
+        validate_installed_packages_against_lock as _validate_installed_packages_against_lock,
+    )
+except ModuleNotFoundError:
+    from dependency_constraint_evidence import (  # type: ignore[no-redef]
+        validate_authoritative_lock,
+        write_authoritative_lock_constraints,
+    )
+    from dependency_constraint_evidence import (  # type: ignore[no-redef]
+        validate_installed_packages_against_lock as _validate_installed_packages_against_lock,
+    )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SERVICE_NAME = "lotus-advise"
@@ -674,30 +690,8 @@ def _write_lock_constraints(
     output_path: Path,
     *,
     requirement_paths: Iterable[Path] = (),
-) -> None:
-    try:
-        lock_payload = tomllib.loads(lock_path.read_text(encoding="utf-8"))
-    except (OSError, tomllib.TOMLDecodeError) as exc:
-        raise RuntimeError(f"Cannot read authoritative dependency lock {lock_path}: {exc}") from exc
-
-    package_constraints: dict[str, str] = {}
-    for package in lock_payload.get("package", []):
-        if not isinstance(package, dict):
-            raise RuntimeError("Authoritative dependency lock contains a malformed package")
-        name = canonicalize_name(str(package.get("name") or ""))
-        version = str(package.get("version") or "")
-        if not name or not version:
-            raise RuntimeError(
-                "Authoritative dependency lock packages must include name and version"
-            )
-        previous_version = package_constraints.setdefault(name, version)
-        if previous_version != version:
-            raise RuntimeError(
-                f"Authoritative dependency lock contains conflicting versions for {name}"
-            )
-    if not package_constraints:
-        raise RuntimeError("Authoritative dependency lock contains no package constraints")
-
+) -> dict[str, str]:
+    validate_authoritative_lock(lock_path)
     refreshed_direct_constraints: dict[str, str] = {}
     for requirement_path in requirement_paths:
         for root in parse_requirement_roots(
@@ -713,13 +707,10 @@ def _write_lock_constraints(
                     raise RuntimeError(
                         f"Direct requirement files contain conflicting versions for {root.name}"
                     )
-    package_constraints.update(refreshed_direct_constraints)
-
-    output_path.write_text(
-        "# Generated at runtime from uv.lock; do not edit.\n"
-        + "\n".join(f"{name}=={package_constraints[name]}" for name in sorted(package_constraints))
-        + "\n",
-        encoding="utf-8",
+    return write_authoritative_lock_constraints(
+        lock_path,
+        output_path,
+        refreshed_direct_constraints=refreshed_direct_constraints,
     )
 
 
@@ -758,7 +749,7 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
     venv_python = _venv_python(venv_root)
     constraints_path = venv_root.parent / "license-ip-constraints.txt"
     try:
-        _write_lock_constraints(
+        package_constraints = _write_lock_constraints(
             REPO_ROOT / DEPENDENCY_LOCK_PATH,
             constraints_path,
             requirement_paths=(
@@ -813,6 +804,35 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
         )
         if install_result.returncode != 0:
             return install_result.returncode
+
+    installed_result = subprocess.run(
+        [
+            str(venv_python),
+            "-I",
+            "-m",
+            "pip",
+            "--isolated",
+            "--disable-pip-version-check",
+            "list",
+            "--format=json",
+        ],
+        cwd=REPO_ROOT,
+        env=install_env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if installed_result.returncode != 0:
+        return installed_result.returncode
+    try:
+        installed_packages = json.loads(installed_result.stdout)
+        _validate_installed_packages_against_lock(installed_packages, package_constraints)
+    except (json.JSONDecodeError, RuntimeError) as exc:
+        print(
+            f"Cannot verify isolated dependency graph against the authoritative lock: {exc}",
+            file=sys.stderr,
+        )
+        return 2
 
     execution_env = _python_isolated_subprocess_env({ISOLATED_ENV_FLAG: "1"})
     execution_result = subprocess.run(
