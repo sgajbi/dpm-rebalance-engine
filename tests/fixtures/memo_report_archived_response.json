@@ -1,0 +1,22 @@
+{
+  "report_type": "PORTFOLIO_REVIEW",
+  "report_service": "lotus-report",
+  "status": "ARCHIVED",
+  "generated_at": "2026-05-24T00:00:00Z",
+  "report_reference_id": "rjob_memo_001",
+  "artifact_url": "/reports/jobs/rjob_memo_001",
+  "explanation": {
+    "render": {
+      "render_job_id": "rdr_memo_001",
+      "artifact_sha256": "sha256:rendered"
+    },
+    "archive": {
+      "archive_request_id": "arch_memo_001",
+      "document_id": "doc_memo_001",
+      "completed_at": "2026-05-24T00:00:01Z",
+      "retention_posture": "OWNED_BY_LOTUS_ARCHIVE",
+      "legal_hold_posture": "OWNED_BY_LOTUS_ARCHIVE",
+      "access_audit_ref": "/documents/doc_memo_001/access-events"
+    }
+  }
+}

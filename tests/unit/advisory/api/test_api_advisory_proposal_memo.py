@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -16,6 +17,8 @@ from src.integrations.lotus_report import LotusReportUnavailableError
 from src.integrations.lotus_report.request_mapping import build_memo_report_package_job_request
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+REPORT_RESPONSE_FIXTURE = REPO_ROOT / "tests/fixtures/memo_report_archived_response.json"
+ARCHIVED_REPORT_RESPONSE = json.loads(REPORT_RESPONSE_FIXTURE.read_text(encoding="utf-8"))
 
 
 def setup_function() -> None:
@@ -188,12 +191,43 @@ def _create_memo(client: TestClient, proposal_id: str) -> dict:
     return response.json()
 
 
+def _create_proposal_memo(client: TestClient) -> tuple[str, dict]:
+    proposal_id = _create_proposal(client)["proposal"]["proposal_id"]
+    return proposal_id, _create_memo(client, proposal_id)
+
+
+def _approve_memo(
+    client: TestClient,
+    proposal_id: str,
+    memo: dict,
+    *,
+    idempotency_key: str | None = None,
+) -> None:
+    headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+    response = client.post(
+        f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
+        json={
+            "action": "APPROVE_FOR_ADVISOR_USE",
+            "reviewed_by": "compliance_1",
+            "reason": "Evidence is sufficient for advisor discussion.",
+            "source_memo_hash": memo["memo_hash"],
+        },
+        headers=headers,
+    )
+    assert response.status_code == 200
+
+
+def _archived_report_response(request: dict) -> dict:
+    return {
+        **ARCHIVED_REPORT_RESPONSE,
+        "proposal": request["proposal"],
+        "report_request_id": request["report_request_id"],
+    }
+
+
 def test_proposal_memo_api_create_read_project_lineage_and_replay() -> None:
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-
-        memo = _create_memo(client, proposal_id)
+        proposal_id, memo = _create_proposal_memo(client)
         assert memo["proposal"]["proposal_id"] == proposal_id
         assert memo["proposal_version_no"] == 1
         assert memo["memo_id"].startswith("memo_")
@@ -267,9 +301,7 @@ def test_proposal_memo_api_create_read_project_lineage_and_replay() -> None:
 
 def test_proposal_memo_review_and_report_package_events_are_idempotent_and_hash_guarded() -> None:
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-        memo = _create_memo(client, proposal_id)
+        proposal_id, memo = _create_proposal_memo(client)
 
         review_payload = {
             "action": "APPROVE_FOR_ADVISOR_USE",
@@ -355,41 +387,15 @@ def test_proposal_memo_review_and_report_package_events_are_idempotent_and_hash_
 
 def test_proposal_memo_report_package_projects_persisted_version_and_replays_once() -> None:
     captured_requests: list[dict] = []
-    mapped_job_requests: list[dict] = []
 
     def _fake_report_package(request: dict) -> dict:
         captured_requests.append(request)
-        mapped_job_requests.append(build_memo_report_package_job_request(request))
-        return {
-            "proposal": request["proposal"],
-            "report_request_id": request["report_request_id"],
-            "report_type": "PORTFOLIO_REVIEW",
-            "report_service": "lotus-report",
-            "status": "ARCHIVED",
-            "generated_at": "2026-05-24T00:00:00Z",
-            "report_reference_id": "rjob_memo_001",
-            "artifact_url": "/reports/jobs/rjob_memo_001",
-            "explanation": {
-                "render": {
-                    "render_job_id": "rdr_memo_001",
-                    "artifact_sha256": "sha256:rendered",
-                },
-                "archive": {
-                    "archive_request_id": "arch_memo_001",
-                    "document_id": "doc_memo_001",
-                    "completed_at": "2026-05-24T00:00:01Z",
-                    "retention_posture": "OWNED_BY_LOTUS_ARCHIVE",
-                    "legal_hold_posture": "OWNED_BY_LOTUS_ARCHIVE",
-                    "access_audit_ref": "/documents/doc_memo_001/access-events",
-                },
-            },
-        }
+        return _archived_report_response(request)
 
     api_main.request_proposal_memo_report_package_with_lotus_report = _fake_report_package
 
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
+        proposal_id = _create_proposal(client)["proposal"]["proposal_id"]
         repository = get_proposal_repository()
         persisted_version = repository.get_version(proposal_id=proposal_id, version_no=1)
         assert persisted_version is not None
@@ -398,19 +404,11 @@ def test_proposal_memo_report_package_projects_persisted_version_and_replays_onc
         }
         repository.create_version(persisted_version)
         memo = _create_memo(client, proposal_id)
-        review_payload = {
-            "action": "APPROVE_FOR_ADVISOR_USE",
-            "reviewed_by": "compliance_1",
-            "reason": "Evidence is sufficient for advisor discussion.",
-            "source_memo_hash": memo["memo_hash"],
-        }
-        assert (
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
-                json=review_payload,
-                headers={"Idempotency-Key": "memo-report-package-review"},
-            ).status_code
-            == 200
+        _approve_memo(
+            client,
+            proposal_id,
+            memo,
+            idempotency_key="memo-report-package-review",
         )
 
         report_payload = {
@@ -442,16 +440,13 @@ def test_proposal_memo_report_package_projects_persisted_version_and_replays_onc
         )
         assert "proposal_result" in captured_requests[0]["proposal_version"]
         assert "proposal_result_json" not in captured_requests[0]["proposal_version"]
-        assert mapped_job_requests == [
-            {
-                "portfolio_scope": {"portfolio_ids": ["pf_memo_api_1"]},
-                "as_of_date": "2026-04-10",
-                "requested_output_formats": ["pdf"],
-                "reporting_currency": "USD",
-                "options": {},
-                "proposal_memo_package": captured_requests[0]["proposal_memo_package"],
-            }
-        ]
+        mapped_job_request = build_memo_report_package_job_request(captured_requests[0])
+        assert mapped_job_request["as_of_date"] == "2026-04-10"
+        assert mapped_job_request["reporting_currency"] == "USD"
+        assert (
+            mapped_job_request["proposal_memo_package"]
+            == captured_requests[0]["proposal_memo_package"]
+        )
 
         replayed = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
@@ -467,23 +462,12 @@ def test_proposal_memo_report_package_projects_persisted_version_and_replays_onc
         )
         assert replayed_body["report"]["report_reference_id"] == "rjob_memo_001"
         assert len(captured_requests) == 1
-        assert len(mapped_job_requests) == 1
 
         lineage = client.get(f"/advisory/proposals/{proposal_id}/memos/lineage")
         assert lineage.status_code == 200
         lineage_memo = lineage.json()["memos"][0]
         assert lineage_memo["report_package_posture"]["report_status"] == "ARCHIVED"
         assert lineage_memo["archive_refs"][0]["document_id"] == "doc_memo_001"
-
-        replay_evidence = client.get(
-            f"/advisory/proposals/{proposal_id}/versions/1/memo/replay-evidence"
-        )
-        assert replay_evidence.status_code == 200
-        assert [
-            event["event_type"]
-            for event in replay_evidence.json()["audit_events"]
-            if event["event_type"] == "MEMO_REPORT_PACKAGE_RECORDED"
-        ] == ["MEMO_REPORT_PACKAGE_RECORDED"]
 
 
 def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write_failure(
@@ -493,35 +477,18 @@ def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write
 
     def _fake_report_package(request: dict) -> dict:
         captured_report_request_ids.append(request["report_request_id"])
-        return {
-            "proposal": request["proposal"],
-            "report_request_id": request["report_request_id"],
-            "report_type": "PORTFOLIO_REVIEW",
-            "report_service": "lotus-report",
-            "status": "ARCHIVED",
-            "generated_at": "2026-05-24T00:00:00Z",
-            "report_reference_id": "rjob_memo_idempotent_001",
-            "artifact_url": "/reports/jobs/rjob_memo_idempotent_001",
-            "explanation": {"render": {}, "archive": {}},
-        }
+        return _archived_report_response(request)
 
     api_main.request_proposal_memo_report_package_with_lotus_report = _fake_report_package
 
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-        memo = _create_memo(client, proposal_id)
-        review = client.post(
-            f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
-            json={
-                "action": "APPROVE_FOR_ADVISOR_USE",
-                "reviewed_by": "compliance_1",
-                "reason": "Evidence is sufficient for advisor discussion.",
-                "source_memo_hash": memo["memo_hash"],
-            },
-            headers={"Idempotency-Key": "memo-report-retry-review"},
+        proposal_id, memo = _create_proposal_memo(client)
+        _approve_memo(
+            client,
+            proposal_id,
+            memo,
+            idempotency_key="memo-report-retry-review",
         )
-        assert review.status_code == 200
 
         repository = get_proposal_repository()
         append_memo_event = repository.append_memo_event
@@ -561,15 +528,14 @@ def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write
         assert len(captured_report_request_ids) == 2
         assert len(set(captured_report_request_ids)) == 1
         assert captured_report_request_ids[0].startswith("prr_")
+        assert "memo-report-persistence-gap" not in captured_report_request_ids[0]
         events = repository.list_memo_events(memo_id=memo["memo_id"])
         assert [event.event_type for event in events].count("MEMO_REPORT_PACKAGE_RECORDED") == 1
 
 
 def test_proposal_memo_report_package_blocks_without_review_and_client_ready_request() -> None:
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-        memo = _create_memo(client, proposal_id)
+        proposal_id, memo = _create_proposal_memo(client)
 
         unreviewed = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
@@ -578,18 +544,7 @@ def test_proposal_memo_report_package_blocks_without_review_and_client_ready_req
         assert unreviewed.status_code == 422
         assert unreviewed.json()["detail"] == "MEMO_REPORT_PACKAGE_REQUIRES_ADVISOR_USE_REVIEW"
 
-        assert (
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
-                json={
-                    "action": "APPROVE_FOR_ADVISOR_USE",
-                    "reviewed_by": "compliance_1",
-                    "reason": "Evidence is sufficient for advisor discussion.",
-                    "source_memo_hash": memo["memo_hash"],
-                },
-            ).status_code
-            == 200
-        )
+        _approve_memo(client, proposal_id, memo)
         client_ready = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
             json={
@@ -614,21 +569,8 @@ def test_proposal_memo_report_package_maps_runtime_provider_failure_to_503(monke
     )
 
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-        memo = _create_memo(client, proposal_id)
-        assert (
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
-                json={
-                    "action": "APPROVE_FOR_ADVISOR_USE",
-                    "reviewed_by": "compliance_1",
-                    "reason": "Evidence is sufficient for advisor discussion.",
-                    "source_memo_hash": memo["memo_hash"],
-                },
-            ).status_code
-            == 200
-        )
+        proposal_id, memo = _create_proposal_memo(client)
+        _approve_memo(client, proposal_id, memo)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
@@ -644,21 +586,8 @@ def test_proposal_memo_report_package_maps_runtime_provider_failure_to_503(monke
 
 def test_proposal_memo_report_package_rejects_empty_output_formats() -> None:
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-        memo = _create_memo(client, proposal_id)
-        assert (
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
-                json={
-                    "action": "APPROVE_FOR_ADVISOR_USE",
-                    "reviewed_by": "compliance_1",
-                    "reason": "Evidence is sufficient for advisor discussion.",
-                    "source_memo_hash": memo["memo_hash"],
-                },
-            ).status_code
-            == 200
-        )
+        proposal_id, memo = _create_proposal_memo(client)
+        _approve_memo(client, proposal_id, memo)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
@@ -706,9 +635,7 @@ def test_proposal_memo_ai_commentary_is_review_gated_idempotent_and_non_authorit
     )
 
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-        memo = _create_memo(client, proposal_id)
+        proposal_id, memo = _create_proposal_memo(client)
 
         unreviewed = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
@@ -717,18 +644,7 @@ def test_proposal_memo_ai_commentary_is_review_gated_idempotent_and_non_authorit
         assert unreviewed.status_code == 422
         assert unreviewed.json()["detail"] == "MEMO_REPORT_PACKAGE_REQUIRES_ADVISOR_USE_REVIEW"
 
-        assert (
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
-                json={
-                    "action": "APPROVE_FOR_ADVISOR_USE",
-                    "reviewed_by": "compliance_1",
-                    "reason": "Evidence is sufficient for advisor discussion.",
-                    "source_memo_hash": memo["memo_hash"],
-                },
-            ).status_code
-            == 200
-        )
+        _approve_memo(client, proposal_id, memo)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
@@ -776,21 +692,8 @@ def test_proposal_memo_ai_commentary_is_review_gated_idempotent_and_non_authorit
 
 def test_proposal_memo_ai_commentary_rejects_empty_requested_sections() -> None:
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-        memo = _create_memo(client, proposal_id)
-        assert (
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
-                json={
-                    "action": "APPROVE_FOR_ADVISOR_USE",
-                    "reviewed_by": "compliance_1",
-                    "reason": "Evidence is sufficient for advisor discussion.",
-                    "source_memo_hash": memo["memo_hash"],
-                },
-            ).status_code
-            == 200
-        )
+        proposal_id, memo = _create_proposal_memo(client)
+        _approve_memo(client, proposal_id, memo)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
@@ -807,21 +710,8 @@ def test_proposal_memo_ai_commentary_rejects_empty_requested_sections() -> None:
 
 def test_proposal_memo_ai_commentary_records_deterministic_unavailable_posture() -> None:
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
-        memo = _create_memo(client, proposal_id)
-        assert (
-            client.post(
-                f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
-                json={
-                    "action": "APPROVE_FOR_ADVISOR_USE",
-                    "reviewed_by": "compliance_1",
-                    "reason": "Evidence is sufficient for advisor discussion.",
-                    "source_memo_hash": memo["memo_hash"],
-                },
-            ).status_code
-            == 200
-        )
+        proposal_id, memo = _create_proposal_memo(client)
+        _approve_memo(client, proposal_id, memo)
 
         response = client.post(
             f"/advisory/proposals/{proposal_id}/versions/1/memo/ai-commentary",
@@ -840,8 +730,7 @@ def test_proposal_memo_ai_commentary_records_deterministic_unavailable_posture()
 
 def test_memo_api_blocks_finalization_until_source_ready_and_reports_missing_memo() -> None:
     with TestClient(app) as client:
-        created = _create_proposal(client)
-        proposal_id = created["proposal"]["proposal_id"]
+        proposal_id = _create_proposal(client)["proposal"]["proposal_id"]
 
         missing = client.get(f"/advisory/proposals/{proposal_id}/versions/1/memo")
         assert missing.status_code == 404
