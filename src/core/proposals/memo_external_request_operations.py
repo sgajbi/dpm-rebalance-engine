@@ -35,7 +35,7 @@ from src.core.proposals.models import (
     ProposalMemoReportPackageResponse,
     ProposalReportResponse,
 )
-from src.core.proposals.projections import to_proposal_summary
+from src.core.proposals.projections import to_proposal_summary, to_version_detail
 from src.core.proposals.repository import ProposalRepository
 
 MemoReportRequester = Callable[..., ProposalReportResponse]
@@ -99,7 +99,9 @@ def request_memo_report_package_operation(
         request={
             "report_request_id": report_request_id,
             "proposal": to_proposal_summary(proposal).model_dump(mode="json"),
-            "proposal_version": version.model_dump(mode="json"),
+            "proposal_version": to_version_detail(version, include_evidence=True).model_dump(
+                mode="json"
+            ),
             "report_type": "PORTFOLIO_REVIEW",
             "requested_by": payload.requested_by,
             "related_version_no": version_no,
