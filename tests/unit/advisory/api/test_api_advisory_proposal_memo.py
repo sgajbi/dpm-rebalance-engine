@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 import src.api.main as api_main
@@ -10,6 +11,7 @@ from src.api.proposals.router import (
 )
 from src.core.proposals import memo_api
 from src.core.proposals.memo_ai_ports import ProposalMemoAiCommentaryDraft
+from src.core.proposals.memo_persistence_models import ProposalMemoEventRecord
 from src.integrations.lotus_report import LotusReportUnavailableError
 from src.integrations.lotus_report.request_mapping import build_memo_report_package_job_request
 
@@ -482,6 +484,85 @@ def test_proposal_memo_report_package_projects_persisted_version_and_replays_onc
             for event in replay_evidence.json()["audit_events"]
             if event["event_type"] == "MEMO_REPORT_PACKAGE_RECORDED"
         ] == ["MEMO_REPORT_PACKAGE_RECORDED"]
+
+
+def test_proposal_memo_report_retry_reuses_downstream_identity_after_event_write_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_report_request_ids: list[str] = []
+
+    def _fake_report_package(request: dict) -> dict:
+        captured_report_request_ids.append(request["report_request_id"])
+        return {
+            "proposal": request["proposal"],
+            "report_request_id": request["report_request_id"],
+            "report_type": "PORTFOLIO_REVIEW",
+            "report_service": "lotus-report",
+            "status": "ARCHIVED",
+            "generated_at": "2026-05-24T00:00:00Z",
+            "report_reference_id": "rjob_memo_idempotent_001",
+            "artifact_url": "/reports/jobs/rjob_memo_idempotent_001",
+            "explanation": {"render": {}, "archive": {}},
+        }
+
+    api_main.request_proposal_memo_report_package_with_lotus_report = _fake_report_package
+
+    with TestClient(app) as client:
+        created = _create_proposal(client)
+        proposal_id = created["proposal"]["proposal_id"]
+        memo = _create_memo(client, proposal_id)
+        review = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/1/memo/review",
+            json={
+                "action": "APPROVE_FOR_ADVISOR_USE",
+                "reviewed_by": "compliance_1",
+                "reason": "Evidence is sufficient for advisor discussion.",
+                "source_memo_hash": memo["memo_hash"],
+            },
+            headers={"Idempotency-Key": "memo-report-retry-review"},
+        )
+        assert review.status_code == 200
+
+        repository = get_proposal_repository()
+        append_memo_event = repository.append_memo_event
+        failed_once = False
+
+        def _fail_first_report_event(event: ProposalMemoEventRecord) -> None:
+            nonlocal failed_once
+            if event.event_type == "MEMO_REPORT_PACKAGE_RECORDED" and not failed_once:
+                failed_once = True
+                raise RuntimeError("simulated event persistence failure")
+            append_memo_event(event)
+
+        monkeypatch.setattr(repository, "append_memo_event", _fail_first_report_event)
+        payload = {
+            "requested_by": "advisor_1",
+            "source_memo_hash": memo["memo_hash"],
+            "requested_output_formats": ["pdf"],
+            "reason": {"purpose": "advisor-use memo report package"},
+        }
+        headers = {"Idempotency-Key": "memo-report-persistence-gap"}
+
+        with pytest.raises(RuntimeError, match="simulated event persistence failure"):
+            client.post(
+                f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
+                json=payload,
+                headers=headers,
+            )
+
+        retried = client.post(
+            f"/advisory/proposals/{proposal_id}/versions/1/memo/report-packages",
+            json=payload,
+            headers=headers,
+        )
+
+        assert retried.status_code == 200
+        assert retried.json()["replayed"] is False
+        assert len(captured_report_request_ids) == 2
+        assert len(set(captured_report_request_ids)) == 1
+        assert captured_report_request_ids[0].startswith("prr_")
+        events = repository.list_memo_events(memo_id=memo["memo_id"])
+        assert [event.event_type for event in events].count("MEMO_REPORT_PACKAGE_RECORDED") == 1
 
 
 def test_proposal_memo_report_package_blocks_without_review_and_client_ready_request() -> None:

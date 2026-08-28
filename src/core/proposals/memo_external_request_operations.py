@@ -5,6 +5,7 @@ from datetime import datetime
 
 from src.core.common.idempotency import normalize_optional_idempotency_key
 from src.core.proposals.exceptions import ProposalValidationError
+from src.core.proposals.identifiers import stable_memo_report_request_id
 from src.core.proposals.memo_ai_ports import ProposalMemoAiCommentaryDraft
 from src.core.proposals.memo_event_recording import (
     append_or_replay_memo_event,
@@ -95,6 +96,11 @@ def request_memo_report_package_operation(
                 report=report_response_from_event(proposal=proposal, event=replayed_event),
                 replayed=True,
             )
+        report_request_id = stable_memo_report_request_id(
+            proposal_id=proposal.proposal_id,
+            memo_id=memo.memo_id,
+            idempotency_key=idempotency_key,
+        )
     report = request_report_package(
         request={
             "report_request_id": report_request_id,
