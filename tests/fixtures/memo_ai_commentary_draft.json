@@ -1,0 +1,18 @@
+{
+  "status": "REVIEW_REQUIRED",
+  "sections": [
+    {
+      "section_key": "EXECUTIVE_SUMMARY",
+      "title": "Executive Summary",
+      "text": "",
+      "review_state": "REVIEW_REQUIRED"
+    }
+  ],
+  "lineage": {
+    "workflow_pack_id": "proposal_memo_commentary.pack",
+    "workflow_pack_version": "v1",
+    "workflow_run_id": "",
+    "fallback_reason": null
+  },
+  "review_guidance": []
+}
