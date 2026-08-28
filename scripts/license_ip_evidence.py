@@ -22,12 +22,11 @@ from packaging.utils import canonicalize_name
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from scripts.dependency_constraint_evidence import (  # noqa: E402
-    validate_authoritative_lock,
-    write_authoritative_lock_constraints,
-)
 from scripts.dependency_constraint_evidence import (
     validate_installed_packages_against_lock as _validate_installed_packages_against_lock,
+)
+from scripts.dependency_constraint_evidence import (  # noqa: E402
+    write_authoritative_lock_constraints,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -685,7 +684,6 @@ def _write_lock_constraints(
     *,
     requirement_paths: Iterable[Path] = (),
 ) -> dict[str, str]:
-    validate_authoritative_lock(lock_path)
     refreshed_direct_constraints: dict[str, str] = {}
     for requirement_path in requirement_paths:
         for root in parse_requirement_roots(
