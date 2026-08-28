@@ -669,7 +669,12 @@ def _build_inventory_from_args(args: argparse.Namespace) -> dict[str, Any]:
     )
 
 
-def _write_lock_constraints(lock_path: Path, output_path: Path) -> None:
+def _write_lock_constraints(
+    lock_path: Path,
+    output_path: Path,
+    *,
+    requirement_paths: Iterable[Path] = (),
+) -> None:
     try:
         lock_payload = tomllib.loads(lock_path.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError) as exc:
@@ -692,6 +697,23 @@ def _write_lock_constraints(lock_path: Path, output_path: Path) -> None:
             )
     if not package_constraints:
         raise RuntimeError("Authoritative dependency lock contains no package constraints")
+
+    refreshed_direct_constraints: dict[str, str] = {}
+    for requirement_path in requirement_paths:
+        for root in parse_requirement_roots(
+            requirement_path,
+            dependency_group="constraint-refresh",
+        ):
+            if root.pinned_version is not None:
+                previous_version = refreshed_direct_constraints.setdefault(
+                    root.name,
+                    root.pinned_version,
+                )
+                if previous_version != root.pinned_version:
+                    raise RuntimeError(
+                        f"Direct requirement files contain conflicting versions for {root.name}"
+                    )
+    package_constraints.update(refreshed_direct_constraints)
 
     output_path.write_text(
         "# Generated at runtime from uv.lock; do not edit.\n"
@@ -736,7 +758,14 @@ def _run_with_isolated_venv(args: argparse.Namespace, venv_root: Path) -> int:
     venv_python = _venv_python(venv_root)
     constraints_path = venv_root.parent / "license-ip-constraints.txt"
     try:
-        _write_lock_constraints(REPO_ROOT / DEPENDENCY_LOCK_PATH, constraints_path)
+        _write_lock_constraints(
+            REPO_ROOT / DEPENDENCY_LOCK_PATH,
+            constraints_path,
+            requirement_paths=(
+                REPO_ROOT / args.runtime_requirements,
+                REPO_ROOT / args.development_requirements,
+            ),
+        )
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 2
