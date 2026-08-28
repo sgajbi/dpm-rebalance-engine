@@ -3,33 +3,31 @@
 import tomllib
 from pathlib import Path
 
+from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
 
 def write_authoritative_lock_constraints(
-    lock_path: Path,
-    output_path: Path,
-    *,
-    refreshed_direct_constraints: dict[str, str],
+    lock_path: Path, output_path: Path, *, refreshed_direct_constraints: dict[str, str]
 ) -> dict[str, str]:
     constraints, direct_packages = _read_authoritative_lock(lock_path)
-    for name, version in refreshed_direct_constraints.items():
+    for name in refreshed_direct_constraints:
         if name not in constraints:
             raise RuntimeError(f"Direct requirement {name} is absent from the lock")
         if name not in direct_packages:
             raise RuntimeError(f"Direct requirement {name} is not recorded as direct in the lock")
-        constraints[name] = version
-    rendered = "# Generated at runtime from uv.lock; do not edit.\n" + "\n".join(
-        f"{name}=={constraints[name]}" for name in sorted(constraints)
-    )
-    output_path.write_text(f"{rendered}\n", encoding="utf-8")
+    constraints.update(refreshed_direct_constraints)
+    lines = ["# Generated at runtime from uv.lock; do not edit."]
+    lines.extend(f"{name}=={constraints[name]}" for name in sorted(constraints))
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return constraints
 
 
 def validate_installed_packages_against_lock(
     installed_packages: object,
     constraints: dict[str, str],
-    inapplicable_packages: frozenset[str] = frozenset(),
+    dependency_metadata: tuple[dict[str, list[str]], ...] = (),
+    direct_requirement_names: frozenset[str] = frozenset(),
 ) -> None:
     if not isinstance(installed_packages, list):
         raise RuntimeError("Installed dependency inventory is not a package list")
@@ -37,28 +35,37 @@ def validate_installed_packages_against_lock(
     for package in installed_packages:
         name, version = _package_identity(package, source="Installed dependency inventory")
         installed_names.add(name)
-        locked_version = constraints.get(name)
-        if locked_version is None:
+        if name not in constraints:
             raise RuntimeError(f"Installed dependency {name}=={version} is absent from the lock")
-        if version != locked_version:
+        if version != constraints[name]:
             raise RuntimeError(
-                f"Installed dependency {name}=={version} does not match {locked_version}"
+                f"Installed dependency {name}=={version} does not match {constraints[name]}"
             )
-    missing_names = sorted(set(constraints) - installed_names - inapplicable_packages)
+    applicable_names = set(direct_requirement_names)
+    inactive_names: set[str] = set()
+    for package in dependency_metadata:
+        for requirement_text in package.get("requires_dist") or ():
+            requirement = Requirement(str(requirement_text))
+            target = canonicalize_name(requirement.name)
+            destination = (
+                inactive_names
+                if requirement.marker and not requirement.marker.evaluate()
+                else applicable_names
+            )
+            destination.add(target)
+    missing_names = sorted(set(constraints) - installed_names - (inactive_names - applicable_names))
     if missing_names:
-        missing_name = missing_names[0]
+        name = missing_names[0]
         raise RuntimeError(
-            f"Locked dependency {missing_name}=={constraints[missing_name]} "
-            "is absent from the installed graph"
+            f"Locked dependency {name}=={constraints[name]} is absent from the installed graph"
         )
 
 
 def _read_authoritative_lock(lock_path: Path) -> tuple[dict[str, str], set[str]]:
     try:
-        payload = tomllib.loads(lock_path.read_text(encoding="utf-8"))
+        packages = tomllib.loads(lock_path.read_text(encoding="utf-8")).get("package", [])
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise RuntimeError(f"Cannot read authoritative dependency lock {lock_path}: {exc}") from exc
-    packages = payload.get("package", [])
     if not isinstance(packages, list):
         raise RuntimeError("Authoritative dependency lock package inventory must be a list")
     constraints: dict[str, str] = {}
@@ -68,9 +75,9 @@ def _read_authoritative_lock(lock_path: Path) -> tuple[dict[str, str], set[str]]
         direct = package.get("direct")
         if not isinstance(direct, bool):
             raise RuntimeError(f"Authoritative dependency lock package {name} needs boolean direct")
-        previous_version = constraints.setdefault(name, version)
-        if previous_version != version:
+        if name in constraints and constraints[name] != version:
             raise RuntimeError(f"Lock contains conflicting versions for {name}")
+        constraints[name] = version
         if direct:
             direct_packages.add(name)
     if not constraints:

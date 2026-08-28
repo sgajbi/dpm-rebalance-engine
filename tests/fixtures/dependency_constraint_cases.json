@@ -44,6 +44,16 @@
       "id": "missing-locked-package",
       "packages": [{"name": "direct", "version": "2.0.0"}],
       "error": "Locked dependency child==1.0.0 is absent from the installed graph"
+    },
+    {
+      "id": "mixed-marker-edges",
+      "packages": [{"name": "direct", "version": "2.0.0"}, {"name": "shared", "version": "1.0.0"}],
+      "constraints": {"direct": "2.0.0", "shared": "1.0.0", "inactive": "1.0.0"},
+      "dependency_metadata": [
+        {"requires_dist": ["shared; python_version < '0'"]},
+        {"requires_dist": ["shared", "inactive; python_version < '0'"]}
+      ],
+      "direct_names": ["direct"]
     }
   ]
 }
