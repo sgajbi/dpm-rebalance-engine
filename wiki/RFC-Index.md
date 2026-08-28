@@ -139,6 +139,13 @@ Client-ready publication, external client communication, bank-specific attestati
 legal/regulatory advice, completed sign-off/approval, and OMS/order/fill/settlement remain
 unpromoted.
 
+## Implementation slices by RFC
+
+Per-slice implementation status, grouped by RFC. The summaries above say what each RFC
+delivers; these say which slices are implemented and what evidence backs them.
+
+### RFC-0027
+
 RFC-0027 Slice 1 is implemented as platform automation and scaffolding review. Evidence lives in
 `docs/rfcs/RFC-0027-slice-1-platform-automation-and-scaffolding-review.md`. Existing platform and
 repo-native controls are sufficient before copilot domain work, so no `lotus-platform` code change
@@ -213,6 +220,8 @@ data-mesh promotion, repeatability hardening, and closure. Evidence lives in
 review, client-ready guardrail rejection, proposal-version run lineage, and the
 `advisory.advisory_copilot` Workbench panel. `AdvisoryCopilotInteractionRecord:v1` is active with
 trust telemetry; standalone evidence-packet and review-record products are not promoted.
+
+### RFC-0026
 
 RFC-0026 Slice 1 is implemented as platform automation and scaffolding review. Evidence lives in
 `docs/rfcs/RFC-0026-slice-1-platform-automation-and-scaffolding-review.md`. Existing platform and
@@ -298,6 +307,8 @@ records `ADVISOR_COCKPIT_ACTION_ACKNOWLEDGED`, `paginationCursor`, `roleProjecti
 `CANONICAL_WORKBENCH_PROOF_PASSED_RFC0026`. Live defects found in stale image rebuild posture,
 portfolio-scoped preparation, memo/report portfolio scoping, and source-backed cockpit lineage were
 fixed at the owning layer and pinned by lower-level tests before rerun.
+
+### RFC-0025
 
 RFC-0025 Slice 1 is implemented as platform automation and scaffolding review. Evidence lives in
 `docs/rfcs/RFC-0025-slice-1-platform-automation-and-scaffolding-review.md`. Existing platform and
@@ -430,6 +441,8 @@ employer-safe, non-promotional, and do not claim completed approval/waiver autho
 sign-off authority, client-ready policy publication, external client communication, bank adoption,
 or full RFC-0028 bank-demo/RFP support. The draft remains in draft status.
 
+### RFC-0024
+
 RFC-0024 Slice 0 is implemented as a critical-review, source-map, and product-gap allocation gate.
 It records memo source authorities, cross-repo ownership, required blocked states, and the first
 bounded implementation direction. It does not implement advisor proposal memo generation, memo APIs,
@@ -548,6 +561,8 @@ RFC-0024 Slice 17 is implemented as post-completion communication. Evidence live
 `LI-2026-05-25-036-a-proposal-memo-is-an-evidence-product.md` and updated the content ledger. The
 draft remains in draft status and does not claim client-ready memo publication, external client
 communication, bank adoption, or full RFC-0028 bank-demo/RFP support.
+
+### RFC-0023
 
 RFC-0023 Slice 0 is implemented as a critical-review, source-map, and product-gap allocation gate.
 It records source authorities, cross-repo ownership, and the first bounded implementation direction.
