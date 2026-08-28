@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import tomllib
 from email.message import Message
 from pathlib import Path
 from typing import Any
@@ -56,10 +57,13 @@ def test_isolated_license_inventory_uses_governed_requirement_install(
     monkeypatch.setenv("PIP_CONFIG_FILE", "ambient-pip.conf")
     monkeypatch.setenv("PYTHONHOME", "ambient-python-home")
     monkeypatch.setenv("PYTHONPATH", "ambient-python-path")
+    lock_packages = tomllib.loads(
+        (Path(__file__).resolve().parents[3] / "uv.lock").read_text(encoding="utf-8")
+    )["package"]
 
     def fake_run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
         calls.append((command, kwargs))
-        stdout = '[{"name":"pip","version":"25.0.1"}]' if "list" in command else None
+        stdout = json.dumps(lock_packages) if "list" in command else None
         return subprocess.CompletedProcess(command, 0, stdout=stdout)
 
     monkeypatch.setattr(
