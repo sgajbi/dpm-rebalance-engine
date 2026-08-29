@@ -802,6 +802,8 @@ def test_validation_wiki_documents_repo_native_ci_enforcement() -> None:
         "Remote Feature Lane",
         "PR Merge Gate",
         "Main Releasability Gate",
+        "Dependency Maintenance",
+        "make check-deps-strict",
         "Report-only quality evidence",
         "make quality-baseline-check",
         "make wiki-quality-gate",
