@@ -689,6 +689,30 @@ def test_pr_and_main_runtime_jobs_are_parallelized_without_renaming_required_che
         assert "if-no-files-found: error" in test_section
 
 
+def test_dependency_freshness_is_scheduled_without_weakening_blocking_security() -> None:
+    for workflow_name in ("pr-merge-gate.yml", "main-releasability.yml"):
+        workflow = _workflow_text(workflow_name)
+        governance_section = _workflow_job_section(workflow, "lint-typecheck-governance")
+
+        assert "make verify-dependencies" in governance_section
+        assert "make security-audit" in governance_section
+        assert "make check-deps-strict" not in governance_section
+
+    workflow = _workflow_text("dependency-maintenance.yml")
+    dependency_section = _workflow_job_section(workflow, "dependency-freshness")
+
+    _assert_default_ci_guardrails(workflow)
+    _assert_all_jobs_have_timeout(workflow)
+    assert "schedule:" in workflow
+    assert 'cron: "30 3 * * *"' in workflow
+    assert "workflow_dispatch:" in workflow
+    assert "Dependency Maintenance / Direct Dependency Freshness" in dependency_section
+    assert "actions/checkout@v7" in dependency_section
+    assert "actions/setup-python@v6" in dependency_section
+    assert "run: make install-ci" in dependency_section
+    assert "run: make check-deps-strict" in dependency_section
+
+
 def test_main_releasability_pushes_only_ci_release_image_with_evidence_artifacts() -> None:
     workflow = _workflow_text("main-releasability.yml")
     release_section = _workflow_job_section(workflow, "image-release-evidence")
