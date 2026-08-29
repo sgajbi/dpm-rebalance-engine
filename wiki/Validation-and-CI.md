@@ -135,6 +135,7 @@ evidence only and does not change runtime, API, persistence, migration, or data-
 | Remote Feature Lane | GitHub `Remote Feature Lane` | Branch feedback for workflow lint, unit tests, producer-owned proposal decision vocabulary, quality trend comparison, dependency governance including dead-code/duplicate-code/unused-dependency/oversized-code regression gates, dependency-lock evidence, license/IP evidence, Bandit severity regression, and demo-assurance checks. |
 | PR Merge Gate | GitHub `Pull Request Merge Gate` | Merge readiness across lint/typecheck, producer-owned proposal decision vocabulary, quality trend comparison, dead-code/duplicate-code/unused-dependency/oversized-code governance, unit/integration/e2e tests, coverage, Docker build, Postgres migration smoke, production startup smoke, and production guardrail negatives. |
 | Main Releasability Gate | GitHub `Main Releasability Gate` | Post-merge release evidence on `main`, including the same proposal decision vocabulary and quality trend comparison, static dead-code/duplicate-code/unused-dependency/oversized-code, runtime, migration, coverage, Docker, security, observability, and advisory-domain signals. |
+| Scheduled dependency maintenance | GitHub `Dependency Maintenance` | Nightly and manually dispatched strict direct-package freshness evidence. A newer upstream release creates a focused maintenance signal without making unrelated PRs or exact-main validation red. |
 | Report-only quality evidence | `Quality Baseline / Report Only` and `make quality-baseline` | Detailed code-health and refactoring scorecards remain report-only; the versioned quality trend comparison is separately enforced by local and governance lanes. |
 
 ```mermaid
@@ -184,6 +185,7 @@ make trust-telemetry-freshness-gate
 
 ```powershell
 make security-audit
+make check-deps-strict
 make dependency-lock-gate
 make license-ip-gate
 make bandit-severity-regression-gate
@@ -287,8 +289,13 @@ The current blocking posture is intentionally high-signal:
    blocks high-severity Bandit findings and fails on any new, stale, expired, or worsened
    medium/low finding relative to `quality/bandit_security_baseline.v1.json`.
 16. `make security-audit`
-   runs dependency health with audit posture and the Bandit severity-regression gate in PR-grade
-   paths.
+   runs vulnerability-aware dependency health and the Bandit severity-regression gate in PR-grade
+   paths. It reports newer package releases without failing solely because an upstream release is
+   available.
+   `make check-deps-strict` additionally fails on outdated direct packages. The nightly/manual
+   `Dependency Maintenance` workflow owns that strict freshness signal so unrelated PRs and
+   exact-main validation remain attributable to their change while vulnerability findings remain
+   blocking.
 17. `make release-image-provenance-gate`
      blocks drift in Dockerfile build metadata args, OCI labels, Docker build arguments, and
      support-safe metadata naming before the image is built or pushed.

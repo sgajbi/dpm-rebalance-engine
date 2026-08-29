@@ -9,7 +9,10 @@ This repository adopts the platform-wide standard defined in:
 ## Required Baseline
 
 - No known high/critical dependency vulnerabilities are allowed.
-- Dependency health must be validated in CI and before merge.
+- Dependency health, installation consistency, lock integrity, and licence posture must be
+  validated in CI and before merge.
+- Availability of a newer direct-package release is maintenance evidence, not a change-attributable
+  merge failure. Strict freshness is evaluated by the scheduled maintenance lane.
 - Local and CI dependency checks should remain aligned.
 
 ## Execution Commands
@@ -20,6 +23,8 @@ This repository adopts the platform-wide standard defined in:
   - `python -m pip check`
 - CI-aligned security audit target:
   - `make security-audit`
+- Strict direct-package freshness maintenance target:
+  - `make check-deps-strict`
 - License/IP release evidence:
   - `make dependency-lock`
   - `make dependency-lock-gate`
@@ -73,6 +78,9 @@ after any dependency manifest or generated dependency-inventory change.
 
 ## Update Cadence
 
+- The `Dependency Maintenance` workflow runs `make check-deps-strict` nightly and supports manual
+  dispatch. Its failure is an explicit dependency-refresh prompt owned outside unrelated feature
+  PRs.
 - Patch/minor updates for tooling and low-risk libraries should be reviewed continuously.
 - Runtime package major upgrades require explicit compatibility validation in unit, integration, and e2e buckets.
 - Any dependency policy change must be documented in an ADR/RFC.
@@ -80,6 +88,7 @@ after any dependency manifest or generated dependency-inventory change.
 ## Evidence
 
 - CI job: `PR Merge Gate / Lint Typecheck Governance`
+- Scheduled job: `Dependency Maintenance / Direct Dependency Freshness`
 - Quality artifact: `quality/baseline_report.md`
 - License/IP inventory: `docs/standards/license-ip-inventory.v1.json`
 - License/IP policy: `docs/standards/license-ip-policy.v1.json`
