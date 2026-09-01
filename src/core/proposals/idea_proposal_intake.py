@@ -484,6 +484,7 @@ def _replayed_intake_response(
             "realization_status": realization.current_status,
             "source_event_version": realization.current_source_event_version,
             "source_evidence_fingerprint": realization.source_evidence_fingerprint,
+            "proposal_record_created": realization.proposal_id is not None,
             "certification_blockers": current_response.certification_blockers,
             "evidence_refs": current_response.evidence_refs,
         }

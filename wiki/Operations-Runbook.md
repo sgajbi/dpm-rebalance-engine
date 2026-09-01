@@ -369,8 +369,9 @@ python scripts/postgres_migrate.py --target all
 python scripts/production_cutover_check.py --check-migrations
 ```
 
-`--target all` applies all three namespaces. Production cutover validation checks all three and
-uses `POLICY_POSTGRES_DSN` for `policy_packs` when policy storage is separate.
+`--target all` applies the `proposals`, `advisory_copilot`, `policy_packs`, and `workspace`
+namespaces. Production cutover validation checks all four and uses `POLICY_POSTGRES_DSN` for
+`policy_packs` when policy storage is separate.
 
 Every migration must be represented in
 `docs/standards/postgres-migration-rollout-contract.v1.json` with expand/migrate/contract phase,
@@ -380,6 +381,12 @@ builds, not concurrent index builds, so use controlled rollout windows for produ
 Before applying policy-pack active-version uniqueness changes, preflight that each
 `policy_pack_id` has at most one `ACTIVE` version; duplicate active rows must be quarantined and
 remediated before migration apply.
+
+Migration `proposals:0013` is not reader-compatible with pre-0013 pods after a realization
+advances. Keep `IDEA_PROPOSAL_RECONCILIATION_ENABLED=false` while applying the migration and during
+the deployment wave. Enable it only after proving every older pod is drained. Disable it before a
+rollback; once any later outcome exists, do not route realization reads or intake replays to a
+pre-0013 application version.
 
 Policy-pack repository writes use a single adapter-owned PostgreSQL transaction for record/catalog
 state, audit events, and idempotency mappings. A partial failure must roll back the whole write.

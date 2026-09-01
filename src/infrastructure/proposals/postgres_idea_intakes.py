@@ -190,29 +190,43 @@ def advance_idea_proposal_realization(
     """Atomically append monotonic outcomes and advance the scoped realization."""
 
     with closing(connect()) as connection:
-        current = _load_locked_realization(connection, realization.realization_id)
-        _validate_realization_progression(
-            current=current,
-            expected_source_event_version=expected_source_event_version,
-            realization=realization,
-            outcomes=outcomes,
-        )
-        _require_valid_proposal_link(connection=connection, realization=realization)
-        _append_realization_outcomes(connection=connection, outcomes=outcomes)
-        _update_realization_progression(
-            connection=connection,
-            expected_source_event_version=expected_source_event_version,
-            realization=realization,
-        )
-        stored_outcomes = _load_outcomes(
-            connection=connection,
-            realization_id=realization.realization_id,
-        )
-        connection.commit()
+        try:
+            current = _load_locked_realization(connection, realization.realization_id)
+            _validate_realization_progression(
+                current=current,
+                expected_source_event_version=expected_source_event_version,
+                realization=realization,
+                outcomes=outcomes,
+            )
+            _require_valid_proposal_link(connection=connection, realization=realization)
+            _append_realization_outcomes(connection=connection, outcomes=outcomes)
+            _update_realization_progression(
+                connection=connection,
+                expected_source_event_version=expected_source_event_version,
+                realization=realization,
+            )
+            stored_outcomes = _load_outcomes(
+                connection=connection,
+                realization_id=realization.realization_id,
+            )
+            connection.commit()
+        except Exception as exc:
+            connection.rollback()
+            if _constraint_name(exc) == "uq_proposal_idea_realization_proposal":
+                raise ProposalStateConflictError(
+                    "IDEA_PROPOSAL_REALIZATION_PROPOSAL_CONFLICT"
+                ) from exc
+            raise
         return IdeaProposalRealizationHistoryRecord(
             realization=realization,
             outcomes=stored_outcomes,
         )
+
+
+def _constraint_name(exc: Exception) -> str | None:
+    diagnostics = getattr(exc, "diag", None)
+    constraint_name = getattr(diagnostics, "constraint_name", None)
+    return str(constraint_name) if constraint_name is not None else None
 
 
 def _load_locked_realization(connection: Any, realization_id: str) -> IdeaProposalRealizationRecord:

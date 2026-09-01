@@ -73,6 +73,13 @@ PostgreSQL stores proposal linkage on `proposal_idea_review_realizations` and ap
 references, unique constraints prevent one proposal from being attached to multiple conversions,
 and database checks enforce valid status/work/proposal/terminal combinations.
 
+Migration `proposals:0013` is schema-expand compatible but not application-reader compatible with
+pre-0013 pods after a realization advances. `IDEA_PROPOSAL_RECONCILIATION_ENABLED` therefore
+defaults to `false`. Operators apply the migration, complete one full deployment wave, verify that
+all older pods are drained, and only then set the flag to `true`. Before any rollback, disable the
+flag; after an outcome has been written, do not route realization reads or intake replays to a
+pre-0013 application version.
+
 `scripts/sql/verify_idea_intake_recovery.sql` validates both retained legacy receipt shapes and the
 current linked/terminal sequence after restore. Invalid scope, missing proposal references,
 non-contiguous event history, contradictory terminal posture, or a hash mismatch is a quarantine

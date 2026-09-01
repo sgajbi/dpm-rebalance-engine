@@ -7,6 +7,7 @@ from fastapi import Depends, Request, status
 import src.api.proposals.router as shared
 from src.api.observability import correlation_id_var
 from src.api.proposals.errors import reject_unexpected_query_params, run_proposal_operation
+from src.api.proposals.feature_gates import assert_idea_proposal_reconciliation_enabled
 from src.api.proposals.idea_intake_parameters import (
     IdeaProposalIntakeCorrelationIdHeader,
     IdeaProposalIntakeIdempotencyKeyHeader,
@@ -167,6 +168,7 @@ def reconcile_idea_proposal(
     repository: ProposalRepository = Depends(shared.get_proposal_repository),
 ) -> IdeaProposalRealizationHistoryResponse:
     shared._assert_lifecycle_enabled()
+    assert_idea_proposal_reconciliation_enabled()
     reject_unexpected_query_params(request, allowed_params=set())
     return cast(
         IdeaProposalRealizationHistoryResponse,

@@ -784,6 +784,7 @@ def test_idea_realization_links_existing_same_portfolio_proposal_idempotently() 
     assert replay.status_code == 200
     assert intake_replay.status_code == 202
     assert intake_replay.json()["idempotency_replay"] is True
+    assert intake_replay.json()["proposal_record_created"] is True
     assert first.json() == replay.json()
     body = first.json()
     assert body["proposal_id"] == "pp_idea_linked"
@@ -800,6 +801,34 @@ def test_idea_realization_links_existing_same_portfolio_proposal_idempotently() 
     assert body["suitability_authority_granted"] is False
     assert body["order_created"] is False
     assert body["client_publication_authorized"] is False
+
+
+def test_idea_realization_reconciliation_is_disabled_until_old_pods_are_drained(
+    monkeypatch,
+) -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-rollout-guard"),
+        )
+        intake_id = accepted.json()["intake_id"]
+        monkeypatch.setenv("IDEA_PROPOSAL_RECONCILIATION_ENABLED", "false")
+        readable = client.get(
+            f"/advisory/proposals/idea-intake/{intake_id}/realization",
+            headers=_realization_headers(),
+        )
+        blocked_write = client.post(
+            f"/advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation",
+            json={"proposal_id": "pp_rollout_guard", "expected_source_event_version": 1},
+            headers=_reconciliation_headers(),
+        )
+
+    assert accepted.status_code == 202
+    assert readable.status_code == 200
+    assert readable.json()["current_status"] == "ACCEPTED_FOR_REVIEW"
+    assert blocked_write.status_code == 404
+    assert blocked_write.json()["detail"] == "IDEA_PROPOSAL_RECONCILIATION_DISABLED"
 
 
 def test_idea_realization_emits_terminal_outcome_from_authoritative_proposal_state() -> None:

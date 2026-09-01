@@ -70,6 +70,29 @@ def test_contract_rejects_index_without_online_behavior() -> None:
     assert "Migration proposals:0006 must document index online/locking behavior." in failures
 
 
+def test_contract_requires_controls_for_mixed_version_incompatible_migration() -> None:
+    contract = load_contract(DEFAULT_CONTRACT_PATH)
+    mutated = deepcopy(contract)
+    migration = next(
+        item
+        for item in mutated["migrations"]
+        if item["namespace_key"] == "proposals" and item["version"] == "0013"
+    )
+    del migration["compatibility_window"]["write_activation_control"]
+    del migration["rollback"]["previous_version_recovery_control"]
+
+    failures = validate_contract(mutated)
+
+    assert (
+        "Migration proposals:0013 must document write_activation_control when "
+        "mixed-version compatibility is false."
+    ) in failures
+    assert (
+        "Migration proposals:0013 must document previous_version_recovery_control when "
+        "mixed-version compatibility is false."
+    ) in failures
+
+
 def test_contract_rejects_migration_runner_missing_namespace(monkeypatch) -> None:
     monkeypatch.setattr(
         rollout_contract,

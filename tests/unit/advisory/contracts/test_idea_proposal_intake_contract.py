@@ -94,6 +94,12 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
         },
     }
     assert contract["proposal_reconciliation_outcomes"] == {
+        "write_activation_flag": "IDEA_PROPOSAL_RECONCILIATION_ENABLED",
+        "write_activation_default": False,
+        "write_activation_rule": (
+            "enable only after migration proposals:0013 is applied and every pre-0013 "
+            "application pod is drained"
+        ),
         "nonterminal_proposal_states": {
             "states": [
                 "DRAFT",

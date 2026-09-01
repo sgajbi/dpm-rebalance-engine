@@ -233,8 +233,17 @@ def _validate_migration_metadata(
         )
     )
     compatibility = migration.get("compatibility_window", {})
-    if compatibility.get("old_and_new_application_versions_supported") is not True:
-        failures.append(f"{owner} must support old and new application versions during rollout.")
+    mixed_version_supported = compatibility.get("old_and_new_application_versions_supported")
+    if not isinstance(mixed_version_supported, bool):
+        failures.append(f"{owner} old_and_new_application_versions_supported must be a boolean.")
+    elif not mixed_version_supported:
+        failures.extend(
+            _require_rollout_control(
+                owner=owner,
+                item=compatibility,
+                field="write_activation_control",
+            )
+        )
 
     failures.extend(
         _validate_nested_object(
@@ -272,8 +281,17 @@ def _validate_migration_metadata(
     rollback = migration.get("rollback", {})
     if rollback.get("forward_fix_required") is not True:
         failures.append(f"{owner} rollback must declare forward_fix_required=true.")
-    if rollback.get("previous_app_version_compatible") is not True:
-        failures.append(f"{owner} rollback must preserve previous app version compatibility.")
+    previous_version_compatible = rollback.get("previous_app_version_compatible")
+    if not isinstance(previous_version_compatible, bool):
+        failures.append(f"{owner} previous_app_version_compatible must be a boolean.")
+    elif not previous_version_compatible:
+        failures.extend(
+            _require_rollout_control(
+                owner=owner,
+                item=rollback,
+                field="previous_version_recovery_control",
+            )
+        )
 
     failures.extend(
         _validate_nested_object(
@@ -286,6 +304,13 @@ def _validate_migration_metadata(
     if "CREATE INDEX" in sql and operation_class not in INDEX_OPERATION_CLASSES:
         failures.append(f"{owner} operation_class must classify CREATE INDEX usage.")
     return failures
+
+
+def _require_rollout_control(*, owner: str, item: dict[str, Any], field: str) -> list[str]:
+    value = item.get(field)
+    if not isinstance(value, str) or not value.strip():
+        return [f"{owner} must document {field} when mixed-version compatibility is false."]
+    return []
 
 
 def _validate_nested_object(
