@@ -32,7 +32,9 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["idempotency_retention"] == {
         "replay_window_hours": 24,
         "expiry_boundary": "created_at_utc_plus_24_hours",
-        "purge_policy": "delete_expired_claims_before_new_claim_unless_legal_hold",
+        "purge_policy": "target_prioritized_batches_before_new_claim_unless_legal_hold",
+        "purge_batch_size": 128,
+        "purge_audit_evidence": "proposal_idea_intake_purge_events",
         "legal_hold_supported": True,
         "raw_idempotency_key_persisted": False,
     }

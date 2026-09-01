@@ -218,7 +218,8 @@ Current repository posture:
    conversion-intent intake receipt. It proves trusted local/dev caller scope, durable
    PostgreSQL-backed idempotency conflict detection, restart-safe replay, and bounded
    accepted/rejected outcomes. Claims have a 24-hour replay window, are automatically purged on
-   subsequent intake after expiry, and remain protected from purge while under legal hold. It is
+   subsequent intake after expiry in target-prioritized batches of at most 128, write sanitized
+   purge evidence in the same transaction, and remain protected while under legal hold. It is
    not certified as proposal realization, does not persist
    advisory review work or proposal lifecycle records, does not publish a source-owned business
    outcome stream, does not run suitability,

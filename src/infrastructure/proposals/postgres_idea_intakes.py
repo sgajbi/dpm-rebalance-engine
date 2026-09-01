@@ -5,6 +5,7 @@ from typing import Any, Callable
 
 from src.core.proposals.exceptions import ProposalIdempotencyConflictError
 from src.core.proposals.idea_intake_persistence import (
+    IDEA_PROPOSAL_INTAKE_PURGE_BATCH_SIZE,
     IdeaProposalIntakeClaim,
     IdeaProposalIntakeRecord,
 )
@@ -19,10 +20,36 @@ def claim_idea_proposal_intake(
     with closing(connect()) as connection:
         connection.execute(
             """
-            DELETE FROM proposal_idea_intakes
-            WHERE expires_at_utc <= %s AND legal_hold = FALSE
+            WITH expired AS (
+                SELECT registry_key
+                FROM proposal_idea_intakes
+                WHERE expires_at_utc <= %s AND legal_hold = FALSE
+                ORDER BY (registry_key = %s) DESC, expires_at_utc, registry_key
+                LIMIT %s
+                FOR UPDATE SKIP LOCKED
+            ), deleted AS (
+                DELETE FROM proposal_idea_intakes AS intake
+                USING expired
+                WHERE intake.registry_key = expired.registry_key
+                  AND intake.legal_hold = FALSE
+                RETURNING intake.registry_key, intake.request_fingerprint,
+                          intake.created_at_utc, intake.expires_at_utc
+            )
+            INSERT INTO proposal_idea_intake_purge_events (
+                registry_key_digest, request_fingerprint, claim_created_at_utc,
+                claim_expired_at_utc, purged_at_utc, reason_code
+            )
+            SELECT registry_key, request_fingerprint, created_at_utc,
+                   expires_at_utc, %s, 'REPLAY_WINDOW_EXPIRED'
+            FROM deleted
+            ON CONFLICT (registry_key_digest, claim_expired_at_utc) DO NOTHING
             """,
-            (record.created_at_utc,),
+            (
+                record.created_at_utc,
+                record.registry_key,
+                IDEA_PROPOSAL_INTAKE_PURGE_BATCH_SIZE,
+                record.created_at_utc,
+            ),
         )
         inserted = connection.execute(
             """

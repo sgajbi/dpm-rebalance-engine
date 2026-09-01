@@ -69,10 +69,15 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
         item for item in contract["durable_namespaces"] if item["namespace_key"] == "proposals"
     )
 
-    assert "proposal_idea_intakes" in proposal_namespace["durable_records"]
+    assert {"proposal_idea_intakes", "proposal_idea_intake_purge_events"}.issubset(
+        proposal_namespace["durable_records"]
+    )
     retention = proposal_namespace["idea_intake_retention"]
     assert retention["replay_window_hours"] == 24
-    assert retention["automatic_purge"] == "before_each_new_intake_claim"
+    assert retention["automatic_purge"] == (
+        "target_prioritized_batches_of_128_before_each_new_intake_claim"
+    )
+    assert retention["purge_audit"] == "same_transaction_append_only_sanitized_evidence"
     assert (
         retention["legal_hold_behavior"]
         == "expired_claims_remain_replayable_and_conflict-protected_while_held"
@@ -88,3 +93,12 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
     command = makefile.split("idea-intake-recovery-check:", 1)[1].split("\n\n", 1)[0]
     assert "SET TRANSACTION READ ONLY" in command
     assert "PROPOSAL_POSTGRES_DSN" in command and "pytest" not in command
+    recovery_sql = Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(encoding="utf-8")
+    assert all(
+        marker in recovery_sql
+        for marker in (
+            "proposal_record_created",
+            "certification_blockers",
+            "proposal_idea_intake_purge_events",
+        )
+    )

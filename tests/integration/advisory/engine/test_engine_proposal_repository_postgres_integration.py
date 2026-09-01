@@ -1166,8 +1166,8 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
     _reset_tables(first_repository)
     created_at = datetime.now(timezone.utc)
     record = IdeaProposalIntakeRecord(
-        registry_key=f"sha256:{uuid.uuid4().hex}:sha256:{uuid.uuid4().hex}",
-        request_fingerprint=f"sha256:{uuid.uuid4().hex}",
+        registry_key=f"{uuid.uuid4().hex * 2}:sha256:{uuid.uuid4().hex * 2}",
+        request_fingerprint=f"sha256:{uuid.uuid4().hex[:12]}",
         response_json='{"intake_status":"ACCEPTED"}',
         created_at_utc=created_at,
         expires_at_utc=created_at + timedelta(hours=24),
@@ -1191,17 +1191,23 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
         match="IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT",
     ):
         second_repository.claim_idea_proposal_intake(
-            replace(record, request_fingerprint=f"sha256:{uuid.uuid4().hex}")
+            replace(record, request_fingerprint=f"sha256:{uuid.uuid4().hex[:12]}")
         )
 
     replacement = replace(
         record,
-        request_fingerprint=f"sha256:{uuid.uuid4().hex}",
+        request_fingerprint=f"sha256:{uuid.uuid4().hex[:12]}",
         created_at_utc=record.expires_at_utc,
         expires_at_utc=record.expires_at_utc + timedelta(hours=24),
     )
     assert second_repository.claim_idea_proposal_intake(replacement).replayed is False
     with closing(first_repository._connect()) as connection:  # noqa: SLF001
+        purge_event = connection.execute(
+            "SELECT reason_code FROM proposal_idea_intake_purge_events "
+            "WHERE registry_key_digest = %s",
+            (record.registry_key,),
+        ).fetchone()
+        assert purge_event["reason_code"] == "REPLAY_WINDOW_EXPIRED"
         connection.execute(
             "UPDATE proposal_idea_intakes SET legal_hold = TRUE WHERE registry_key = %s",
             (record.registry_key,),
@@ -1211,7 +1217,7 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
         second_repository.claim_idea_proposal_intake(
             replace(
                 replacement,
-                request_fingerprint=f"sha256:{uuid.uuid4().hex}",
+                request_fingerprint=f"sha256:{uuid.uuid4().hex[:12]}",
                 created_at_utc=replacement.expires_at_utc,
                 expires_at_utc=replacement.expires_at_utc + timedelta(hours=24),
             )
@@ -1223,7 +1229,8 @@ def _reset_tables(repository: PostgresProposalRepository) -> None:
         connection.execute(
             "TRUNCATE TABLE proposal_memo_events, proposal_memo_idempotency, proposal_memos, "
             "proposal_approvals, proposal_workflow_events, proposal_versions, proposal_records, "
-            "proposal_async_operations, proposal_idempotency, proposal_idea_intakes CASCADE"
+            "proposal_async_operations, proposal_idempotency, proposal_idea_intake_purge_events, "
+            "proposal_idea_intakes CASCADE"
         )
         connection.commit()
 

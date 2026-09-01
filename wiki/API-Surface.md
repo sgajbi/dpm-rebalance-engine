@@ -67,8 +67,9 @@ conversion-intent handoff. It returns HTTP 202 with accepted, replayed, or rejec
 requires `Idempotency-Key`, and derives bounded trusted scope from local/dev caller headers. It
 persists the scoped intake idempotency decision through the proposal repository so replay and
 conflict behavior survive restart, and detects changed-payload replay with HTTP 409. The replay
-window is 24 hours: expired unheld claims are purged before a new claim, while legal hold prevents
-purge and preserves replay/conflict protection. It does not
+window is 24 hours: expired unheld claims are purged in target-prioritized batches of at most 128
+before a new claim, with sanitized append-only purge evidence written in the same transaction.
+Legal hold prevents purge and preserves replay/conflict protection. It does not
 create advisory review work or proposal lifecycle records, publish a source-owned business outcome,
 run suitability, grant advisory approval, create orders, authorize client publication, bind
 production IdP claims, certify a data product, or promote a supported feature.

@@ -132,7 +132,7 @@ def transition_proposal(
     return ProposalTransitionResult(
         proposal=deepcopy(proposal),
         event=deepcopy(event),
-        approval=deepcopy(approval) if approval is not None else None,
+        approval=deepcopy(approval),
     )
 
 
