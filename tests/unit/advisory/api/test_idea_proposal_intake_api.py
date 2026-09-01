@@ -1,15 +1,18 @@
 import json
 from dataclasses import replace
+from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 
 import src.api.proposals.router as proposals_router
 from src.api.main import app
+from src.core.proposals.contract_types import ProposalWorkflowState
 from src.core.proposals.idea_proposal_intake import (
     IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS,
     IdeaProposalIntakeRequest,
     acknowledge_idea_proposal_intake,
 )
+from src.core.proposals.persistence_models import ProposalRecord
 from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
 
 
@@ -63,6 +66,36 @@ def _realization_headers(
     if authorized_portfolio_id is not None:
         headers["X-Authorized-Portfolio-Id"] = authorized_portfolio_id
     return headers
+
+
+def _reconciliation_headers(
+    *,
+    portfolio_id: str = "PB_SG_GLOBAL_BAL_001",
+    authorized_portfolio_id: str | None = "PB_SG_GLOBAL_BAL_001",
+) -> dict[str, str]:
+    headers = _headers(capabilities="advisory.idea_proposal_realization.write", role="ADVISOR")
+    headers["X-Portfolio-Id"] = portfolio_id
+    if authorized_portfolio_id is not None:
+        headers["X-Authorized-Portfolio-Id"] = authorized_portfolio_id
+    return headers
+
+
+def _proposal_record(
+    *,
+    proposal_id: str,
+    portfolio_id: str,
+    state: ProposalWorkflowState = "DRAFT",
+) -> ProposalRecord:
+    now = datetime.now(timezone.utc)
+    return ProposalRecord(
+        proposal_id=proposal_id,
+        portfolio_id=portfolio_id,
+        created_by="advisor-001",
+        created_at=now,
+        last_event_at=now,
+        current_state=state,
+        current_version_no=1,
+    )
 
 
 def test_idea_proposal_intake_route_returns_source_safe_non_proposal_posture() -> None:
@@ -531,6 +564,14 @@ def test_idea_proposal_intake_route_is_documented_in_openapi() -> None:
     assert "X-Authorized-Portfolio-Id" not in {
         parameter["name"] for parameter in operation["parameters"] if parameter["in"] == "header"
     }
+    reconciliation = openapi["paths"][
+        "/advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation"
+    ]["post"]
+    assert reconciliation["summary"] == (
+        "Link and reconcile an Advise proposal for an Idea realization"
+    )
+    assert "does not independently prove orders" in reconciliation["description"]
+    assert {"401", "403", "404", "409"}.issubset(reconciliation["responses"])
 
 
 def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -> None:
@@ -703,3 +744,175 @@ def test_idea_conversion_identity_prevents_second_work_item_for_changed_evidence
     assert corrected.status_code == 202
     assert corrected.json()["idempotency_replay"] is False
     assert corrected.json()["review_work_id"] == first.json()["review_work_id"]
+
+
+def test_idea_realization_links_existing_same_portfolio_proposal_idempotently() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-proposal-link"),
+        )
+        repository = proposals_router.get_proposal_repository()
+        repository.create_proposal(
+            _proposal_record(
+                proposal_id="pp_idea_linked",
+                portfolio_id="PB_SG_GLOBAL_BAL_001",
+            )
+        )
+        route = (
+            f"/advisory/proposals/idea-intake/{accepted.json()['intake_id']}"
+            "/realization/proposal-reconciliation"
+        )
+        first = client.post(
+            route,
+            json={"proposal_id": "pp_idea_linked", "expected_source_event_version": 1},
+            headers=_reconciliation_headers(),
+        )
+        replay = client.post(
+            route,
+            json={"proposal_id": "pp_idea_linked", "expected_source_event_version": 1},
+            headers=_reconciliation_headers(),
+        )
+
+    assert first.status_code == 200
+    assert replay.status_code == 200
+    assert first.json() == replay.json()
+    body = first.json()
+    assert body["proposal_id"] == "pp_idea_linked"
+    assert body["proposal_record_created"] is True
+    assert body["review_work_status"] == "PROPOSAL_LINKED"
+    assert body["current_status"] == "PROPOSAL_LINKED"
+    assert body["current_source_event_version"] == 2
+    assert [outcome["status"] for outcome in body["outcomes"]] == [
+        "ACCEPTED_FOR_REVIEW",
+        "PROPOSAL_LINKED",
+    ]
+    assert body["outcomes"][1]["reason_code"] == "advise_proposal_linked"
+    assert body["outcomes"][1]["terminal"] is False
+    assert body["suitability_authority_granted"] is False
+    assert body["order_created"] is False
+    assert body["client_publication_authorized"] is False
+
+
+def test_idea_realization_emits_terminal_outcome_from_authoritative_proposal_state() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-proposal-terminal"),
+        )
+        repository = proposals_router.get_proposal_repository()
+        proposal = _proposal_record(
+            proposal_id="pp_idea_terminal",
+            portfolio_id="PB_SG_GLOBAL_BAL_001",
+        )
+        repository.create_proposal(proposal)
+        route = (
+            f"/advisory/proposals/idea-intake/{accepted.json()['intake_id']}"
+            "/realization/proposal-reconciliation"
+        )
+        linked = client.post(
+            route,
+            json={"proposal_id": proposal.proposal_id, "expected_source_event_version": 1},
+            headers=_reconciliation_headers(),
+        )
+        repository.update_proposal(
+            proposal.model_copy(
+                update={"current_state": "REJECTED", "last_event_at": datetime.now(timezone.utc)}
+            )
+        )
+        terminal = client.post(
+            route,
+            json={"proposal_id": proposal.proposal_id, "expected_source_event_version": 2},
+            headers=_reconciliation_headers(),
+        )
+
+    assert linked.status_code == 200
+    assert terminal.status_code == 200
+    body = terminal.json()
+    assert body["review_work_status"] == "CLOSED"
+    assert body["current_status"] == "ADVISORY_REJECTED"
+    assert body["current_source_event_version"] == 3
+    assert body["outcomes"][-1]["reason_code"] == "advise_proposal_rejected"
+    assert body["outcomes"][-1]["proposal_id"] == proposal.proposal_id
+    assert body["outcomes"][-1]["terminal"] is True
+
+
+def test_idea_realization_reconciliation_fails_closed_for_other_portfolio_proposal() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-proposal-cross-scope"),
+        )
+        repository = proposals_router.get_proposal_repository()
+        repository.create_proposal(
+            _proposal_record(proposal_id="pp_other_scope", portfolio_id="PB_OTHER")
+        )
+        response = client.post(
+            (
+                f"/advisory/proposals/idea-intake/{accepted.json()['intake_id']}"
+                "/realization/proposal-reconciliation"
+            ),
+            json={"proposal_id": "pp_other_scope", "expected_source_event_version": 1},
+            headers=_reconciliation_headers(),
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "IDEA_PROPOSAL_RECONCILIATION_PROPOSAL_NOT_FOUND"
+
+
+def test_idea_realization_reconciliation_rejects_competing_proposal_link() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-proposal-competing-link"),
+        )
+        repository = proposals_router.get_proposal_repository()
+        for proposal_id in ("pp_idea_first", "pp_idea_second"):
+            repository.create_proposal(
+                _proposal_record(
+                    proposal_id=proposal_id,
+                    portfolio_id="PB_SG_GLOBAL_BAL_001",
+                )
+            )
+        route = (
+            f"/advisory/proposals/idea-intake/{accepted.json()['intake_id']}"
+            "/realization/proposal-reconciliation"
+        )
+        first = client.post(
+            route,
+            json={"proposal_id": "pp_idea_first", "expected_source_event_version": 1},
+            headers=_reconciliation_headers(),
+        )
+        competing = client.post(
+            route,
+            json={"proposal_id": "pp_idea_second", "expected_source_event_version": 2},
+            headers=_reconciliation_headers(),
+        )
+
+    assert first.status_code == 200
+    assert competing.status_code == 409
+    assert competing.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_PROPOSAL_CONFLICT"
+
+
+def test_idea_realization_reconciliation_requires_write_capability() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-proposal-write-capability"),
+        )
+        response = client.post(
+            (
+                f"/advisory/proposals/idea-intake/{accepted.json()['intake_id']}"
+                "/realization/proposal-reconciliation"
+            ),
+            json={"proposal_id": "pp_not_disclosed", "expected_source_event_version": 1},
+            headers=_realization_headers(),
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_CAPABILITY_REQUIRED"

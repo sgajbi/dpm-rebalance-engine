@@ -7,11 +7,6 @@ from src.core.advisor_cockpit.persistence import (
     CockpitAcknowledgementRecord,
 )
 from src.core.proposals.contract_types import ProposalWorkflowState
-from src.core.proposals.idea_intake_persistence import (
-    IdeaProposalIntakeClaim,
-    IdeaProposalIntakeRecord,
-)
-from src.core.proposals.idea_review_realization import IdeaProposalRealizationHistoryRecord
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -34,7 +29,6 @@ from src.infrastructure.proposals import (
     postgres_cockpit_acknowledgements as _cockpit_acknowledgements,
 )
 from src.infrastructure.proposals import postgres_connection as _postgres_connection
-from src.infrastructure.proposals import postgres_idea_intakes as _idea_intakes
 from src.infrastructure.proposals import (
     postgres_idempotency as _idempotency,
 )
@@ -50,9 +44,12 @@ from src.infrastructure.proposals import (
 from src.infrastructure.proposals import (
     postgres_workflow_events as _workflow_events,
 )
+from src.infrastructure.proposals.postgres_idea_repository import (
+    PostgresIdeaIntakeRepositoryMixin,
+)
 
 
-class PostgresProposalRepository:
+class PostgresProposalRepository(PostgresIdeaIntakeRepositoryMixin):
     def __init__(self, *, dsn: str) -> None:
         if not dsn:
             raise RuntimeError("PROPOSAL_POSTGRES_DSN_REQUIRED")
@@ -64,27 +61,6 @@ class PostgresProposalRepository:
         return _idempotency.get_proposal_idempotency(
             connect=self._connect,
             idempotency_key=idempotency_key,
-        )
-
-    def claim_idea_proposal_intake(
-        self, record: IdeaProposalIntakeRecord
-    ) -> IdeaProposalIntakeClaim:
-        return _idea_intakes.claim_idea_proposal_intake(connect=self._connect, record=record)
-
-    def get_idea_proposal_realization(
-        self,
-        *,
-        intake_id: str,
-        tenant_id: str,
-        legal_entity_code: str,
-        portfolio_id: str,
-    ) -> Optional[IdeaProposalRealizationHistoryRecord]:
-        return _idea_intakes.get_idea_proposal_realization(
-            connect=self._connect,
-            intake_id=intake_id,
-            tenant_id=tenant_id,
-            legal_entity_code=legal_entity_code,
-            portfolio_id=portfolio_id,
         )
 
     def save_idempotency(self, record: ProposalIdempotencyRecord) -> None:

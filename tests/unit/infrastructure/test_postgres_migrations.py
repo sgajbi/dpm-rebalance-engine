@@ -264,3 +264,38 @@ def test_idea_realization_migration_scopes_intake_identity() -> None:
     assert "source_claim_registry_key TEXT NOT NULL" in sql
     assert "CONSTRAINT ck_proposal_idea_realization_source_claim" in sql
     assert "UNIQUE (tenant_id, legal_entity_code, portfolio_id, intake_id)" in sql
+
+
+def test_idea_proposal_outcome_migration_enforces_linkage_and_terminal_posture() -> None:
+    migration_path = (
+        Path("src")
+        / "infrastructure"
+        / "postgres_migrations"
+        / "proposals"
+        / "0013_idea_proposal_outcomes.sql"
+    )
+    sql = " ".join(migration_path.read_text(encoding="utf-8").split())
+
+    assert "ADD COLUMN IF NOT EXISTS proposal_id TEXT NULL" in sql
+    assert "UNIQUE (proposal_id)" in sql
+    assert "REFERENCES proposal_records(proposal_id) ON DELETE RESTRICT" in sql
+    assert "expected_source_event_version" not in sql
+    for status in (
+        "PROPOSAL_LINKED",
+        "ADVISORY_REJECTED",
+        "ADVISORY_CANCELLED",
+        "ADVISORY_EXPIRED",
+        "ADVISORY_COMPLETED",
+    ):
+        assert f"'{status}'" in sql
+    for reason_code in (
+        "advise_proposal_linked",
+        "advise_proposal_rejected",
+        "advise_proposal_cancelled",
+        "advise_proposal_expired",
+        "advise_proposal_workflow_completed",
+    ):
+        assert f"'{reason_code}'" in sql
+    assert "status = 'PROPOSAL_LINKED'" in sql
+    assert "terminal = FALSE" in sql
+    assert "terminal = TRUE" in sql

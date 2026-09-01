@@ -36,7 +36,8 @@ IdeaProposalRealizationPortfolioHeader = Annotated[
     Header(
         alias="X-Portfolio-Id",
         description=(
-            "Required producer-authorized portfolio scope for realization reads. It must match "
+            "Required producer-authorized portfolio scope for realization reads and commands. "
+            "It must match "
             "the durable Advise review-work scope."
         ),
         min_length=1,
@@ -50,7 +51,8 @@ IdeaProposalAuthorizedPortfolioHeader = Annotated[
     Header(
         alias="X-Authorized-Portfolio-Id",
         description=(
-            "Trusted caller portfolio entitlement for realization reads. The read fails closed "
+            "Trusted caller portfolio entitlement for realization reads and commands. The "
+            "operation fails closed "
             "unless this scope exactly matches X-Portfolio-Id."
         ),
         max_length=160,

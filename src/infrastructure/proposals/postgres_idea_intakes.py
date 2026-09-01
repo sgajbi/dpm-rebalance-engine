@@ -4,7 +4,11 @@ from contextlib import closing
 from dataclasses import replace
 from typing import Any, Callable, cast
 
-from src.core.proposals.exceptions import ProposalIdempotencyConflictError
+from src.core.proposals.exceptions import (
+    ProposalIdempotencyConflictError,
+    ProposalNotFoundError,
+    ProposalStateConflictError,
+)
 from src.core.proposals.idea_intake_persistence import (
     IDEA_PROPOSAL_INTAKE_PURGE_BATCH_SIZE,
     IdeaProposalIntakeClaim,
@@ -111,7 +115,7 @@ def claim_idea_proposal_intake(
             requested=realization_claim.realization,
             source_claim_registry_key=record.registry_key,
         )
-        initial_outcome = _claim_initial_outcome(
+        initial_outcome = _claim_outcome(
             connection=connection,
             requested=realization_claim.initial_outcome,
         )
@@ -141,7 +145,7 @@ def get_idea_proposal_realization(
     with closing(connect()) as connection:
         row = connection.execute(
             """
-            SELECT realization_id, intake_id, review_work_id, review_work_status,
+            SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
                    tenant_id, legal_entity_code,
                    portfolio_id, idea_candidate_id, conversion_intent_id,
                    source_evidence_fingerprint, current_status, current_source_event_version,
@@ -173,6 +177,147 @@ def get_idea_proposal_realization(
         )
 
 
+def advance_idea_proposal_realization(
+    *,
+    connect: Callable[[], Any],
+    expected_source_event_version: int,
+    realization: IdeaProposalRealizationRecord,
+    outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...],
+) -> IdeaProposalRealizationHistoryRecord:
+    """Atomically append monotonic outcomes and advance the scoped realization."""
+
+    with closing(connect()) as connection:
+        current = _load_locked_realization(connection, realization.realization_id)
+        _validate_realization_progression(
+            current=current,
+            expected_source_event_version=expected_source_event_version,
+            realization=realization,
+            outcomes=outcomes,
+        )
+        _require_valid_proposal_link(connection=connection, realization=realization)
+        _append_realization_outcomes(connection=connection, outcomes=outcomes)
+        _update_realization_progression(
+            connection=connection,
+            expected_source_event_version=expected_source_event_version,
+            realization=realization,
+        )
+        stored_outcomes = _load_outcomes(
+            connection=connection,
+            realization_id=realization.realization_id,
+        )
+        connection.commit()
+        return IdeaProposalRealizationHistoryRecord(
+            realization=realization,
+            outcomes=stored_outcomes,
+        )
+
+
+def _load_locked_realization(connection: Any, realization_id: str) -> IdeaProposalRealizationRecord:
+    row = connection.execute(
+        """
+        SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
+               tenant_id, legal_entity_code, portfolio_id, idea_candidate_id,
+               conversion_intent_id, source_evidence_fingerprint, current_status,
+               current_source_event_version, created_at_utc, updated_at_utc
+        FROM proposal_idea_review_realizations
+        WHERE realization_id = %s
+        FOR UPDATE
+        """,
+        (realization_id,),
+    ).fetchone()
+    if row is None:
+        raise ProposalNotFoundError("IDEA_PROPOSAL_REALIZATION_NOT_FOUND")
+    return _realization_from_row(row)
+
+
+def _validate_realization_progression(
+    *,
+    current: IdeaProposalRealizationRecord,
+    expected_source_event_version: int,
+    realization: IdeaProposalRealizationRecord,
+    outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...],
+) -> None:
+    if _realization_scope_identity(current) != _realization_scope_identity(realization):
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_SCOPE_CONFLICT")
+    if current.current_source_event_version != expected_source_event_version:
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_VERSION_CONFLICT")
+    if realization.current_source_event_version != expected_source_event_version + len(outcomes):
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
+    for offset, outcome in enumerate(outcomes, start=1):
+        if outcome.realization_id != realization.realization_id:
+            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
+        if outcome.source_event_version != expected_source_event_version + offset:
+            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
+
+
+def _require_valid_proposal_link(
+    *, connection: Any, realization: IdeaProposalRealizationRecord
+) -> None:
+    proposal_row = connection.execute(
+        "SELECT portfolio_id, created_at::timestamptz AS created_at "
+        "FROM proposal_records WHERE proposal_id = %s",
+        (realization.proposal_id,),
+    ).fetchone()
+    if proposal_row is None or str(proposal_row["portfolio_id"]) != realization.portfolio_id:
+        raise ProposalNotFoundError("IDEA_PROPOSAL_RECONCILIATION_PROPOSAL_NOT_FOUND")
+    if proposal_row["created_at"] < realization.created_at_utc:
+        raise ProposalNotFoundError("IDEA_PROPOSAL_RECONCILIATION_PROPOSAL_NOT_FOUND")
+
+
+def _append_realization_outcomes(
+    *, connection: Any, outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...]
+) -> None:
+    for outcome in outcomes:
+        _claim_outcome(connection=connection, requested=outcome)
+
+
+def _update_realization_progression(
+    *,
+    connection: Any,
+    expected_source_event_version: int,
+    realization: IdeaProposalRealizationRecord,
+) -> None:
+    updated = connection.execute(
+        """
+        UPDATE proposal_idea_review_realizations
+        SET review_work_status = %s,
+            proposal_id = %s,
+            current_status = %s,
+            current_source_event_version = %s,
+            updated_at_utc = %s
+        WHERE realization_id = %s AND current_source_event_version = %s
+        RETURNING realization_id
+        """,
+        (
+            realization.review_work_status,
+            realization.proposal_id,
+            realization.current_status,
+            realization.current_source_event_version,
+            realization.updated_at_utc,
+            realization.realization_id,
+            expected_source_event_version,
+        ),
+    ).fetchone()
+    if updated is None:
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_VERSION_CONFLICT")
+
+
+def _load_outcomes(
+    *, connection: Any, realization_id: str
+) -> tuple[IdeaProposalRealizationOutcomeRecord, ...]:
+    rows = connection.execute(
+        """
+        SELECT outcome_id, realization_id, source_event_version, status, reason_code,
+               occurred_at_utc, review_work_id, proposal_id, terminal
+        FROM proposal_idea_realization_outcomes
+        WHERE realization_id = %s
+        ORDER BY source_event_version
+        """,
+        (realization_id,),
+    ).fetchall()
+    return tuple(_outcome_from_row(row) for row in rows)
+
+
 def _claim_realization(
     *,
     connection: Any,
@@ -183,12 +328,12 @@ def _claim_realization(
         """
         INSERT INTO proposal_idea_review_realizations (
             realization_id, intake_id, source_claim_registry_key,
-            review_work_id, review_work_status,
+            review_work_id, review_work_status, proposal_id,
             tenant_id, legal_entity_code,
             portfolio_id, idea_candidate_id, conversion_intent_id,
             source_evidence_fingerprint, current_status, current_source_event_version,
             created_at_utc, updated_at_utc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (realization_id) DO NOTHING
         """,
         (
@@ -197,6 +342,7 @@ def _claim_realization(
             source_claim_registry_key,
             requested.review_work_id,
             requested.review_work_status,
+            requested.proposal_id,
             requested.tenant_id,
             requested.legal_entity_code,
             requested.portfolio_id,
@@ -211,7 +357,7 @@ def _claim_realization(
     )
     row = connection.execute(
         """
-        SELECT realization_id, intake_id, review_work_id, review_work_status,
+        SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
                tenant_id, legal_entity_code,
                portfolio_id, idea_candidate_id, conversion_intent_id,
                source_evidence_fingerprint, current_status, current_source_event_version,
@@ -229,7 +375,7 @@ def _claim_realization(
     return stored
 
 
-def _claim_initial_outcome(
+def _claim_outcome(
     *, connection: Any, requested: IdeaProposalRealizationOutcomeRecord
 ) -> IdeaProposalRealizationOutcomeRecord:
     connection.execute(
@@ -279,6 +425,7 @@ def _realization_from_row(row: Any) -> IdeaProposalRealizationRecord:
             if row["review_work_status"] is not None
             else None
         ),
+        proposal_id=str(row["proposal_id"]) if row["proposal_id"] is not None else None,
         tenant_id=str(row["tenant_id"]),
         legal_entity_code=str(row["legal_entity_code"]),
         portfolio_id=str(row["portfolio_id"]),
@@ -318,8 +465,24 @@ def _realization_identity(record: IdeaProposalRealizationRecord) -> tuple[Any, .
         record.idea_candidate_id,
         record.conversion_intent_id,
         record.source_evidence_fingerprint,
+        record.proposal_id,
         record.current_status,
         record.current_source_event_version,
+    )
+
+
+def _realization_scope_identity(record: IdeaProposalRealizationRecord) -> tuple[Any, ...]:
+    return (
+        record.realization_id,
+        record.intake_id,
+        record.review_work_id,
+        record.tenant_id,
+        record.legal_entity_code,
+        record.portfolio_id,
+        record.idea_candidate_id,
+        record.conversion_intent_id,
+        record.source_evidence_fingerprint,
+        record.created_at_utc,
     )
 
 

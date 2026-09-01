@@ -98,6 +98,7 @@ _IDEA_INTAKE_FIELDS = (
 )
 _IDEA_REALIZATION_FIELDS = (
     "realization_id intake_id source_claim_registry_key review_work_id review_work_status "
+    "proposal_id "
     "tenant_id legal_entity_code "
     "portfolio_id "
     "idea_candidate_id conversion_intent_id source_evidence_fingerprint current_status "
