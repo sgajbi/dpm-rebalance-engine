@@ -20,6 +20,7 @@ from src.core.proposals.idea_review_realization import (
     IdeaProposalRealizationRecord,
     IdeaProposalRealizationStatus,
     IdeaProposalReviewWorkStatus,
+    validate_realization_progression,
 )
 
 
@@ -239,15 +240,12 @@ def _validate_realization_progression(
 ) -> None:
     if _realization_scope_identity(current) != _realization_scope_identity(realization):
         raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_SCOPE_CONFLICT")
-    if current.current_source_event_version != expected_source_event_version:
-        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_VERSION_CONFLICT")
-    if realization.current_source_event_version != expected_source_event_version + len(outcomes):
-        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
-    for offset, outcome in enumerate(outcomes, start=1):
-        if outcome.realization_id != realization.realization_id:
-            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
-        if outcome.source_event_version != expected_source_event_version + offset:
-            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
+    validate_realization_progression(
+        current_source_event_version=current.current_source_event_version,
+        expected_source_event_version=expected_source_event_version,
+        realization=realization,
+        outcomes=outcomes,
+    )
 
 
 def _require_valid_proposal_link(

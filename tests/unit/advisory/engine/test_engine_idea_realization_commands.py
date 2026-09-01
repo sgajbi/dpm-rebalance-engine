@@ -1,4 +1,6 @@
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+from typing import NoReturn
 
 import pytest
 
@@ -18,7 +20,12 @@ from src.core.proposals.idea_realization_commands import (
     IdeaProposalReconciliationRequest,
     reconcile_idea_proposal_realization,
 )
-from src.core.proposals.idea_review_realization import IdeaProposalRealizationStatus
+from src.core.proposals.idea_review_realization import (
+    IdeaProposalRealizationOutcomeRecord,
+    IdeaProposalRealizationRecord,
+    IdeaProposalRealizationStatus,
+    validate_realization_progression,
+)
 from src.core.proposals.persistence_models import ProposalRecord
 from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
 
@@ -77,7 +84,7 @@ def _seed_intake(
         repository=repository,
         received_at=NOW,
     )
-    return response.intake_id
+    return str(response.intake_id)
 
 
 def _proposal(
@@ -272,3 +279,111 @@ def test_reconciliation_rejects_proposal_that_predates_review_work() -> None:
             principal=_principal(),
             occurred_at=NOW,
         )
+
+
+@pytest.mark.parametrize("proposal_id", ["   ", "proposal\ninvalid"])
+def test_reconciliation_request_rejects_blank_or_control_character_proposal_id(
+    proposal_id: str,
+) -> None:
+    with pytest.raises(ValueError, match="IDEA_PROPOSAL_RECONCILIATION_PROPOSAL_ID_REQUIRED"):
+        IdeaProposalReconciliationRequest(
+            proposal_id=proposal_id,
+            expected_source_event_version=1,
+        )
+
+
+def test_realization_progression_requires_one_ordered_outcome_per_new_version() -> None:
+    repository = InMemoryProposalRepository()
+    intake_id = _seed_intake(repository)
+    history = repository.get_idea_proposal_realization(
+        intake_id=intake_id,
+        tenant_id="tenant-private-bank-sg",
+        legal_entity_code="SGPB",
+        portfolio_id=PORTFOLIO_ID,
+    )
+    assert history is not None
+    realization = replace(history.realization, current_source_event_version=2)
+    outcome = replace(
+        history.outcomes[0],
+        outcome_id="ipro_progression_002",
+        source_event_version=2,
+        status="PROPOSAL_LINKED",
+        proposal_id="pp_idea_001",
+        terminal=False,
+    )
+
+    validate_realization_progression(
+        current_source_event_version=1,
+        expected_source_event_version=1,
+        realization=realization,
+        outcomes=(outcome,),
+    )
+
+    invalid_cases = (
+        (2, realization, (outcome,), "IDEA_PROPOSAL_REALIZATION_VERSION_CONFLICT"),
+        (
+            1,
+            replace(realization, current_source_event_version=3),
+            (outcome,),
+            "IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID",
+        ),
+        (
+            1,
+            realization,
+            (replace(outcome, realization_id="ipr_other"),),
+            "IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID",
+        ),
+        (
+            1,
+            realization,
+            (replace(outcome, source_event_version=3),),
+            "IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID",
+        ),
+    )
+    for expected_version, candidate, outcomes, expected_error in invalid_cases:
+        with pytest.raises(ProposalStateConflictError, match=expected_error):
+            validate_realization_progression(
+                current_source_event_version=1,
+                expected_source_event_version=expected_version,
+                realization=candidate,
+                outcomes=outcomes,
+            )
+
+
+class _CommitThenConflictRepository(InMemoryProposalRepository):
+    def advance_idea_proposal_realization(
+        self,
+        *,
+        expected_source_event_version: int,
+        realization: IdeaProposalRealizationRecord,
+        outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...],
+    ) -> NoReturn:
+        super().advance_idea_proposal_realization(
+            expected_source_event_version=expected_source_event_version,
+            realization=realization,
+            outcomes=outcomes,
+        )
+        raise ProposalStateConflictError("simulated_commit_response_loss")
+
+
+def test_reconciliation_recovers_exact_state_after_commit_response_is_lost() -> None:
+    repository = _CommitThenConflictRepository()
+    intake_id = _seed_intake(repository)
+    proposal = _proposal()
+    repository.create_proposal(proposal)
+
+    response = reconcile_idea_proposal_realization(
+        repository=repository,
+        intake_id=intake_id,
+        portfolio_id=PORTFOLIO_ID,
+        payload=IdeaProposalReconciliationRequest(
+            proposal_id=proposal.proposal_id,
+            expected_source_event_version=1,
+        ),
+        principal=_principal(),
+        occurred_at=NOW,
+    )
+
+    assert response.current_status == "PROPOSAL_LINKED"
+    assert response.current_source_event_version == 2
+    assert response.proposal_id == proposal.proposal_id
