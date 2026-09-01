@@ -132,7 +132,6 @@ WITH recovered_claims AS (
                           = (response_json::jsonb ->> 'source_event_version')::integer
                       AND realization.source_evidence_fingerprint
                           = response_json::jsonb ->> 'source_evidence_fingerprint'
-                      AND realization.created_at_utc <= intake.created_at_utc
                       AND realization.updated_at_utc = realization.created_at_utc
                 )
             )

@@ -1402,6 +1402,16 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
     )
     assert later_claim.idempotency_replay is False
     assert later_claim.realization_id == first.realization_id
+    out_of_order_claim = process_idea_proposal_intake(
+        request,
+        correlation_id="corr-portfolio-out-of-order-claim",
+        idempotency_key="idea-intake-portfolio-out-of-order-claim",
+        principal=principal,
+        repository=second_repository,
+        received_at=created_at - timedelta(seconds=1),
+    )
+    assert out_of_order_claim.idempotency_replay is False
+    assert out_of_order_claim.realization_id == first.realization_id
     expired_key_reclaim = process_idea_proposal_intake(
         request,
         correlation_id="corr-portfolio-expired-key-reclaim",
