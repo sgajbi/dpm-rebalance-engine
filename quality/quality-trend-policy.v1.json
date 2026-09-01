@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+21751ad2decd",
+  "policy_version": "lotus-advise-quality-trend.v1+e7ef6d3f0c30",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -52,7 +52,7 @@
       {
         "metric": "total_python_lines",
         "base_sha": "4337fb939bc9d675a49e640678b01fbc40f9fd9d",
-        "head_python_content_fingerprint": "a1765c4378894aacabd426823a8e16b81ed1edb23e643c350798509f45fc66cf",
+        "head_python_content_fingerprint": "2904f6a6f4fc2033036db70f7fd0a2dbcba53c97184d6031f0a26beed9c731b4",
         "allowed_delta": 1952,
         "reason": "Reviewed #607 bounded realization slice: +977 net production lines implement deterministic Idea conversion realization identity, durable adviser-review work, append-only Advise-owned initial outcomes, exact trusted portfolio-entitlement enforcement before realization lookup, PostgreSQL migration/recovery controls with exact receipt/realization/outcome, deterministic intake/realization/review-work/outcome identity, immutable atomic intake/realization/initial-outcome chronology reconciliation, and original-claim provenance retained across receipt purge and later idempotency claims, repository adapters, one capability-configured principal dependency that preserves the certified callable surface, scoped in-memory parity, and a narrowly bounded upgrade of realization fields and current certification evidence for still-valid receipts written by the immediately preceding release; +975 net test lines prove API authority, pre-lookup scope rejection and authorized-scope audit metadata, typed principal resolution, economic-identity conflict handling, accepted/rejected work posture, concurrent claims, atomic conflict rejection with corrected retry, restart replay, cross-tenant isolation, later-claim and expired-key reuse of one economic realization, legacy-receipt replay without obsolete blockers, exact pre-realization recovery validation, contradictory realization/outcome rejection plus contradictory receipt-field rejection, swapped or blank source-identity rejection, deterministic intake/outcome identity rejection, corrupted outcome and whole-chain chronology rejection, deliberate legacy-receipt corruption rejection, live PostgreSQL recovery, and exact exception binding. Complexity remains at the mainline B-ranked inventory and a newly resolved duplicate fingerprint remains removed.",
         "approver": "sgajbi",
