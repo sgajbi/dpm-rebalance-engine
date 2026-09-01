@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-01T10:49:45.603626+00:00",
+  "generatedAt": "2026-09-01T13:53:28.129676+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -17025,6 +17025,18 @@
       "allowedValues": [],
       "semanticId": "lotus.x_portfolio_id",
       "attributeRef": "#/attributeCatalog/lotus.x_portfolio_id"
+    },
+    {
+      "name": "x_authorized_portfolio_id",
+      "kind": "request_option",
+      "location": "header",
+      "required": false,
+      "type": "string",
+      "description": "Trusted caller portfolio entitlement for realization reads. The read fails closed unless this scope exactly matches X-Portfolio-Id.",
+      "example": "PB_SG_GLOBAL_BAL_001",
+      "allowedValues": [],
+      "semanticId": "lotus.x_authorized_portfolio_id",
+      "attributeRef": "#/attributeCatalog/lotus.x_authorized_portfolio_id"
     },
     {
       "name": "x_actor_id",
@@ -52761,6 +52773,14 @@
             "type": "string",
             "semanticId": "lotus.x_portfolio_id",
             "attributeRef": "#/attributeCatalog/lotus.x_portfolio_id"
+          },
+          {
+            "name": "X-Authorized-Portfolio-Id",
+            "location": "header",
+            "required": false,
+            "type": "string",
+            "semanticId": "lotus.x_authorized_portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.x_authorized_portfolio_id"
           },
           {
             "name": "X-Actor-Id",
