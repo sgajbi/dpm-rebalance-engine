@@ -106,6 +106,8 @@ def test_shared_principal_resolution_preserves_typed_surface_contracts(
     elif dependency is require_idea_proposal_realization_reader:
         assert not hasattr(principal, "authorized_proposal_id")
         assert principal.authorized_portfolio_id == "portfolio-001"
+        metadata = principal.audit_metadata(capability=capability)
+        assert metadata["authorized_portfolio_id"] == "portfolio-001"
     elif dependency is require_advisory_copilot_review_principal:
         assert principal.authorized_proposal_id == "proposal-001"
         assert principal.authorized_portfolio_id == "portfolio-001"
