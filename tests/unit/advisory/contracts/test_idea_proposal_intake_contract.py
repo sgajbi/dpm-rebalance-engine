@@ -131,7 +131,6 @@ def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape(
     assert "realization.current_status" in recovery_sql
     assert "realization.current_source_event_version" in recovery_sql
     assert "realization.source_evidence_fingerprint" in recovery_sql
-    assert "realization.created_at_utc <= intake.created_at_utc" in recovery_sql
     assert "source_claim.registry_key = realization.source_claim_registry_key" in recovery_sql
     assert "source_claim.created_at_utc = realization.created_at_utc" in recovery_sql
     assert "source_claim_purge.claim_created_at_utc = realization.created_at_utc" in recovery_sql

@@ -228,7 +228,8 @@ Current repository posture:
    purge evidence in the same transaction, and remain protected while under legal hold. Each
    durable realization retains its original claim registry identity; recovery binds its creation
    chronology to either that live receipt or its append-only purge event while allowing later
-   idempotency claims to reuse the same economic realization. Accepted
+   or concurrently ordered idempotency claims to reuse the same economic realization without
+   treating transport timestamps as a total order. Accepted
    review intent creates exactly one deterministic durable `PENDING_ADVISER_REVIEW` work item and
    an append-only `ACCEPTED_FOR_REVIEW` outcome. Unsupported intent creates a terminal
    `REJECTED_BEFORE_WORK` outcome and no work item. The scoped read fails closed across tenant,
