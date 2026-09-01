@@ -69,9 +69,12 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
         item for item in contract["durable_namespaces"] if item["namespace_key"] == "proposals"
     )
 
-    assert {"proposal_idea_intakes", "proposal_idea_intake_purge_events"}.issubset(
-        proposal_namespace["durable_records"]
-    )
+    assert {
+        "proposal_idea_intakes",
+        "proposal_idea_intake_purge_events",
+        "proposal_idea_review_realizations",
+        "proposal_idea_realization_outcomes",
+    }.issubset(proposal_namespace["durable_records"])
     retention = proposal_namespace["idea_intake_retention"]
     assert retention["replay_window_hours"] == 24
     assert retention["automatic_purge"] == (
@@ -86,6 +89,18 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
         retention["restore_integrity"] == "receipt_requires_nonblank_bounded_portfolio_id_"
         "expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
     )
+    realization_retention = proposal_namespace["idea_review_realization_retention"]
+    assert realization_retention == {
+        "retention_class": "ADVISORY_PROPOSAL_RECORD",
+        "transport_receipt_expiry_independent": True,
+        "outcome_history": "append_only_monotonic_source_event_versions",
+        "purge_policy": (
+            "retain_with_advisory_review_lifecycle_until_governed_records_disposition"
+        ),
+        "restore_integrity": (
+            "scope_identity_review_work_posture_and_exact_outcome_sequence_must_reconcile"
+        ),
+    }
     restore_checks = {check["check_key"]: check for check in proposal_namespace["restore_checks"]}
     idea_check = restore_checks["idea_intake_restored_claim_integrity"]
     assert idea_check["command"] == "make idea-intake-recovery-check"
@@ -101,5 +116,8 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
             "portfolio_id",
             "certification_blockers",
             "proposal_idea_intake_purge_events",
+            "proposal_idea_review_realizations",
+            "proposal_idea_realization_outcomes",
+            "source_event_version",
         )
     )

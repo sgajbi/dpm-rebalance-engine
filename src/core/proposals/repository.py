@@ -6,6 +6,7 @@ from src.core.proposals.idea_intake_persistence import (
     IdeaProposalIntakeClaim,
     IdeaProposalIntakeRecord,
 )
+from src.core.proposals.idea_review_realization import IdeaProposalRealizationHistoryRecord
 from src.core.proposals.memo_persistence_models import (
     ProposalMemoEventRecord,
     ProposalMemoIdempotencyRecord,
@@ -27,6 +28,15 @@ class ProposalRepository(Protocol):
     def claim_idea_proposal_intake(
         self, record: IdeaProposalIntakeRecord
     ) -> IdeaProposalIntakeClaim: ...
+
+    def get_idea_proposal_realization(
+        self,
+        *,
+        intake_id: str,
+        tenant_id: str,
+        legal_entity_code: str,
+        portfolio_id: str,
+    ) -> Optional[IdeaProposalRealizationHistoryRecord]: ...
 
     def get_idempotency(self, *, idempotency_key: str) -> Optional[ProposalIdempotencyRecord]: ...
 

@@ -14,6 +14,7 @@ from src.api.proposals.copilot_review_principal import (
 )
 from src.api.proposals.idea_intake_principal import (
     require_idea_proposal_intake_principal,
+    require_idea_proposal_realization_reader,
 )
 from src.api.proposals.policy_control_principal import (
     POLICY_PACK_VALIDATE_CAPABILITY,
@@ -43,6 +44,11 @@ _PrincipalDependency = Callable[..., object]
             "advisory.idea_proposal_intake.accept",
         ),
         (
+            require_idea_proposal_realization_reader,
+            "ADVISOR",
+            "advisory.idea_proposal_realization.read",
+        ),
+        (
             require_policy_pack_validation_principal,
             POLICY_STEWARD_ROLE,
             POLICY_PACK_VALIDATE_CAPABILITY,
@@ -60,7 +66,8 @@ def test_shared_principal_resolution_preserves_typed_surface_contracts(
         "x_tenant_id": " tenant-001 ",
         "x_legal_entity_code": " reference ",
         "x_correlation_id": None
-        if dependency is require_idea_proposal_intake_principal
+        if dependency
+        in {require_idea_proposal_intake_principal, require_idea_proposal_realization_reader}
         else " correlation-001 ",
         "x_service_identity": None,
         "authorization": "Bearer trusted-token",
@@ -91,7 +98,10 @@ def test_shared_principal_resolution_preserves_typed_surface_contracts(
 
     if dependency is require_advisor_cockpit_read_principal:
         assert principal.authorized_advisor_id == "advisor-001"
-    elif dependency is require_idea_proposal_intake_principal:
+    elif dependency in {
+        require_idea_proposal_intake_principal,
+        require_idea_proposal_realization_reader,
+    }:
         assert not hasattr(principal, "authorized_proposal_id")
     elif dependency is require_advisory_copilot_review_principal:
         assert principal.authorized_proposal_id == "proposal-001"
@@ -117,6 +127,12 @@ def test_shared_principal_resolution_preserves_typed_surface_contracts(
             require_idea_proposal_intake_principal,
             "ADVISOR",
             "advisory.idea_proposal_intake.accept",
+            "IDEA_PROPOSAL_INTAKE_PRINCIPAL_INVALID",
+        ),
+        (
+            require_idea_proposal_realization_reader,
+            "ADVISOR",
+            "advisory.idea_proposal_realization.read",
             "IDEA_PROPOSAL_INTAKE_PRINCIPAL_INVALID",
         ),
         (
@@ -169,6 +185,12 @@ def test_shared_principal_resolution_rejects_inactive_principals_consistently(
             require_idea_proposal_intake_principal,
             "ADVISOR",
             "advisory.idea_proposal_intake.accept",
+            "IDEA_PROPOSAL_INTAKE_PRINCIPAL_REQUIRED",
+        ),
+        (
+            require_idea_proposal_realization_reader,
+            "ADVISOR",
+            "advisory.idea_proposal_realization.read",
             "IDEA_PROPOSAL_INTAKE_PRINCIPAL_REQUIRED",
         ),
         (

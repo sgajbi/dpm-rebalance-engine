@@ -15,6 +15,11 @@ from src.core.proposals.idea_intake_persistence import (
     IdeaProposalIntakeClaim,
     IdeaProposalIntakeRecord,
 )
+from src.core.proposals.idea_review_realization import (
+    IdeaProposalRealizationHistoryRecord,
+    IdeaProposalRealizationOutcomeRecord,
+    IdeaProposalRealizationRecord,
+)
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -57,6 +62,64 @@ def _purge_expired_idea_proposal_intakes(
             del records[key]
 
 
+def _same_idea_realization_identity(
+    existing: IdeaProposalRealizationRecord,
+    requested: IdeaProposalRealizationRecord,
+) -> bool:
+    return (
+        existing.realization_id,
+        existing.intake_id,
+        existing.review_work_id,
+        existing.review_work_status,
+        existing.tenant_id,
+        existing.legal_entity_code,
+        existing.portfolio_id,
+        existing.idea_candidate_id,
+        existing.conversion_intent_id,
+        existing.source_evidence_fingerprint,
+        existing.current_status,
+        existing.current_source_event_version,
+    ) == (
+        requested.realization_id,
+        requested.intake_id,
+        requested.review_work_id,
+        requested.review_work_status,
+        requested.tenant_id,
+        requested.legal_entity_code,
+        requested.portfolio_id,
+        requested.idea_candidate_id,
+        requested.conversion_intent_id,
+        requested.source_evidence_fingerprint,
+        requested.current_status,
+        requested.current_source_event_version,
+    )
+
+
+def _same_idea_realization_outcome(
+    existing: IdeaProposalRealizationOutcomeRecord,
+    requested: IdeaProposalRealizationOutcomeRecord,
+) -> bool:
+    return (
+        existing.outcome_id,
+        existing.realization_id,
+        existing.source_event_version,
+        existing.status,
+        existing.reason_code,
+        existing.review_work_id,
+        existing.proposal_id,
+        existing.terminal,
+    ) == (
+        requested.outcome_id,
+        requested.realization_id,
+        requested.source_event_version,
+        requested.status,
+        requested.reason_code,
+        requested.review_work_id,
+        requested.proposal_id,
+        requested.terminal,
+    )
+
+
 class InMemoryProposalRepository(ProposalRepository):
     def __init__(self) -> None:
         self._lock = Lock()
@@ -78,6 +141,11 @@ class InMemoryProposalRepository(ProposalRepository):
             str, CockpitAcknowledgementIdempotencyRecord
         ] = {}
         self._idea_proposal_intakes: dict[str, IdeaProposalIntakeRecord] = {}
+        self._idea_proposal_realizations: dict[str, IdeaProposalRealizationRecord] = {}
+        self._idea_realization_by_intake: dict[str, str] = {}
+        self._idea_proposal_realization_outcomes: dict[
+            str, list[IdeaProposalRealizationOutcomeRecord]
+        ] = {}
 
     def claim_idea_proposal_intake(
         self, record: IdeaProposalIntakeRecord
@@ -88,13 +156,78 @@ class InMemoryProposalRepository(ProposalRepository):
                 as_of=record.created_at_utc,
             )
             existing = self._idea_proposal_intakes.get(record.registry_key)
-            if existing is None:
-                stored = copy_record(record)
-                self._idea_proposal_intakes[record.registry_key] = stored
-                return IdeaProposalIntakeClaim(record=copy_record(stored), replayed=False)
-            if existing.request_fingerprint != record.request_fingerprint:
+            if existing is not None and existing.request_fingerprint != record.request_fingerprint:
                 raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT")
-            return IdeaProposalIntakeClaim(record=copy_record(existing), replayed=True)
+            existing_realization = self._idea_proposal_realizations.get(
+                record.realization.realization_id
+            )
+            if existing_realization is not None and not _same_idea_realization_identity(
+                existing_realization, record.realization
+            ):
+                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_REALIZATION_CONFLICT")
+            outcomes = self._idea_proposal_realization_outcomes.get(
+                record.realization.realization_id, []
+            )
+            existing_outcome = next(
+                (
+                    outcome
+                    for outcome in outcomes
+                    if outcome.source_event_version == record.initial_outcome.source_event_version
+                ),
+                None,
+            )
+            if existing_outcome is not None and not _same_idea_realization_outcome(
+                existing_outcome, record.initial_outcome
+            ):
+                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_REALIZATION_CONFLICT")
+
+            replayed = existing is not None
+            if existing is None:
+                existing = copy_record(record)
+                self._idea_proposal_intakes[record.registry_key] = existing
+            if existing_realization is None:
+                stored_realization = copy_record(record.realization)
+                self._idea_proposal_realizations[record.realization.realization_id] = (
+                    stored_realization
+                )
+                self._idea_realization_by_intake[record.realization.intake_id] = (
+                    record.realization.realization_id
+                )
+            if existing_outcome is None:
+                self._idea_proposal_realization_outcomes.setdefault(
+                    record.realization.realization_id, []
+                ).append(copy_record(record.initial_outcome))
+            return IdeaProposalIntakeClaim(record=copy_record(existing), replayed=replayed)
+
+    def get_idea_proposal_realization(
+        self,
+        *,
+        intake_id: str,
+        tenant_id: str,
+        legal_entity_code: str,
+        portfolio_id: str,
+    ) -> Optional[IdeaProposalRealizationHistoryRecord]:
+        with self._lock:
+            realization_id = self._idea_realization_by_intake.get(intake_id)
+            if realization_id is None:
+                return None
+            realization = self._idea_proposal_realizations[realization_id]
+            if (
+                realization.tenant_id != tenant_id
+                or realization.legal_entity_code != legal_entity_code
+                or realization.portfolio_id != portfolio_id
+            ):
+                return None
+            outcomes = tuple(
+                sorted(
+                    self._idea_proposal_realization_outcomes.get(realization_id, []),
+                    key=lambda outcome: outcome.source_event_version,
+                )
+            )
+            return IdeaProposalRealizationHistoryRecord(
+                realization=copy_record(realization),
+                outcomes=tuple(copy_records(outcomes)),
+            )
 
     def get_idempotency(self, *, idempotency_key: str) -> Optional[ProposalIdempotencyRecord]:
         with self._lock:

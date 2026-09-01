@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY = "advisory.idea_proposal_intake.accept"
+IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY = "advisory.idea_proposal_realization.read"
 IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES = frozenset(
     {"ADVISOR", "PORTFOLIO_MANAGER", "RELATIONSHIP_MANAGER", "SERVICE"}
 )
@@ -34,5 +35,6 @@ class IdeaProposalIntakePrincipal:
 __all__ = [
     "IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY",
     "IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES",
+    "IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY",
     "IdeaProposalIntakePrincipal",
 ]

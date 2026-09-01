@@ -30,3 +30,17 @@ IdeaProposalIntakeIdempotencyKeyHeader = Annotated[
         examples=["idea-intake-idem-001"],
     ),
 ]
+
+IdeaProposalRealizationPortfolioHeader = Annotated[
+    str,
+    Header(
+        alias="X-Portfolio-Id",
+        description=(
+            "Required producer-authorized portfolio scope for realization reads. It must match "
+            "the durable Advise review-work scope."
+        ),
+        min_length=1,
+        max_length=160,
+        examples=["PB_SG_GLOBAL_BAL_001"],
+    ),
+]
