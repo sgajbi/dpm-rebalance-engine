@@ -66,6 +66,28 @@ class IdeaProposalRealizationHistoryRecord:
     outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...]
 
 
+def realization_claim_identity(record: IdeaProposalRealizationRecord) -> tuple[object, ...]:
+    """Return request-derived identity retained across replay and later progression."""
+
+    return (
+        record.realization_id,
+        record.intake_id,
+        record.review_work_id,
+        record.tenant_id,
+        record.legal_entity_code,
+        record.portfolio_id,
+        record.idea_candidate_id,
+        record.conversion_intent_id,
+        record.source_evidence_fingerprint,
+    )
+
+
+def realization_progression_identity(record: IdeaProposalRealizationRecord) -> tuple[object, ...]:
+    """Return immutable persisted identity, including the original chronology anchor."""
+
+    return (*realization_claim_identity(record), record.created_at_utc)
+
+
 def validate_realization_progression(
     *,
     current_source_event_version: int,

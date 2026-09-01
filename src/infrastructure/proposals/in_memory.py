@@ -19,6 +19,7 @@ from src.core.proposals.idea_review_realization import (
     IdeaProposalRealizationHistoryRecord,
     IdeaProposalRealizationOutcomeRecord,
     IdeaProposalRealizationRecord,
+    realization_claim_identity,
     validate_realization_progression,
 )
 from src.core.proposals.models import (
@@ -61,41 +62,6 @@ def _purge_expired_idea_proposal_intakes(
     for key, stored in tuple(records.items()):
         if not stored.legal_hold and stored.expires_at_utc <= as_of:
             del records[key]
-
-
-def _same_idea_realization_identity(
-    existing: IdeaProposalRealizationRecord,
-    requested: IdeaProposalRealizationRecord,
-) -> bool:
-    return (
-        existing.realization_id,
-        existing.intake_id,
-        existing.review_work_id,
-        existing.review_work_status,
-        existing.tenant_id,
-        existing.legal_entity_code,
-        existing.portfolio_id,
-        existing.idea_candidate_id,
-        existing.conversion_intent_id,
-        existing.source_evidence_fingerprint,
-        existing.proposal_id,
-        existing.current_status,
-        existing.current_source_event_version,
-    ) == (
-        requested.realization_id,
-        requested.intake_id,
-        requested.review_work_id,
-        requested.review_work_status,
-        requested.tenant_id,
-        requested.legal_entity_code,
-        requested.portfolio_id,
-        requested.idea_candidate_id,
-        requested.conversion_intent_id,
-        requested.source_evidence_fingerprint,
-        requested.proposal_id,
-        requested.current_status,
-        requested.current_source_event_version,
-    )
 
 
 def _same_idea_realization_outcome(
@@ -171,6 +137,7 @@ class InMemoryProposalRepository(ProposalRepository):
         self._idea_proposal_intakes: dict[str, IdeaProposalIntakeRecord] = {}
         self._idea_proposal_realizations: dict[str, IdeaProposalRealizationRecord] = {}
         self._idea_realization_by_intake: dict[tuple[str, str, str, str], str] = {}
+        self._idea_realization_by_proposal: dict[str, str] = {}
         self._idea_proposal_realization_outcomes: dict[
             str, list[IdeaProposalRealizationOutcomeRecord]
         ] = {}
@@ -203,7 +170,9 @@ class InMemoryProposalRepository(ProposalRepository):
 
     def _validate_idea_realization(self, requested: IdeaProposalRealizationRecord) -> None:
         existing = self._idea_proposal_realizations.get(requested.realization_id)
-        if existing is not None and not _same_idea_realization_identity(existing, requested):
+        if existing is not None and realization_claim_identity(
+            existing
+        ) != realization_claim_identity(requested):
             raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_REALIZATION_CONFLICT")
 
     def _validate_initial_idea_outcome(
@@ -270,11 +239,7 @@ class InMemoryProposalRepository(ProposalRepository):
     ) -> IdeaProposalRealizationHistoryRecord:
         with self._lock:
             current = self._idea_proposal_realizations.get(realization.realization_id)
-            proposal = (
-                self._proposals.get(realization.proposal_id)
-                if realization.proposal_id is not None
-                else None
-            )
+            proposal = self._proposal_for_idea_realization(realization)
             _validate_idea_realization_progression(
                 current=current,
                 expected_source_event_version=expected_source_event_version,
@@ -288,10 +253,27 @@ class InMemoryProposalRepository(ProposalRepository):
             for outcome in outcomes:
                 stored_outcomes.append(copy_record(outcome))
             self._idea_proposal_realizations[realization.realization_id] = copy_record(realization)
+            self._record_idea_realization_proposal_owner(realization)
             return IdeaProposalRealizationHistoryRecord(
                 realization=copy_record(realization),
                 outcomes=tuple(copy_records(stored_outcomes)),
             )
+
+    def _proposal_for_idea_realization(
+        self, realization: IdeaProposalRealizationRecord
+    ) -> ProposalRecord | None:
+        if realization.proposal_id is None:
+            return None
+        proposal_owner = self._idea_realization_by_proposal.get(realization.proposal_id)
+        if proposal_owner not in {None, realization.realization_id}:
+            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROPOSAL_CONFLICT")
+        return self._proposals.get(realization.proposal_id)
+
+    def _record_idea_realization_proposal_owner(
+        self, realization: IdeaProposalRealizationRecord
+    ) -> None:
+        if realization.proposal_id is not None:
+            self._idea_realization_by_proposal[realization.proposal_id] = realization.realization_id
 
     def get_idempotency(self, *, idempotency_key: str) -> Optional[ProposalIdempotencyRecord]:
         with self._lock:

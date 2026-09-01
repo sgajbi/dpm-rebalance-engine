@@ -49,21 +49,23 @@ def _principal(
 
 
 def _intake_request(
-    *, intent_type: IdeaProposalIntentType = "REVIEW_FOR_ADVISORY_PROPOSAL"
+    *,
+    intent_type: IdeaProposalIntentType = "REVIEW_FOR_ADVISORY_PROPOSAL",
+    identity_suffix: str = "001",
 ) -> IdeaProposalIntakeRequest:
     return IdeaProposalIntakeRequest.model_validate(
         {
             "source_system": "lotus-idea",
             "source_product": "lotus-idea:IdeaCandidate:v1",
-            "idea_candidate_id": "idea_candidate_001",
-            "conversion_intent_id": "conversion_intent_001",
+            "idea_candidate_id": f"idea_candidate_{identity_suffix}",
+            "conversion_intent_id": f"conversion_intent_{identity_suffix}",
             "intent_type": intent_type,
             "portfolio_id": PORTFOLIO_ID,
             "source_refs": [
                 {
                     "source_system": "lotus-idea",
                     "source_type": "IdeaCandidate",
-                    "source_id": "idea_candidate_001",
+                    "source_id": f"idea_candidate_{identity_suffix}",
                     "content_hash": "sha256:evidence",
                 }
             ],
@@ -75,11 +77,12 @@ def _seed_intake(
     repository: InMemoryProposalRepository,
     *,
     intent_type: IdeaProposalIntentType = "REVIEW_FOR_ADVISORY_PROPOSAL",
+    identity_suffix: str = "001",
 ) -> str:
     response = process_idea_proposal_intake(
-        _intake_request(intent_type=intent_type),
+        _intake_request(intent_type=intent_type, identity_suffix=identity_suffix),
         correlation_id="corr-idea-intake",
-        idempotency_key=f"idea-intake-{intent_type}",
+        idempotency_key=f"idea-intake-{intent_type}-{identity_suffix}",
         principal=_principal(),
         repository=repository,
         received_at=NOW,
@@ -387,3 +390,36 @@ def test_reconciliation_recovers_exact_state_after_commit_response_is_lost() -> 
     assert response.current_status == "PROPOSAL_LINKED"
     assert response.current_source_event_version == 2
     assert response.proposal_id == proposal.proposal_id
+
+
+def test_reconciliation_prevents_one_proposal_from_realizing_two_idea_intents() -> None:
+    repository = InMemoryProposalRepository()
+    first_intake_id = _seed_intake(repository, identity_suffix="001")
+    second_intake_id = _seed_intake(repository, identity_suffix="002")
+    proposal = _proposal()
+    repository.create_proposal(proposal)
+    payload = IdeaProposalReconciliationRequest(
+        proposal_id=proposal.proposal_id,
+        expected_source_event_version=1,
+    )
+    reconcile_idea_proposal_realization(
+        repository=repository,
+        intake_id=first_intake_id,
+        portfolio_id=PORTFOLIO_ID,
+        payload=payload,
+        principal=_principal(),
+        occurred_at=NOW,
+    )
+
+    with pytest.raises(
+        ProposalStateConflictError,
+        match="IDEA_PROPOSAL_REALIZATION_PROPOSAL_CONFLICT",
+    ):
+        reconcile_idea_proposal_realization(
+            repository=repository,
+            intake_id=second_intake_id,
+            portfolio_id=PORTFOLIO_ID,
+            payload=payload,
+            principal=_principal(),
+            occurred_at=NOW,
+        )

@@ -20,6 +20,8 @@ from src.core.proposals.idea_review_realization import (
     IdeaProposalRealizationRecord,
     IdeaProposalRealizationStatus,
     IdeaProposalReviewWorkStatus,
+    realization_claim_identity,
+    realization_progression_identity,
     validate_realization_progression,
 )
 
@@ -238,7 +240,7 @@ def _validate_realization_progression(
     realization: IdeaProposalRealizationRecord,
     outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...],
 ) -> None:
-    if _realization_scope_identity(current) != _realization_scope_identity(realization):
+    if realization_progression_identity(current) != realization_progression_identity(realization):
         raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_SCOPE_CONFLICT")
     validate_realization_progression(
         current_source_event_version=current.current_source_event_version,
@@ -368,7 +370,7 @@ def _claim_realization(
     if row is None:
         raise RuntimeError("IDEA_PROPOSAL_REALIZATION_PERSISTENCE_FAILED")
     stored = _realization_from_row(row)
-    if _realization_identity(stored) != _realization_identity(requested):
+    if realization_claim_identity(stored) != realization_claim_identity(requested):
         raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_REALIZATION_CONFLICT")
     return stored
 
@@ -448,39 +450,6 @@ def _outcome_from_row(row: Any) -> IdeaProposalRealizationOutcomeRecord:
         review_work_id=(str(row["review_work_id"]) if row["review_work_id"] is not None else None),
         proposal_id=str(row["proposal_id"]) if row["proposal_id"] is not None else None,
         terminal=bool(row["terminal"]),
-    )
-
-
-def _realization_identity(record: IdeaProposalRealizationRecord) -> tuple[Any, ...]:
-    return (
-        record.realization_id,
-        record.intake_id,
-        record.review_work_id,
-        record.review_work_status,
-        record.tenant_id,
-        record.legal_entity_code,
-        record.portfolio_id,
-        record.idea_candidate_id,
-        record.conversion_intent_id,
-        record.source_evidence_fingerprint,
-        record.proposal_id,
-        record.current_status,
-        record.current_source_event_version,
-    )
-
-
-def _realization_scope_identity(record: IdeaProposalRealizationRecord) -> tuple[Any, ...]:
-    return (
-        record.realization_id,
-        record.intake_id,
-        record.review_work_id,
-        record.tenant_id,
-        record.legal_entity_code,
-        record.portfolio_id,
-        record.idea_candidate_id,
-        record.conversion_intent_id,
-        record.source_evidence_fingerprint,
-        record.created_at_utc,
     )
 
 
