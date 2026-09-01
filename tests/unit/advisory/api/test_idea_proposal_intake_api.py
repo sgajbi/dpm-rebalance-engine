@@ -623,7 +623,15 @@ def test_idea_conversion_identity_prevents_second_work_item_for_changed_evidence
             json=changed,
             headers=_headers(idempotency_key="idea-realization-changed"),
         )
+        corrected = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-changed"),
+        )
 
     assert first.status_code == 202
     assert conflict.status_code == 409
     assert conflict.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_CONFLICT"
+    assert corrected.status_code == 202
+    assert corrected.json()["idempotency_replay"] is False
+    assert corrected.json()["review_work_id"] == first.json()["review_work_id"]
