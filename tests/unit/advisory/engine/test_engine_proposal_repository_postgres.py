@@ -45,23 +45,72 @@ class _FakeCursor:
         return list(self._rows)
 
 
+def _row(field_names: str, args) -> dict:
+    return dict(zip(field_names.split(), args, strict=True))
+
+
+_IDEMPOTENCY_FIELDS = "idempotency_key request_hash proposal_id proposal_version_no created_at"
+_SIMULATION_IDEMPOTENCY_FIELDS = "idempotency_key request_hash response_json created_at"
+_IDEA_INTAKE_FIELDS = (
+    "registry_key request_fingerprint response_json created_at_utc expires_at_utc legal_hold"
+)
+_MEMO_IDEMPOTENCY_FIELDS = (
+    "idempotency_key request_hash memo_id proposal_id proposal_version_no created_at"
+)
+_MEMO_FIELDS = (
+    "memo_id proposal_id proposal_version_no proposal_version_id artifact_id memo_version "
+    "memo_status lifecycle_status created_by created_at source_input_hash memo_hash memo_json "
+    "projection_json review_events_json report_package_events_json archive_refs_json ai_refs_json "
+    "replay_metadata_json"
+)
+_MEMO_EVENT_FIELDS = (
+    "event_id memo_id proposal_id proposal_version_no event_type actor_id occurred_at reason_json"
+)
+_ACKNOWLEDGEMENT_FIELDS = (
+    "acknowledgement_id action_item_id action_item_version acknowledged_by acknowledged_at "
+    "acknowledgement_note correlation_id reason_json"
+)
+_ACKNOWLEDGEMENT_IDEMPOTENCY_FIELDS = (
+    "idempotency_key request_hash acknowledgement_id action_item_id created_at"
+)
+_OPERATION_FIELDS = (
+    "operation_id operation_type status correlation_id idempotency_key proposal_id created_by "
+    "created_at payload_json attempt_count max_attempts started_at lease_expires_at finished_at "
+    "result_json error_json"
+)
+_PROPOSAL_FIELDS = (
+    "proposal_id portfolio_id mandate_id jurisdiction created_by created_at last_event_at "
+    "current_state current_version_no title advisor_notes lifecycle_origin source_workspace_id"
+)
+_PROPOSAL_UPDATE_FIELDS = (
+    "portfolio_id mandate_id jurisdiction created_by created_at last_event_at current_state "
+    "current_version_no title advisor_notes lifecycle_origin source_workspace_id"
+)
+_VERSION_FIELDS = (
+    "proposal_version_id proposal_id version_no created_at request_hash artifact_hash "
+    "simulation_hash status_at_creation proposal_result_json artifact_json evidence_bundle_json "
+    "gate_decision_json"
+)
+_WORKFLOW_EVENT_FIELDS = (
+    "event_id proposal_id event_type from_state to_state actor_id occurred_at reason_json "
+    "related_version_no"
+)
+_APPROVAL_FIELDS = (
+    "approval_id proposal_id approval_type approved actor_id occurred_at details_json "
+    "related_version_no"
+)
+_TRANSACTIONAL_STORES = (
+    "idempotency simulation_idempotency operations proposals versions events approvals memos "
+    "memo_idempotency memo_events cockpit_acknowledgements "
+    "cockpit_acknowledgement_idempotency idea_intakes schema_migrations"
+).split()
+
+
 class _FakeConnection:
     def __init__(self):
-        self.idempotency = {}
-        self.simulation_idempotency = {}
-        self.operations = {}
-        self.proposals = {}
-        self.versions = {}
-        self.events = {}
-        self.approvals = {}
-        self.memos = {}
-        self.memo_idempotency = {}
-        self.memo_events = {}
-        self.cockpit_acknowledgements = {}
-        self.cockpit_acknowledgement_idempotency = {}
-        self.idea_intakes = {}
+        for field in _TRANSACTIONAL_STORES:
+            setattr(self, field, {})
         self.suppress_idea_intake_read = False
-        self.schema_migrations = {}
         self.executed_sql = []
         self.executed_args = []
         self.rollback_count = 0
@@ -130,13 +179,7 @@ class _FakeConnection:
             self.schema_migrations[(args[1], args[0])] = args[2]
             return _FakeCursor()
         if "INSERT INTO proposal_idempotency" in sql:
-            self.idempotency[args[0]] = {
-                "idempotency_key": args[0],
-                "request_hash": args[1],
-                "proposal_id": args[2],
-                "proposal_version_no": args[3],
-                "created_at": args[4],
-            }
+            self.idempotency[args[0]] = _row(_IDEMPOTENCY_FIELDS, args)
             return _FakeCursor()
         if "DELETE FROM proposal_idea_intakes" in sql:
             as_of = args[0]
@@ -148,15 +191,7 @@ class _FakeConnection:
             return _FakeCursor()
         if "INSERT INTO proposal_idea_intakes" in sql:
             inserted = args[0] not in self.idea_intakes
-            fields = (
-                "registry_key",
-                "request_fingerprint",
-                "response_json",
-                "created_at_utc",
-                "expires_at_utc",
-                "legal_hold",
-            )
-            self.idea_intakes.setdefault(args[0], dict(zip(fields, args, strict=True)))
+            self.idea_intakes.setdefault(args[0], _row(_IDEA_INTAKE_FIELDS, args))
             return _FakeCursor({"registry_key": args[0]} if inserted else None)
         if "FROM proposal_idea_intakes" in sql:
             row = None if self.suppress_idea_intake_read else self.idea_intakes.get(args[0])
@@ -164,55 +199,17 @@ class _FakeConnection:
         if "FROM proposal_idempotency WHERE idempotency_key = %s" in sql:
             return _FakeCursor(self.idempotency.get(args[0]))
         if "INSERT INTO proposal_simulation_idempotency" in sql:
-            self.simulation_idempotency[args[0]] = {
-                "idempotency_key": args[0],
-                "request_hash": args[1],
-                "response_json": args[2],
-                "created_at": args[3],
-            }
+            self.simulation_idempotency[args[0]] = _row(_SIMULATION_IDEMPOTENCY_FIELDS, args)
             return _FakeCursor()
         if "FROM proposal_simulation_idempotency WHERE idempotency_key = %s" in sql:
             return _FakeCursor(self.simulation_idempotency.get(args[0]))
         if "INSERT INTO proposal_memo_idempotency" in sql:
-            self.memo_idempotency.setdefault(
-                args[0],
-                {
-                    "idempotency_key": args[0],
-                    "request_hash": args[1],
-                    "memo_id": args[2],
-                    "proposal_id": args[3],
-                    "proposal_version_no": args[4],
-                    "created_at": args[5],
-                },
-            )
+            self.memo_idempotency.setdefault(args[0], _row(_MEMO_IDEMPOTENCY_FIELDS, args))
             return _FakeCursor()
         if "FROM proposal_memo_idempotency WHERE idempotency_key = %s" in sql:
             return _FakeCursor(self.memo_idempotency.get(args[0]))
         if "INSERT INTO proposal_memos" in sql:
-            self.memos.setdefault(
-                args[0],
-                {
-                    "memo_id": args[0],
-                    "proposal_id": args[1],
-                    "proposal_version_no": args[2],
-                    "proposal_version_id": args[3],
-                    "artifact_id": args[4],
-                    "memo_version": args[5],
-                    "memo_status": args[6],
-                    "lifecycle_status": args[7],
-                    "created_by": args[8],
-                    "created_at": args[9],
-                    "source_input_hash": args[10],
-                    "memo_hash": args[11],
-                    "memo_json": args[12],
-                    "projection_json": args[13],
-                    "review_events_json": args[14],
-                    "report_package_events_json": args[15],
-                    "archive_refs_json": args[16],
-                    "ai_refs_json": args[17],
-                    "replay_metadata_json": args[18],
-                },
-            )
+            self.memos.setdefault(args[0], _row(_MEMO_FIELDS, args))
             return _FakeCursor()
         if "FROM proposal_memos WHERE memo_id = %s" in sql:
             return _FakeCursor(self.memos.get(args[0]))
@@ -252,35 +249,14 @@ class _FakeConnection:
             )
             return _FakeCursor(rows=rows)
         if "INSERT INTO proposal_memo_events" in sql:
-            self.memo_events.setdefault(
-                args[0],
-                {
-                    "event_id": args[0],
-                    "memo_id": args[1],
-                    "proposal_id": args[2],
-                    "proposal_version_no": args[3],
-                    "event_type": args[4],
-                    "actor_id": args[5],
-                    "occurred_at": args[6],
-                    "reason_json": args[7],
-                },
-            )
+            self.memo_events.setdefault(args[0], _row(_MEMO_EVENT_FIELDS, args))
             return _FakeCursor()
         if "FROM proposal_memo_events" in sql and "ORDER BY occurred_at ASC, event_id ASC" in sql:
             rows = [row for row in self.memo_events.values() if row["memo_id"] == args[0]]
             rows = sorted(rows, key=lambda row: (row["occurred_at"], row["event_id"]))
             return _FakeCursor(rows=rows)
         if "INSERT INTO advisor_cockpit_acknowledgements" in sql:
-            self.cockpit_acknowledgements[args[1]] = {
-                "acknowledgement_id": args[0],
-                "action_item_id": args[1],
-                "action_item_version": args[2],
-                "acknowledged_by": args[3],
-                "acknowledged_at": args[4],
-                "acknowledgement_note": args[5],
-                "correlation_id": args[6],
-                "reason_json": args[7],
-            }
+            self.cockpit_acknowledgements[args[1]] = _row(_ACKNOWLEDGEMENT_FIELDS, args)
             return _FakeCursor()
         if (
             "FROM advisor_cockpit_acknowledgements" in sql
@@ -297,19 +273,13 @@ class _FakeConnection:
             return _FakeCursor(self.cockpit_acknowledgements.get(args[0]))
         if "INSERT INTO advisor_cockpit_acknowledgement_idempotency" in sql:
             self.cockpit_acknowledgement_idempotency.setdefault(
-                args[0],
-                {
-                    "idempotency_key": args[0],
-                    "request_hash": args[1],
-                    "acknowledgement_id": args[2],
-                    "action_item_id": args[3],
-                    "created_at": args[4],
-                },
+                args[0], _row(_ACKNOWLEDGEMENT_IDEMPOTENCY_FIELDS, args)
             )
             return _FakeCursor()
         if "FROM advisor_cockpit_acknowledgement_idempotency" in sql:
             return _FakeCursor(self.cockpit_acknowledgement_idempotency.get(args[0]))
         if "INSERT INTO proposal_async_operations" in sql:
+            operation = _row(_OPERATION_FIELDS, args[:16])
             if "ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING" in sql:
                 inserted_operation_id = args[0]
                 idempotency_key = args[4]
@@ -322,44 +292,10 @@ class _FakeConnection:
                     None,
                 )
                 if existing is None:
-                    self.operations[inserted_operation_id] = {
-                        "operation_id": args[0],
-                        "operation_type": args[1],
-                        "status": args[2],
-                        "correlation_id": args[3],
-                        "idempotency_key": args[4],
-                        "proposal_id": args[5],
-                        "created_by": args[6],
-                        "created_at": args[7],
-                        "payload_json": args[8],
-                        "attempt_count": args[9],
-                        "max_attempts": args[10],
-                        "started_at": args[11],
-                        "lease_expires_at": args[12],
-                        "finished_at": args[13],
-                        "result_json": args[14],
-                        "error_json": args[15],
-                    }
-                    return _FakeCursor(self.operations[inserted_operation_id])
+                    self.operations[inserted_operation_id] = operation
+                    return _FakeCursor(operation)
                 return _FakeCursor(existing)
-            self.operations[args[0]] = {
-                "operation_id": args[0],
-                "operation_type": args[1],
-                "status": args[2],
-                "correlation_id": args[3],
-                "idempotency_key": args[4],
-                "proposal_id": args[5],
-                "created_by": args[6],
-                "created_at": args[7],
-                "payload_json": args[8],
-                "attempt_count": args[9],
-                "max_attempts": args[10],
-                "started_at": args[11],
-                "lease_expires_at": args[12],
-                "finished_at": args[13],
-                "result_json": args[14],
-                "error_json": args[15],
-            }
+            self.operations[args[0]] = operation
             return _FakeCursor()
         if "FROM proposal_async_operations WHERE operation_id = %s" in sql:
             return _FakeCursor(self.operations.get(args[0]))
@@ -410,21 +346,7 @@ class _FakeConnection:
                 rows = rows[: args[1]]
             return _FakeCursor(rows=rows)
         if "INSERT INTO proposal_records" in sql:
-            self.proposals[args[0]] = {
-                "proposal_id": args[0],
-                "portfolio_id": args[1],
-                "mandate_id": args[2],
-                "jurisdiction": args[3],
-                "created_by": args[4],
-                "created_at": args[5],
-                "last_event_at": args[6],
-                "current_state": args[7],
-                "current_version_no": args[8],
-                "title": args[9],
-                "advisor_notes": args[10],
-                "lifecycle_origin": args[11],
-                "source_workspace_id": args[12],
-            }
+            self.proposals[args[0]] = _row(_PROPOSAL_FIELDS, args)
             return _FakeCursor()
         if sql.startswith("UPDATE proposal_records SET"):
             return self._execute_update_proposal_records(args)
@@ -495,23 +417,7 @@ class _FakeConnection:
                 rows = rows[: args[arg_index]]
             return _FakeCursor(rows=rows)
         if "INSERT INTO proposal_versions" in sql:
-            self.versions.setdefault(
-                (args[1], args[2]),
-                {
-                    "proposal_version_id": args[0],
-                    "proposal_id": args[1],
-                    "version_no": args[2],
-                    "created_at": args[3],
-                    "request_hash": args[4],
-                    "artifact_hash": args[5],
-                    "simulation_hash": args[6],
-                    "status_at_creation": args[7],
-                    "proposal_result_json": args[8],
-                    "artifact_json": args[9],
-                    "evidence_bundle_json": args[10],
-                    "gate_decision_json": args[11],
-                },
-            )
+            self.versions.setdefault((args[1], args[2]), _row(_VERSION_FIELDS, args))
             return _FakeCursor()
         if "FROM proposal_versions WHERE proposal_id = %s AND version_no = %s" in sql:
             return _FakeCursor(self.versions.get((args[0], args[1])))
@@ -526,20 +432,7 @@ class _FakeConnection:
             rows = sorted(rows, key=lambda row: row["version_no"], reverse=True)
             return _FakeCursor(rows[0] if rows else None)
         if "INSERT INTO proposal_workflow_events" in sql:
-            self.events.setdefault(
-                args[0],
-                {
-                    "event_id": args[0],
-                    "proposal_id": args[1],
-                    "event_type": args[2],
-                    "from_state": args[3],
-                    "to_state": args[4],
-                    "actor_id": args[5],
-                    "occurred_at": args[6],
-                    "reason_json": args[7],
-                    "related_version_no": args[8],
-                },
-            )
+            self.events.setdefault(args[0], _row(_WORKFLOW_EVENT_FIELDS, args))
             return _FakeCursor()
         if "FROM proposal_workflow_events" in sql and "WHERE event_id = %s" in sql:
             return _FakeCursor(self.events.get(args[0]))
@@ -564,19 +457,7 @@ class _FakeConnection:
             )
             return _FakeCursor(rows=rows)
         if "INSERT INTO proposal_approvals" in sql:
-            self.approvals.setdefault(
-                args[0],
-                {
-                    "approval_id": args[0],
-                    "proposal_id": args[1],
-                    "approval_type": args[2],
-                    "approved": args[3],
-                    "actor_id": args[4],
-                    "occurred_at": args[5],
-                    "details_json": args[6],
-                    "related_version_no": args[7],
-                },
-            )
+            self.approvals.setdefault(args[0], _row(_APPROVAL_FIELDS, args))
             return _FakeCursor()
         if "FROM proposal_approvals" in sql and "WHERE approval_id = %s" in sql:
             return _FakeCursor(self.approvals.get(args[0]))
@@ -603,21 +484,7 @@ class _FakeConnection:
         if self._transaction_snapshot is not None:
             return
         self._transaction_snapshot = {
-            "idempotency": deepcopy(self.idempotency),
-            "simulation_idempotency": deepcopy(self.simulation_idempotency),
-            "operations": deepcopy(self.operations),
-            "proposals": deepcopy(self.proposals),
-            "versions": deepcopy(self.versions),
-            "events": deepcopy(self.events),
-            "approvals": deepcopy(self.approvals),
-            "memos": deepcopy(self.memos),
-            "memo_idempotency": deepcopy(self.memo_idempotency),
-            "memo_events": deepcopy(self.memo_events),
-            "cockpit_acknowledgements": deepcopy(self.cockpit_acknowledgements),
-            "cockpit_acknowledgement_idempotency": deepcopy(
-                self.cockpit_acknowledgement_idempotency
-            ),
-            "schema_migrations": deepcopy(self.schema_migrations),
+            field: deepcopy(getattr(self, field)) for field in _TRANSACTIONAL_STORES
         }
 
     def _restore_transaction_snapshot(self):
@@ -638,35 +505,17 @@ class _FakeConnection:
             or current["current_version_no"] != expected_current_version_no
         ):
             return _FakeCursor(rowcount=0)
-        current.update(
-            {
-                "portfolio_id": args[0],
-                "mandate_id": args[1],
-                "jurisdiction": args[2],
-                "created_by": args[3],
-                "created_at": args[4],
-                "last_event_at": args[5],
-                "current_state": args[6],
-                "current_version_no": args[7],
-                "title": args[8],
-                "advisor_notes": args[9],
-                "lifecycle_origin": args[10],
-                "source_workspace_id": args[11],
-            }
-        )
+        current.update(_row(_PROPOSAL_UPDATE_FIELDS, args[:12]))
         return _FakeCursor(rowcount=1)
 
     def commit(self):
         self._transaction_snapshot = None
-        return None
 
     def rollback(self):
         self.rollback_count += 1
         self._restore_transaction_snapshot()
-        return None
 
-    def close(self):
-        return None
+    def close(self): ...
 
 
 class _NoOperationReturnedConnection(_FakeConnection):

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -32,47 +33,34 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _idea_intake_record(
-    *,
-    created_at: datetime,
-    request_fingerprint: str = "sha256:request",
-    legal_hold: bool = False,
-) -> IdeaProposalIntakeRecord:
-    return IdeaProposalIntakeRecord(
+def test_idea_intake_expiry_allows_reuse_unless_legal_hold_applies() -> None:
+    created_at = _now()
+    first = IdeaProposalIntakeRecord(
         registry_key="scope:retained-key",
-        request_fingerprint=request_fingerprint,
+        request_fingerprint="sha256:request",
         response_json='{"intake_status":"ACCEPTED"}',
         created_at_utc=created_at,
         expires_at_utc=created_at + timedelta(hours=24),
-        legal_hold=legal_hold,
     )
-
-
-def test_idea_intake_replay_window_expires_and_allows_key_reuse() -> None:
     repository = InMemoryProposalRepository()
-    created_at = _now()
-    first = _idea_intake_record(created_at=created_at)
-
     assert repository.claim_idea_proposal_intake(first).replayed is False
-    replacement = _idea_intake_record(
-        created_at=first.expires_at_utc,
+    replacement = replace(
+        first,
         request_fingerprint="sha256:replacement",
+        created_at_utc=first.expires_at_utc,
+        expires_at_utc=first.expires_at_utc + timedelta(hours=24),
     )
     assert repository.claim_idea_proposal_intake(replacement).replayed is False
 
-
-def test_idea_intake_legal_hold_blocks_expiry_purge_and_key_reuse() -> None:
-    repository = InMemoryProposalRepository()
-    created_at = _now()
-    held = _idea_intake_record(created_at=created_at, legal_hold=True)
-    repository.claim_idea_proposal_intake(held)
-
-    replacement = _idea_intake_record(
-        created_at=held.expires_at_utc,
-        request_fingerprint="sha256:replacement",
+    held_repository = InMemoryProposalRepository()
+    held_repository.claim_idea_proposal_intake(replace(first, legal_hold=True))
+    held_replacement = replace(
+        replacement,
+        created_at_utc=replacement.expires_at_utc,
+        expires_at_utc=replacement.expires_at_utc + timedelta(hours=24),
     )
     with pytest.raises(ProposalIdempotencyConflictError):
-        repository.claim_idea_proposal_intake(replacement)
+        held_repository.claim_idea_proposal_intake(held_replacement)
 
 
 def _proposal(proposal_id: str, created_by: str, state: str = "DRAFT") -> ProposalRecord:

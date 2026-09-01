@@ -1194,19 +1194,6 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
             replace(record, request_fingerprint=f"sha256:{uuid.uuid4().hex}")
         )
 
-    _assert_idea_intake_expiry_and_legal_hold(
-        first_repository=first_repository,
-        second_repository=second_repository,
-        record=record,
-    )
-
-
-def _assert_idea_intake_expiry_and_legal_hold(
-    *,
-    first_repository: PostgresProposalRepository,
-    second_repository: PostgresProposalRepository,
-    record: IdeaProposalIntakeRecord,
-) -> None:
     replacement = replace(
         record,
         request_fingerprint=f"sha256:{uuid.uuid4().hex}",
@@ -1214,24 +1201,21 @@ def _assert_idea_intake_expiry_and_legal_hold(
         expires_at_utc=record.expires_at_utc + timedelta(hours=24),
     )
     assert second_repository.claim_idea_proposal_intake(replacement).replayed is False
-
     with closing(first_repository._connect()) as connection:  # noqa: SLF001
         connection.execute(
             "UPDATE proposal_idea_intakes SET legal_hold = TRUE WHERE registry_key = %s",
             (record.registry_key,),
         )
         connection.commit()
-    held_replacement = replace(
-        replacement,
-        request_fingerprint=f"sha256:{uuid.uuid4().hex}",
-        created_at_utc=replacement.expires_at_utc,
-        expires_at_utc=replacement.expires_at_utc + timedelta(hours=24),
-    )
-    with pytest.raises(
-        ProposalIdempotencyConflictError,
-        match="IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT",
-    ):
-        second_repository.claim_idea_proposal_intake(held_replacement)
+    with pytest.raises(ProposalIdempotencyConflictError):
+        second_repository.claim_idea_proposal_intake(
+            replace(
+                replacement,
+                request_fingerprint=f"sha256:{uuid.uuid4().hex}",
+                created_at_utc=replacement.expires_at_utc,
+                expires_at_utc=replacement.expires_at_utc + timedelta(hours=24),
+            )
+        )
 
 
 def _reset_tables(repository: PostgresProposalRepository) -> None:

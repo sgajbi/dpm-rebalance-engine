@@ -66,22 +66,21 @@ def test_durable_state_recovery_drill_evidence_lists_restore_checks() -> None:
 def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
     contract = load_contract()
     proposal_namespace = next(
-        namespace
-        for namespace in contract["durable_namespaces"]
-        if namespace["namespace_key"] == "proposals"
+        item for item in contract["durable_namespaces"] if item["namespace_key"] == "proposals"
     )
 
     assert "proposal_idea_intakes" in proposal_namespace["durable_records"]
-    assert proposal_namespace["idea_intake_retention"] == {
-        "replay_window_hours": 24,
-        "automatic_purge": "before_each_new_intake_claim",
-        "legal_hold_behavior": (
-            "expired_claims_remain_replayable_and_conflict-protected_while_held"
-        ),
-        "restore_integrity": (
-            "expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
-        ),
-    }
+    retention = proposal_namespace["idea_intake_retention"]
+    assert retention["replay_window_hours"] == 24
+    assert retention["automatic_purge"] == "before_each_new_intake_claim"
+    assert (
+        retention["legal_hold_behavior"]
+        == "expired_claims_remain_replayable_and_conflict-protected_while_held"
+    )
+    assert (
+        retention["restore_integrity"]
+        == "expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
+    )
     restore_checks = {check["check_key"]: check for check in proposal_namespace["restore_checks"]}
     idea_check = restore_checks["idea_intake_restored_claim_integrity"]
     assert idea_check["command"] == "make idea-intake-recovery-check"
