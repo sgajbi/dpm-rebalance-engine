@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from src.core.proposals.idea_review_realization import (
+    IdeaProposalRealizationOutcomeRecord,
+    IdeaProposalRealizationRecord,
+)
+
 IDEA_PROPOSAL_INTAKE_REPLAY_RETENTION = timedelta(hours=24)
 IDEA_PROPOSAL_INTAKE_PURGE_BATCH_SIZE = 128
 
@@ -16,6 +21,8 @@ class IdeaProposalIntakeRecord:
     response_json: str
     created_at_utc: datetime
     expires_at_utc: datetime
+    realization: IdeaProposalRealizationRecord
+    initial_outcome: IdeaProposalRealizationOutcomeRecord
     legal_hold: bool = False
 
 

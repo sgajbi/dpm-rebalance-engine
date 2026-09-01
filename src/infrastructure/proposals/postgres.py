@@ -12,6 +12,7 @@ from src.core.proposals.idea_intake_persistence import (
     IdeaProposalIntakeClaim,
     IdeaProposalIntakeRecord,
 )
+from src.core.proposals.idea_review_realization import IdeaProposalRealizationHistoryRecord
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -70,6 +71,22 @@ class PostgresProposalRepository:
         self, record: IdeaProposalIntakeRecord
     ) -> IdeaProposalIntakeClaim:
         return _idea_intakes.claim_idea_proposal_intake(connect=self._connect, record=record)
+
+    def get_idea_proposal_realization(
+        self,
+        *,
+        intake_id: str,
+        tenant_id: str,
+        legal_entity_code: str,
+        portfolio_id: str,
+    ) -> Optional[IdeaProposalRealizationHistoryRecord]:
+        return _idea_intakes.get_idea_proposal_realization(
+            connect=self._connect,
+            intake_id=intake_id,
+            tenant_id=tenant_id,
+            legal_entity_code=legal_entity_code,
+            portfolio_id=portfolio_id,
+        )
 
     def save_idempotency(self, record: ProposalIdempotencyRecord) -> None:
         _idempotency.save_proposal_idempotency(connect=self._connect, record=record)

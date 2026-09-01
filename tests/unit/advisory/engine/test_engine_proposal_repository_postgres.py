@@ -16,6 +16,10 @@ from src.core.proposals.exceptions import (
     ProposalStateConflictError,
 )
 from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
+from src.core.proposals.idea_review_realization import (
+    IdeaProposalRealizationOutcomeRecord,
+    IdeaProposalRealizationRecord,
+)
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -92,6 +96,16 @@ _SIMULATION_IDEMPOTENCY_FIELDS = "idempotency_key request_hash response_json cre
 _IDEA_INTAKE_FIELDS = (
     "registry_key request_fingerprint response_json created_at_utc expires_at_utc legal_hold"
 )
+_IDEA_REALIZATION_FIELDS = (
+    "realization_id intake_id review_work_id review_work_status tenant_id legal_entity_code "
+    "portfolio_id "
+    "idea_candidate_id conversion_intent_id source_evidence_fingerprint current_status "
+    "current_source_event_version created_at_utc updated_at_utc"
+)
+_IDEA_REALIZATION_OUTCOME_FIELDS = (
+    "outcome_id realization_id source_event_version status reason_code occurred_at_utc "
+    "review_work_id proposal_id terminal"
+)
 _MEMO_IDEMPOTENCY_FIELDS = (
     "idempotency_key request_hash memo_id proposal_id proposal_version_no created_at"
 )
@@ -140,7 +154,8 @@ _APPROVAL_FIELDS = (
 _TRANSACTIONAL_STORES = (
     "idempotency simulation_idempotency operations proposals versions events approvals memos "
     "memo_idempotency memo_events cockpit_acknowledgements "
-    "cockpit_acknowledgement_idempotency idea_intakes idea_intake_purge_events schema_migrations"
+    "cockpit_acknowledgement_idempotency idea_intakes idea_intake_purge_events "
+    "idea_realizations idea_realization_outcomes schema_migrations"
 ).split()
 _MIGRATION_DEFAULTS = (
     ("lifecycle_origin", "proposals", "DIRECT_CREATE"),
@@ -231,6 +246,39 @@ class _FakeConnection:
         if "FROM proposal_idea_intakes" in sql:
             row = None if self.suppress_idea_intake_read else self.idea_intakes.get(args[0])
             return _FakeCursor(row)
+        if "INSERT INTO proposal_idea_review_realizations" in sql:
+            self.idea_realizations.setdefault(args[0], _row(_IDEA_REALIZATION_FIELDS, args))
+            return _FakeCursor()
+        if "FROM proposal_idea_review_realizations" in sql:
+            if "WHERE realization_id = %s" in sql:
+                return _FakeCursor(self.idea_realizations.get(args[0]))
+            row = next(
+                (
+                    stored
+                    for stored in self.idea_realizations.values()
+                    if stored["intake_id"] == args[0]
+                    and stored["tenant_id"] == args[1]
+                    and stored["legal_entity_code"] == args[2]
+                    and stored["portfolio_id"] == args[3]
+                ),
+                None,
+            )
+            return _FakeCursor(row)
+        if "INSERT INTO proposal_idea_realization_outcomes" in sql:
+            key = (args[1], args[2])
+            self.idea_realization_outcomes.setdefault(
+                key, _row(_IDEA_REALIZATION_OUTCOME_FIELDS, args)
+            )
+            return _FakeCursor()
+        if "FROM proposal_idea_realization_outcomes" in sql:
+            if "source_event_version = %s" in sql:
+                return _FakeCursor(self.idea_realization_outcomes.get((args[0], args[1])))
+            rows = [
+                stored
+                for (realization_id, _), stored in self.idea_realization_outcomes.items()
+                if realization_id == args[0]
+            ]
+            return _FakeCursor(rows=sorted(rows, key=lambda stored: stored["source_event_version"]))
         if "FROM proposal_idempotency WHERE idempotency_key = %s" in sql:
             return _FakeCursor(self.idempotency.get(args[0]))
         if "INSERT INTO proposal_simulation_idempotency" in sql:
@@ -577,16 +625,48 @@ def test_postgres_repository_idempotency_roundtrip(monkeypatch):
     assert loaded.created_at == created_at
 
 
+def _idea_intake_record(created_at: datetime, *, registry_key: str) -> IdeaProposalIntakeRecord:
+    realization = IdeaProposalRealizationRecord(
+        realization_id="ipr_123456789abc",
+        intake_id="ipi_123456789abc",
+        review_work_id="iarw_123456789abc",
+        review_work_status="PENDING_ADVISER_REVIEW",
+        tenant_id="tenant-private-bank-sg",
+        legal_entity_code="SGPB",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        idea_candidate_id="idea_candidate_001",
+        conversion_intent_id="conversion_intent_001",
+        source_evidence_fingerprint=f"sha256:{'a' * 64}",
+        current_status="ACCEPTED_FOR_REVIEW",
+        current_source_event_version=1,
+        created_at_utc=created_at,
+        updated_at_utc=created_at,
+    )
+    return IdeaProposalIntakeRecord(
+        registry_key=registry_key,
+        request_fingerprint="sha256:request",
+        response_json='{"intake_status":"ACCEPTED"}',
+        created_at_utc=created_at,
+        expires_at_utc=created_at + timedelta(hours=24),
+        realization=realization,
+        initial_outcome=IdeaProposalRealizationOutcomeRecord(
+            outcome_id="ipro_123456789abc",
+            realization_id=realization.realization_id,
+            source_event_version=1,
+            status="ACCEPTED_FOR_REVIEW",
+            reason_code="idea_conversion_accepted_for_adviser_review",
+            occurred_at_utc=created_at,
+            review_work_id=realization.review_work_id,
+            proposal_id=None,
+            terminal=False,
+        ),
+    )
+
+
 def test_postgres_repository_claims_replays_and_conflicts_idea_intake(monkeypatch):
     repository, connection = _build_repository(monkeypatch)
     created_at = datetime.now(timezone.utc)
-    record = IdeaProposalIntakeRecord(
-        "scope:key",
-        "sha256:request",
-        '{"intake_status":"ACCEPTED"}',
-        created_at,
-        created_at + timedelta(hours=24),
-    )
+    record = _idea_intake_record(created_at, registry_key="scope:key")
 
     assert repository.claim_idea_proposal_intake(record).replayed is False
     assert repository.claim_idea_proposal_intake(record).replayed is True
@@ -600,13 +680,7 @@ def test_postgres_repository_claims_replays_and_conflicts_idea_intake(monkeypatc
 def test_postgres_repository_reuses_expired_intake_key_but_preserves_legal_hold(monkeypatch):
     repository, connection = _build_repository(monkeypatch)
     created_at = datetime.now(timezone.utc)
-    record = IdeaProposalIntakeRecord(
-        "scope:retained-key",
-        "sha256:request",
-        '{"intake_status":"ACCEPTED"}',
-        created_at,
-        created_at + timedelta(hours=24),
-    )
+    record = _idea_intake_record(created_at, registry_key="scope:retained-key")
     repository.claim_idea_proposal_intake(record)
 
     replacement = replace(

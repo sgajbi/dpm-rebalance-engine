@@ -13,6 +13,7 @@ from src.api.proposals.principal import (
 from src.core.proposals.idea_intake_authority import (
     IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
     IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
+    IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY,
     IdeaProposalIntakePrincipal,
 )
 
@@ -20,12 +21,19 @@ IDEA_PROPOSAL_INTAKE_PRINCIPAL_REQUIRED = "IDEA_PROPOSAL_INTAKE_PRINCIPAL_REQUIR
 IDEA_PROPOSAL_INTAKE_PRINCIPAL_INVALID = "IDEA_PROPOSAL_INTAKE_PRINCIPAL_INVALID"
 IDEA_PROPOSAL_INTAKE_ROLE_NOT_AUTHORIZED = "IDEA_PROPOSAL_INTAKE_ROLE_NOT_AUTHORIZED"
 IDEA_PROPOSAL_INTAKE_CAPABILITY_REQUIRED = "IDEA_PROPOSAL_INTAKE_CAPABILITY_REQUIRED"
+IDEA_PROPOSAL_REALIZATION_CAPABILITY_REQUIRED = "IDEA_PROPOSAL_REALIZATION_CAPABILITY_REQUIRED"
 
 _PRINCIPAL_ERRORS = ProposalPrincipalErrors(
     required=IDEA_PROPOSAL_INTAKE_PRINCIPAL_REQUIRED,
     invalid=IDEA_PROPOSAL_INTAKE_PRINCIPAL_INVALID,
     role_not_authorized=IDEA_PROPOSAL_INTAKE_ROLE_NOT_AUTHORIZED,
     capability_required=IDEA_PROPOSAL_INTAKE_CAPABILITY_REQUIRED,
+)
+_REALIZATION_READER_ERRORS = ProposalPrincipalErrors(
+    required=IDEA_PROPOSAL_INTAKE_PRINCIPAL_REQUIRED,
+    invalid=IDEA_PROPOSAL_INTAKE_PRINCIPAL_INVALID,
+    role_not_authorized=IDEA_PROPOSAL_INTAKE_ROLE_NOT_AUTHORIZED,
+    capability_required=IDEA_PROPOSAL_REALIZATION_CAPABILITY_REQUIRED,
 )
 
 
@@ -44,6 +52,37 @@ def require_idea_proposal_intake_principal(
         required_capability=IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
         authorized_roles=IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
         errors=_PRINCIPAL_ERRORS,
+        principal_factory=_build_idea_proposal_intake_principal,
+        headers=ProposalPrincipalHeaders(
+            actor_id=x_actor_id,
+            role=x_role,
+            tenant_id=x_tenant_id,
+            legal_entity_code=x_legal_entity_code,
+            correlation_id=x_correlation_id,
+            service_identity=x_service_identity,
+            authorization=authorization,
+            capabilities=x_capabilities,
+            principal_status=x_principal_status,
+        ),
+        correlation_id_fallback="route-correlation-pending",
+    )
+
+
+def require_idea_proposal_realization_reader(
+    x_actor_id: Annotated[str | None, Header(alias="X-Actor-Id")] = None,
+    x_role: Annotated[str | None, Header(alias="X-Role")] = None,
+    x_tenant_id: Annotated[str | None, Header(alias="X-Tenant-Id")] = None,
+    x_legal_entity_code: Annotated[str | None, Header(alias="X-Legal-Entity-Code")] = None,
+    x_correlation_id: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
+    x_service_identity: Annotated[str | None, Header(alias="X-Service-Identity")] = None,
+    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
+    x_capabilities: Annotated[str | None, Header(alias="X-Capabilities")] = None,
+    x_principal_status: Annotated[str | None, Header(alias="X-Principal-Status")] = None,
+) -> IdeaProposalIntakePrincipal:
+    return resolve_proposal_principal(
+        required_capability=IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY,
+        authorized_roles=IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
+        errors=_REALIZATION_READER_ERRORS,
         principal_factory=_build_idea_proposal_intake_principal,
         headers=ProposalPrincipalHeaders(
             actor_id=x_actor_id,
@@ -79,5 +118,7 @@ __all__ = [
     "IDEA_PROPOSAL_INTAKE_PRINCIPAL_INVALID",
     "IDEA_PROPOSAL_INTAKE_PRINCIPAL_REQUIRED",
     "IDEA_PROPOSAL_INTAKE_ROLE_NOT_AUTHORIZED",
+    "IDEA_PROPOSAL_REALIZATION_CAPABILITY_REQUIRED",
     "require_idea_proposal_intake_principal",
+    "require_idea_proposal_realization_reader",
 ]

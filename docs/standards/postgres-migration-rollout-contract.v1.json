@@ -421,6 +421,41 @@
       }
     },
     {
+      "namespace_key": "proposals",
+      "version": "0012",
+      "path": "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql",
+      "phase": "expand",
+      "operation_class": "create_table_and_indexes",
+      "compatibility_window": {
+        "old_and_new_application_versions_supported": true,
+        "minimum_rollout_window": "one_full_deploy_wave",
+        "consumer_contract": "adds durable Advise-owned Idea review realization and append-only initial outcome tables before intake creates adviser review work"
+      },
+      "lock_behavior": {
+        "transaction_scope": "single_namespace_transaction",
+        "lock_profile": "short_create_tables_plus_empty_constraint_and_index_build",
+        "online_behavior": "metadata_only_when_tables_absent; old application versions ignore the additive tables",
+        "required_operator_control": "apply before routing Idea intake traffic to the review-work application revision"
+      },
+      "backfill": {
+        "required": false,
+        "checkpoint_strategy": "not_applicable",
+        "resume_strategy": "rerun idempotent CREATE TABLE and CREATE INDEX statements",
+        "quarantine_strategy": "keep review-work realization disabled until migration and recovery verification pass; do not infer prior work from opaque identifiers"
+      },
+      "rollback": {
+        "forward_fix_required": true,
+        "previous_app_version_compatible": true,
+        "limitations": "older application versions ignore the additive tables; never delete created review work or outcome history during rollback"
+      },
+      "rehearsal": {
+        "profile_key": "local_postgres_migration_smoke",
+        "command": "make migration-rollout-contract-gate && make migration-smoke",
+        "output_path": "output/postgres-migration-rollout-rehearsal.json",
+        "evidence_kind": "static_contract_plus_postgres_smoke"
+      }
+    },
+    {
       "namespace_key": "advisory_copilot",
       "version": "0001",
       "path": "src/infrastructure/postgres_migrations/advisory_copilot/0001_copilot_run_persistence.sql",

@@ -48,6 +48,12 @@ def _headers(
     return headers
 
 
+def _realization_headers(*, portfolio_id: str = "PB_SG_GLOBAL_BAL_001") -> dict[str, str]:
+    headers = _headers(capabilities="advisory.idea_proposal_realization.read")
+    headers["X-Portfolio-Id"] = portfolio_id
+    return headers
+
+
 def test_idea_proposal_intake_route_returns_source_safe_non_proposal_posture() -> None:
     with TestClient(app) as client:
         response = client.post(
@@ -65,6 +71,12 @@ def test_idea_proposal_intake_route_returns_source_safe_non_proposal_posture() -
     assert body["proposal_authority"] == "lotus-advise"
     assert body["target_product"] == "lotus-advise:AdvisoryProposalLifecycleRecord:v1"
     assert body["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
+    assert body["realization_id"].startswith("ipr_")
+    assert body["review_work_id"].startswith("iarw_")
+    assert body["review_work_status"] == "PENDING_ADVISER_REVIEW"
+    assert body["realization_status"] == "ACCEPTED_FOR_REVIEW"
+    assert body["source_event_version"] == 1
+    assert body["source_evidence_fingerprint"].startswith("sha256:")
     assert body["route_existence_proven"] is True
     assert body["intake_receipt_accepted"] is True
     assert body["idempotency_replay"] is False
@@ -295,6 +307,9 @@ def test_idea_proposal_intake_route_returns_bounded_rejection_without_proposal_c
     body = response.json()
     assert body["intake_status"] == "REJECTED"
     assert body["intake_receipt_accepted"] is False
+    assert body["review_work_id"] is None
+    assert body["review_work_status"] is None
+    assert body["realization_status"] == "REJECTED_BEFORE_WORK"
     assert body["proposal_record_created"] is False
     assert body["suitability_authority_granted"] is False
     assert body["outcome_reason_codes"] == [
@@ -346,6 +361,8 @@ def test_idea_proposal_intake_domain_acknowledgement_is_deterministic() -> None:
     second = acknowledge_idea_proposal_intake(request, correlation_id="corr-b")
 
     assert first.intake_id == second.intake_id
+    assert first.realization_id == second.realization_id
+    assert first.review_work_id == second.review_work_id
     assert first.proposal_record_created is False
     assert first.intake_receipt_accepted is True
     assert first.suitability_authority_granted is False
@@ -425,3 +442,138 @@ def test_idea_proposal_intake_route_is_documented_in_openapi() -> None:
     assert "401" in operation["responses"]
     assert "403" in operation["responses"]
     assert "409" in operation["responses"]
+    realization_operation = openapi["paths"][
+        "/advisory/proposals/idea-intake/{intake_id}/realization"
+    ]["get"]
+    assert realization_operation["summary"] == "Read Advise-owned Idea realization outcomes"
+    assert "proposal creation" in realization_operation["description"]
+    assert "404" in realization_operation["responses"]
+
+
+def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-read"),
+        )
+        intake_id = accepted.json()["intake_id"]
+        response = client.get(
+            f"/advisory/proposals/idea-intake/{intake_id}/realization",
+            headers=_realization_headers(),
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intake_id"] == intake_id
+    assert body["review_work_id"] == accepted.json()["review_work_id"]
+    assert body["review_work_status"] == "PENDING_ADVISER_REVIEW"
+    assert body["current_status"] == "ACCEPTED_FOR_REVIEW"
+    assert body["current_source_event_version"] == 1
+    assert body["proposal_record_created"] is False
+    assert body["suitability_authority_granted"] is False
+    assert body["order_created"] is False
+    assert body["client_publication_authorized"] is False
+    assert len(body["outcomes"]) == 1
+    assert body["outcomes"][0]["status"] == "ACCEPTED_FOR_REVIEW"
+    assert body["outcomes"][0]["terminal"] is False
+
+
+def test_idea_proposal_realization_route_fails_closed_on_scope_mismatch() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-scope"),
+        )
+        intake_id = accepted.json()["intake_id"]
+        wrong_portfolio = client.get(
+            f"/advisory/proposals/idea-intake/{intake_id}/realization",
+            headers=_realization_headers(portfolio_id="PB_OTHER"),
+        )
+        wrong_tenant_headers = _realization_headers()
+        wrong_tenant_headers["X-Tenant-Id"] = "tenant-private-bank-hk"
+        wrong_tenant = client.get(
+            f"/advisory/proposals/idea-intake/{intake_id}/realization",
+            headers=wrong_tenant_headers,
+        )
+
+    assert wrong_portfolio.status_code == 404
+    assert wrong_portfolio.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_NOT_FOUND"
+    assert wrong_tenant.status_code == 404
+    assert wrong_tenant.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_NOT_FOUND"
+
+
+def test_idea_proposal_realization_route_requires_read_capability() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-capability"),
+        )
+        response = client.get(
+            f"/advisory/proposals/idea-intake/{accepted.json()['intake_id']}/realization",
+            headers={**_headers(), "X-Portfolio-Id": "PB_SG_GLOBAL_BAL_001"},
+        )
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_CAPABILITY_REQUIRED"
+
+
+def test_idea_proposal_rejection_has_terminal_outcome_without_review_work() -> None:
+    payload = {**_payload(), "intent_type": "CREATE_ADVISORY_PROPOSAL_DRAFT"}
+    with TestClient(app) as client:
+        rejected = client.post(
+            "/advisory/proposals/idea-intake",
+            json=payload,
+            headers=_headers(idempotency_key="idea-realization-rejected"),
+        )
+        response = client.get(
+            f"/advisory/proposals/idea-intake/{rejected.json()['intake_id']}/realization",
+            headers=_realization_headers(),
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["review_work_id"] is None
+    assert body["review_work_status"] is None
+    assert body["current_status"] == "REJECTED_BEFORE_WORK"
+    assert body["outcomes"] == [
+        {
+            "outcome_id": body["outcomes"][0]["outcome_id"],
+            "source_event_version": 1,
+            "status": "REJECTED_BEFORE_WORK",
+            "reason_code": "idea_conversion_rejected_before_advisory_work",
+            "occurred_at": body["outcomes"][0]["occurred_at"],
+            "review_work_id": None,
+            "proposal_id": None,
+            "terminal": True,
+        }
+    ]
+
+
+def test_idea_conversion_identity_prevents_second_work_item_for_changed_evidence() -> None:
+    changed = _payload()
+    changed["source_refs"] = [
+        {
+            "source_system": "lotus-idea",
+            "source_type": "IdeaCandidate",
+            "source_id": "idea_candidate_001",
+            "content_hash": "sha256:materially-changed",
+        }
+    ]
+    with TestClient(app) as client:
+        first = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-original"),
+        )
+        conflict = client.post(
+            "/advisory/proposals/idea-intake",
+            json=changed,
+            headers=_headers(idempotency_key="idea-realization-changed"),
+        )
+
+    assert first.status_code == 202
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_CONFLICT"

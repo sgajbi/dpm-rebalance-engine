@@ -10,9 +10,14 @@
   "lifecycle_status": "implemented",
   "supportability_status": "not_certified",
   "target_route": "POST /advisory/proposals/idea-intake",
+  "realization_read_route": "GET /advisory/proposals/idea-intake/{intake_id}/realization",
   "route_existence_proven": true,
   "runtime_intake_receipt_proven": true,
   "durable_intake_idempotency_proven": true,
+  "durable_adviser_review_work_proven": true,
+  "initial_source_owned_outcome_proven": true,
+  "proposal_linkage_outcomes_proven": false,
+  "terminal_lifecycle_outcomes_proven": false,
   "required_request_fields": [
     "source_system",
     "source_product",
@@ -53,16 +58,32 @@
     "REJECTED"
   ],
   "principal_capability": "advisory.idea_proposal_intake.accept",
+  "realization_read_capability": "advisory.idea_proposal_realization.read",
+  "initial_realization_outcomes": {
+    "REVIEW_FOR_ADVISORY_PROPOSAL": {
+      "status": "ACCEPTED_FOR_REVIEW",
+      "review_work_status": "PENDING_ADVISER_REVIEW",
+      "source_event_version": 1,
+      "terminal": false
+    },
+    "CREATE_ADVISORY_PROPOSAL_DRAFT": {
+      "status": "REJECTED_BEFORE_WORK",
+      "review_work_status": null,
+      "source_event_version": 1,
+      "terminal": true
+    }
+  },
   "local_dev_principal_source": "trusted_headers_until_production_idp_available",
   "certification_blockers": [
     "suitability_policy_authority_remains_lotus_advise",
     "advisory_proposal_creation_not_certified",
-    "advisory_review_work_realization_not_certified",
-    "source_owned_outcome_stream_not_certified",
+    "proposal_linkage_outcome_not_certified",
+    "terminal_realization_outcomes_not_certified",
     "client_publication_authority_blocked"
   ],
   "non_proof_boundaries": [
-    "Proves a live executable intake receipt for lotus-idea conversion-intent handoff into lotus-advise, including accepted, replayed, rejected, and idempotency-conflict behavior.",
+    "Proves a live executable intake receipt plus one durable Advise adviser-review work item and version-1 source-owned realization outcome for an accepted review intent.",
+    "Proves that a draft-creation request is rejected before work with a terminal version-1 outcome and no review work or proposal.",
     "Does not grant suitability, recommendation, approval, consent, execution, order, OMS, fill, settlement, or client-communication authority.",
     "Does not create orders, advisory proposal lifecycle records, suitability decisions, approvals, execution instructions, fills, settlement records, or client messages.",
     "Does not promote a supported feature, client-ready workflow, data-product certification, or downstream execution proof."
@@ -73,8 +94,12 @@
     "src/core/proposals/idea_intake_authority.py",
     "src/core/proposals/idea_proposal_intake.py",
     "src/core/proposals/idea_intake_persistence.py",
+    "src/core/proposals/idea_review_realization.py",
+    "src/core/proposals/idea_realization_read_model.py",
     "src/infrastructure/proposals/postgres_idea_intakes.py",
     "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
+    "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql",
+    "scripts/sql/verify_idea_intake_recovery.sql",
     "tests/unit/advisory/api/test_idea_proposal_intake_api.py"
   ]
 }

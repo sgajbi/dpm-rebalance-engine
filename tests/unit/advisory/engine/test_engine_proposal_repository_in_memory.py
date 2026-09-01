@@ -9,6 +9,10 @@ from src.core.proposals.exceptions import (
     ProposalStateConflictError,
 )
 from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
+from src.core.proposals.idea_review_realization import (
+    IdeaProposalRealizationOutcomeRecord,
+    IdeaProposalRealizationRecord,
+)
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -33,15 +37,47 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def test_idea_intake_expiry_allows_reuse_unless_legal_hold_applies() -> None:
-    created_at = _now()
-    first = IdeaProposalIntakeRecord(
+def _idea_intake_record(created_at: datetime) -> IdeaProposalIntakeRecord:
+    realization = IdeaProposalRealizationRecord(
+        realization_id="ipr_123456789abc",
+        intake_id="ipi_123456789abc",
+        review_work_id="iarw_123456789abc",
+        review_work_status="PENDING_ADVISER_REVIEW",
+        tenant_id="tenant-private-bank-sg",
+        legal_entity_code="SGPB",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        idea_candidate_id="idea_candidate_001",
+        conversion_intent_id="conversion_intent_001",
+        source_evidence_fingerprint=f"sha256:{'a' * 64}",
+        current_status="ACCEPTED_FOR_REVIEW",
+        current_source_event_version=1,
+        created_at_utc=created_at,
+        updated_at_utc=created_at,
+    )
+    return IdeaProposalIntakeRecord(
         registry_key="scope:retained-key",
         request_fingerprint="sha256:request",
         response_json='{"intake_status":"ACCEPTED"}',
         created_at_utc=created_at,
         expires_at_utc=created_at + timedelta(hours=24),
+        realization=realization,
+        initial_outcome=IdeaProposalRealizationOutcomeRecord(
+            outcome_id="ipro_123456789abc",
+            realization_id=realization.realization_id,
+            source_event_version=1,
+            status="ACCEPTED_FOR_REVIEW",
+            reason_code="idea_conversion_accepted_for_adviser_review",
+            occurred_at_utc=created_at,
+            review_work_id=realization.review_work_id,
+            proposal_id=None,
+            terminal=False,
+        ),
     )
+
+
+def test_idea_intake_expiry_allows_reuse_unless_legal_hold_applies() -> None:
+    created_at = _now()
+    first = _idea_intake_record(created_at)
     repository = InMemoryProposalRepository()
     assert repository.claim_idea_proposal_intake(first).replayed is False
     replacement = replace(
@@ -56,6 +92,34 @@ def test_idea_intake_expiry_allows_reuse_unless_legal_hold_applies() -> None:
     held_repository.claim_idea_proposal_intake(replace(first, legal_hold=True))
     with pytest.raises(ProposalIdempotencyConflictError):
         held_repository.claim_idea_proposal_intake(replacement)
+
+
+def test_idea_intake_creates_one_scope_checked_review_realization() -> None:
+    record = _idea_intake_record(_now())
+    repository = InMemoryProposalRepository()
+
+    repository.claim_idea_proposal_intake(record)
+    repository.claim_idea_proposal_intake(record)
+
+    history = repository.get_idea_proposal_realization(
+        intake_id=record.realization.intake_id,
+        tenant_id=record.realization.tenant_id,
+        legal_entity_code=record.realization.legal_entity_code,
+        portfolio_id=record.realization.portfolio_id,
+    )
+    assert history is not None
+    assert history.realization.review_work_id == "iarw_123456789abc"
+    assert history.realization.current_status == "ACCEPTED_FOR_REVIEW"
+    assert [outcome.source_event_version for outcome in history.outcomes] == [1]
+    assert (
+        repository.get_idea_proposal_realization(
+            intake_id=record.realization.intake_id,
+            tenant_id=record.realization.tenant_id,
+            legal_entity_code=record.realization.legal_entity_code,
+            portfolio_id="PB_OTHER",
+        )
+        is None
+    )
 
 
 def _proposal(proposal_id: str, created_by: str, state: str = "DRAFT") -> ProposalRecord:

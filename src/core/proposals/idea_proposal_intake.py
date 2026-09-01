@@ -17,6 +17,12 @@ from src.core.proposals.idea_intake_persistence import (
     IDEA_PROPOSAL_INTAKE_REPLAY_RETENTION,
     IdeaProposalIntakeRecord,
 )
+from src.core.proposals.idea_review_realization import (
+    IdeaProposalRealizationOutcomeRecord,
+    IdeaProposalRealizationRecord,
+    IdeaProposalRealizationStatus,
+    IdeaProposalReviewWorkStatus,
+)
 from src.core.proposals.repository import ProposalRepository
 
 IdeaProposalIntakeStatus = Literal["ACCEPTED", "ACCEPTED_REPLAYED", "REJECTED"]
@@ -29,8 +35,8 @@ IdeaProposalIntentType = Literal[
 IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS = [
     "suitability_policy_authority_remains_lotus_advise",
     "advisory_proposal_creation_not_certified",
-    "advisory_review_work_realization_not_certified",
-    "source_owned_outcome_stream_not_certified",
+    "proposal_linkage_outcome_not_certified",
+    "terminal_realization_outcomes_not_certified",
     "client_publication_authority_blocked",
 ]
 
@@ -59,6 +65,12 @@ IDEA_PROPOSAL_INTAKE_RESPONSE_EXAMPLE: dict[str, Any] = {
     "proposal_authority": "lotus-advise",
     "target_product": "lotus-advise:AdvisoryProposalLifecycleRecord:v1",
     "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+    "realization_id": "ipr_73d5330c532f",
+    "review_work_id": "iarw_a1c9106760cb",
+    "review_work_status": "PENDING_ADVISER_REVIEW",
+    "realization_status": "ACCEPTED_FOR_REVIEW",
+    "source_event_version": 1,
+    "source_evidence_fingerprint": "sha256:abc123",
     "route_existence_proven": True,
     "intake_receipt_accepted": True,
     "idempotency_replay": False,
@@ -83,7 +95,9 @@ IDEA_PROPOSAL_INTAKE_RESPONSE_EXAMPLE: dict[str, Any] = {
         "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
         "src/api/proposals/routes_idea_intake.py",
         "src/core/proposals/idea_proposal_intake.py",
+        "src/core/proposals/idea_review_realization.py",
         "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
+        "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql",
     ],
     "received_at": "2026-06-21T10:10:00+00:00",
     "correlation_id": "corr-idea-proposal-001",
@@ -235,6 +249,37 @@ class IdeaProposalIntakeResponse(BaseModel):
     def _validate_portfolio_id(cls, value: str) -> str:
         return _normalize_required_identifier(value)
 
+    realization_id: str = Field(
+        description="Deterministic Advise-owned realization identity for the conversion intent.",
+        examples=["ipr_73d5330c532f"],
+    )
+    review_work_id: str | None = Field(
+        description=(
+            "Advise adviser-review work identity when accepted for review; absent when rejected "
+            "before work."
+        ),
+        examples=["iarw_a1c9106760cb"],
+    )
+    review_work_status: IdeaProposalReviewWorkStatus | None = Field(
+        description=(
+            "Advise adviser-queue status when work exists; absent when rejected before work."
+        ),
+        examples=["PENDING_ADVISER_REVIEW"],
+    )
+    realization_status: IdeaProposalRealizationStatus = Field(
+        description="Initial Advise-owned business realization outcome.",
+        examples=["ACCEPTED_FOR_REVIEW"],
+    )
+    source_event_version: int = Field(
+        ge=1,
+        description="Monotonic version of the Advise-owned realization outcome stream.",
+        examples=[1],
+    )
+    source_evidence_fingerprint: str = Field(
+        description="Canonical fingerprint of the Idea evidence references accepted by Advise.",
+        examples=["sha256:abc123"],
+    )
+
     route_existence_proven: bool = Field(
         description="True because this route exists and is covered by contract tests.",
         examples=[True],
@@ -323,6 +368,15 @@ def acknowledge_idea_proposal_intake(
         source_refs_fingerprint=source_refs_fingerprint,
     )
     accepted = request.intent_type == "REVIEW_FOR_ADVISORY_PROPOSAL"
+    trusted_scope = _trusted_scope(principal=principal, correlation_id=correlation_id)
+    realization_id = _realization_id(
+        conversion_intent_id=request.conversion_intent_id,
+        portfolio_id=request.portfolio_id,
+        trusted_scope=trusted_scope,
+    )
+    realization_status: IdeaProposalRealizationStatus = (
+        "ACCEPTED_FOR_REVIEW" if accepted else "REJECTED_BEFORE_WORK"
+    )
     return IdeaProposalIntakeResponse(
         intake_id=intake_id,
         intake_status="ACCEPTED" if accepted else "REJECTED",
@@ -331,12 +385,18 @@ def acknowledge_idea_proposal_intake(
         proposal_authority="lotus-advise",
         target_product="lotus-advise:AdvisoryProposalLifecycleRecord:v1",
         portfolio_id=request.portfolio_id,
+        realization_id=realization_id,
+        review_work_id=_review_work_id(realization_id) if accepted else None,
+        review_work_status="PENDING_ADVISER_REVIEW" if accepted else None,
+        realization_status=realization_status,
+        source_event_version=1,
+        source_evidence_fingerprint=f"sha256:{source_refs_fingerprint}",
         route_existence_proven=True,
         intake_receipt_accepted=accepted,
         idempotency_replay=False,
         idempotency_key_hash=_safe_key_hash(idempotency_key),
         request_fingerprint=request_fingerprint,
-        trusted_scope=_trusted_scope(principal=principal, correlation_id=correlation_id),
+        trusted_scope=trusted_scope,
         outcome_reason_codes=_outcome_reason_codes(request),
         proposal_record_created=False,
         suitability_authority_granted=False,
@@ -347,7 +407,9 @@ def acknowledge_idea_proposal_intake(
             "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
             "src/api/proposals/routes_idea_intake.py",
             "src/core/proposals/idea_proposal_intake.py",
+            "src/core/proposals/idea_review_realization.py",
             "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
+            "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql",
         ],
         received_at=timestamp.isoformat(),
         correlation_id=correlation_id,
@@ -386,6 +448,15 @@ def process_idea_proposal_intake(
             response_json=response.model_dump_json(),
             created_at_utc=created_at_utc,
             expires_at_utc=created_at_utc + IDEA_PROPOSAL_INTAKE_REPLAY_RETENTION,
+            realization=_realization_record(
+                request=request,
+                response=response,
+                created_at_utc=created_at_utc,
+            ),
+            initial_outcome=_initial_realization_outcome(
+                response=response,
+                occurred_at_utc=created_at_utc,
+            ),
         )
     )
     if not claim.replayed:
@@ -528,3 +599,70 @@ def _intake_id(
         ).encode()
     ).hexdigest()
     return f"ipi_{digest[:12]}"
+
+
+def _realization_id(
+    *,
+    conversion_intent_id: str,
+    portfolio_id: str,
+    trusted_scope: dict[str, Any],
+) -> str:
+    payload = "|".join(
+        (
+            str(trusted_scope.get("tenant_id")),
+            str(trusted_scope.get("legal_entity_code")),
+            portfolio_id,
+            conversion_intent_id,
+        )
+    )
+    return f"ipr_{sha256(payload.encode()).hexdigest()[:12]}"
+
+
+def _review_work_id(realization_id: str) -> str:
+    return f"iarw_{sha256(f'{realization_id}|review-work'.encode()).hexdigest()[:12]}"
+
+
+def _realization_record(
+    *,
+    request: IdeaProposalIntakeRequest,
+    response: IdeaProposalIntakeResponse,
+    created_at_utc: datetime,
+) -> IdeaProposalRealizationRecord:
+    return IdeaProposalRealizationRecord(
+        realization_id=response.realization_id,
+        intake_id=response.intake_id,
+        review_work_id=response.review_work_id,
+        review_work_status=response.review_work_status,
+        tenant_id=str(response.trusted_scope["tenant_id"]),
+        legal_entity_code=str(response.trusted_scope["legal_entity_code"]),
+        portfolio_id=response.portfolio_id,
+        idea_candidate_id=request.idea_candidate_id,
+        conversion_intent_id=request.conversion_intent_id,
+        source_evidence_fingerprint=response.source_evidence_fingerprint,
+        current_status=response.realization_status,
+        current_source_event_version=response.source_event_version,
+        created_at_utc=created_at_utc,
+        updated_at_utc=created_at_utc,
+    )
+
+
+def _initial_realization_outcome(
+    *,
+    response: IdeaProposalIntakeResponse,
+    occurred_at_utc: datetime,
+) -> IdeaProposalRealizationOutcomeRecord:
+    return IdeaProposalRealizationOutcomeRecord(
+        outcome_id=f"ipro_{sha256(f'{response.realization_id}|1'.encode()).hexdigest()[:12]}",
+        realization_id=response.realization_id,
+        source_event_version=1,
+        status=response.realization_status,
+        reason_code=(
+            "idea_conversion_accepted_for_adviser_review"
+            if response.review_work_id is not None
+            else "idea_conversion_rejected_before_advisory_work"
+        ),
+        occurred_at_utc=occurred_at_utc,
+        review_work_id=response.review_work_id,
+        proposal_id=None,
+        terminal=response.review_work_id is None,
+    )

@@ -24,6 +24,10 @@ from src.core.proposals.idea_proposal_intake import (
     IdeaProposalIntakeRequest,
     process_idea_proposal_intake,
 )
+from src.core.proposals.idea_review_realization import (
+    IdeaProposalRealizationOutcomeRecord,
+    IdeaProposalRealizationRecord,
+)
 from src.core.proposals.input_request_models import ProposalCreateRequest
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
@@ -1175,12 +1179,40 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
     )
     _reset_tables(first_repository)
     created_at = datetime.now(timezone.utc)
+    realization = IdeaProposalRealizationRecord(
+        realization_id=f"ipr_{uuid.uuid4().hex[:12]}",
+        intake_id=f"ipi_{uuid.uuid4().hex[:12]}",
+        review_work_id=f"iarw_{uuid.uuid4().hex[:12]}",
+        review_work_status="PENDING_ADVISER_REVIEW",
+        tenant_id="tenant-private-bank-sg",
+        legal_entity_code="SGPB",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        idea_candidate_id="idea_candidate_concurrency",
+        conversion_intent_id="conversion_intent_concurrency",
+        source_evidence_fingerprint=f"sha256:{uuid.uuid4().hex * 2}",
+        current_status="ACCEPTED_FOR_REVIEW",
+        current_source_event_version=1,
+        created_at_utc=created_at,
+        updated_at_utc=created_at,
+    )
     record = IdeaProposalIntakeRecord(
         registry_key=f"{uuid.uuid4().hex * 2}:sha256:{uuid.uuid4().hex * 2}",
         request_fingerprint=f"sha256:{uuid.uuid4().hex[:12]}",
         response_json='{"intake_status":"ACCEPTED"}',
         created_at_utc=created_at,
         expires_at_utc=created_at + timedelta(hours=24),
+        realization=realization,
+        initial_outcome=IdeaProposalRealizationOutcomeRecord(
+            outcome_id=f"ipro_{uuid.uuid4().hex[:12]}",
+            realization_id=realization.realization_id,
+            source_event_version=1,
+            status="ACCEPTED_FOR_REVIEW",
+            reason_code="idea_conversion_accepted_for_adviser_review",
+            occurred_at_utc=created_at,
+            review_work_id=realization.review_work_id,
+            proposal_id=None,
+            terminal=False,
+        ),
     )
 
     barrier = Barrier(2)
@@ -1195,6 +1227,16 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
     assert [claim.replayed for claim in claims].count(False) == 1
     assert [claim.replayed for claim in claims].count(True) == 1
     assert claims[0].record == claims[1].record
+    with closing(first_repository._connect()) as connection:  # noqa: SLF001
+        realization_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM proposal_idea_review_realizations"
+        ).fetchone()
+        outcome_count = connection.execute(
+            "SELECT COUNT(*) AS count FROM proposal_idea_realization_outcomes"
+        ).fetchone()
+        connection.rollback()
+    assert realization_count["count"] == 1
+    assert outcome_count["count"] == 1
 
     with pytest.raises(
         ProposalIdempotencyConflictError,
@@ -1273,6 +1315,10 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
     assert first.portfolio_id == "PB_SG_GLOBAL_BAL_001"
     assert replay.portfolio_id == first.portfolio_id
     assert replay.idempotency_replay is True
+    assert replay.realization_id == first.realization_id
+    assert replay.review_work_id == first.review_work_id
+    assert replay.review_work_status == "PENDING_ADVISER_REVIEW"
+    assert replay.realization_status == "ACCEPTED_FOR_REVIEW"
     with pytest.raises(ProposalIdempotencyConflictError):
         process_idea_proposal_intake(
             request.model_copy(update={"portfolio_id": "PB_SG_INCOME_002"}),
@@ -1283,16 +1329,46 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
             received_at=created_at + timedelta(seconds=2),
         )
 
+    rejected = process_idea_proposal_intake(
+        request.model_copy(
+            update={
+                "idea_candidate_id": "idea-candidate-rejected-live",
+                "conversion_intent_id": "conversion-intent-rejected-live",
+                "intent_type": "CREATE_ADVISORY_PROPOSAL_DRAFT",
+            }
+        ),
+        correlation_id="corr-rejected-before-work",
+        idempotency_key="idea-intake-rejected-before-work",
+        principal=principal,
+        repository=second_repository,
+        received_at=created_at + timedelta(seconds=3),
+    )
+    assert rejected.realization_status == "REJECTED_BEFORE_WORK"
+    assert rejected.review_work_id is None
+    assert rejected.review_work_status is None
+
     with closing(first_repository._connect()) as connection:  # noqa: SLF001
         stored = connection.execute(
             "SELECT response_json::jsonb ->> 'portfolio_id' AS portfolio_id "
             "FROM proposal_idea_intakes"
+        ).fetchone()
+        durable_counts = connection.execute(
+            "SELECT "
+            "(SELECT COUNT(*) FROM proposal_idea_review_realizations) AS realizations, "
+            "(SELECT COUNT(*) FROM proposal_idea_realization_outcomes) AS outcomes, "
+            "(SELECT COUNT(*) FROM proposal_idea_review_realizations "
+            " WHERE review_work_id IS NOT NULL) AS review_work_items"
         ).fetchone()
         recovery = connection.execute(
             Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(encoding="utf-8")
         ).fetchone()
         connection.rollback()
     assert stored["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
+    assert durable_counts == {
+        "realizations": 2,
+        "outcomes": 2,
+        "review_work_items": 1,
+    }
     assert next(iter(recovery.values())) is True
 
 
@@ -1302,6 +1378,7 @@ def _reset_tables(repository: PostgresProposalRepository) -> None:
             "TRUNCATE TABLE proposal_memo_events, proposal_memo_idempotency, proposal_memos, "
             "proposal_approvals, proposal_workflow_events, proposal_versions, proposal_records, "
             "proposal_async_operations, proposal_idempotency, proposal_idea_intake_purge_events, "
+            "proposal_idea_realization_outcomes, proposal_idea_review_realizations, "
             "proposal_idea_intakes CASCADE"
         )
         connection.commit()

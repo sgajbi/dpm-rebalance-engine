@@ -25,11 +25,18 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["source_authority"] == "lotus-idea"
     assert contract["proposal_authority"] == "lotus-advise"
     assert contract["target_route"] == "POST /advisory/proposals/idea-intake"
+    assert contract["realization_read_route"] == (
+        "GET /advisory/proposals/idea-intake/{intake_id}/realization"
+    )
     assert contract["lifecycle_status"] == "implemented"
     assert contract["supportability_status"] == "not_certified"
     assert contract["route_existence_proven"] is True
     assert contract["runtime_intake_receipt_proven"] is True
     assert contract["durable_intake_idempotency_proven"] is True
+    assert contract["durable_adviser_review_work_proven"] is True
+    assert contract["initial_source_owned_outcome_proven"] is True
+    assert contract["proposal_linkage_outcomes_proven"] is False
+    assert contract["terminal_lifecycle_outcomes_proven"] is False
     assert contract["required_request_fields"] == [
         "source_system",
         "source_product",
@@ -64,13 +71,29 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     }
     assert contract["downstream_execution_proven"] is False
     assert contract["supported_feature_promoted"] is False
+    assert contract["realization_read_capability"] == "advisory.idea_proposal_realization.read"
+    assert contract["initial_realization_outcomes"] == {
+        "REVIEW_FOR_ADVISORY_PROPOSAL": {
+            "status": "ACCEPTED_FOR_REVIEW",
+            "review_work_status": "PENDING_ADVISER_REVIEW",
+            "source_event_version": 1,
+            "terminal": False,
+        },
+        "CREATE_ADVISORY_PROPOSAL_DRAFT": {
+            "status": "REJECTED_BEFORE_WORK",
+            "review_work_status": None,
+            "source_event_version": 1,
+            "terminal": True,
+        },
+    }
 
 
 def test_idea_proposal_intake_contract_keeps_non_proof_boundaries_and_blockers() -> None:
     contract = _contract()
     boundaries = " ".join(contract["non_proof_boundaries"])
 
-    assert "Proves a live executable intake receipt" in boundaries
+    assert "durable Advise adviser-review work item" in boundaries
+    assert "rejected before work" in boundaries
     assert "Does not grant suitability" in boundaries
     assert "Does not create orders" in boundaries
     assert "Does not promote a supported feature" in boundaries
@@ -82,7 +105,11 @@ def test_idea_proposal_intake_contract_keeps_non_proof_boundaries_and_blockers()
         "src/core/proposals/idea_intake_authority.py",
         "src/core/proposals/idea_proposal_intake.py",
         "src/core/proposals/idea_intake_persistence.py",
+        "src/core/proposals/idea_review_realization.py",
+        "src/core/proposals/idea_realization_read_model.py",
         "src/infrastructure/proposals/postgres_idea_intakes.py",
         "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
+        "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql",
+        "scripts/sql/verify_idea_intake_recovery.sql",
         "tests/unit/advisory/api/test_idea_proposal_intake_api.py",
     }.issubset(set(contract["evidence_refs"]))
