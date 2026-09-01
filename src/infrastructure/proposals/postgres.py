@@ -43,7 +43,6 @@ from src.infrastructure.proposals import (
 from src.infrastructure.proposals import (
     postgres_records as _records,
 )
-from src.infrastructure.proposals import postgres_transitions as _transitions
 from src.infrastructure.proposals import (
     postgres_versions as _versions,
 )
@@ -367,7 +366,7 @@ class PostgresProposalRepository:
         expected_current_state: Optional[ProposalWorkflowState] = None,
         expected_current_version_no: Optional[int] = None,
     ) -> ProposalTransitionResult:
-        return _transitions.transition_proposal(
+        return _workflow_events.transition_proposal(
             connect=self._connect,
             proposal=proposal,
             event=event,

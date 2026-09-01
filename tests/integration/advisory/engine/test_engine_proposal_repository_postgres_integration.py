@@ -2,6 +2,7 @@ import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
 
@@ -1158,16 +1159,16 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
     if not _DSN:
         pytest.skip("PROPOSAL_POSTGRES_INTEGRATION_DSN is required for live persistence proof")
 
-    first_repository = PostgresProposalRepository(dsn=_DSN)
-    second_repository = PostgresProposalRepository(dsn=_DSN)
+    first_repository, second_repository = (
+        PostgresProposalRepository(dsn=_DSN),
+        PostgresProposalRepository(dsn=_DSN),
+    )
     _reset_tables(first_repository)
-    now = datetime.now(timezone.utc)
-    registry_key = f"sha256:{uuid.uuid4().hex}:sha256:{uuid.uuid4().hex}"
     record = IdeaProposalIntakeRecord(
-        registry_key=registry_key,
+        registry_key=f"sha256:{uuid.uuid4().hex}:sha256:{uuid.uuid4().hex}",
         request_fingerprint=f"sha256:{uuid.uuid4().hex}",
         response_json='{"intake_status":"ACCEPTED"}',
-        created_at_utc=now,
+        created_at_utc=datetime.now(timezone.utc),
     )
 
     barrier = Barrier(2)
@@ -1183,17 +1184,13 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
     assert [claim.replayed for claim in claims].count(True) == 1
     assert claims[0].record == claims[1].record
 
-    conflicting_record = IdeaProposalIntakeRecord(
-        registry_key=registry_key,
-        request_fingerprint=f"sha256:{uuid.uuid4().hex}",
-        response_json='{"intake_status":"REJECTED"}',
-        created_at_utc=now + timedelta(seconds=1),
-    )
     with pytest.raises(
         ProposalIdempotencyConflictError,
         match="IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT",
     ):
-        second_repository.claim_idea_proposal_intake(conflicting_record)
+        second_repository.claim_idea_proposal_intake(
+            replace(record, request_fingerprint=f"sha256:{uuid.uuid4().hex}")
+        )
 
 
 def _reset_tables(repository: PostgresProposalRepository) -> None:

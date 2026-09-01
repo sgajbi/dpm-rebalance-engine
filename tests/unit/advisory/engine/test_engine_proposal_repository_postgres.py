@@ -1,5 +1,6 @@
 import sys
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from types import ModuleType
 
@@ -10,7 +11,11 @@ from src.core.advisor_cockpit.persistence import (
     CockpitAcknowledgementIdempotencyRecord,
     CockpitAcknowledgementRecord,
 )
-from src.core.proposals.exceptions import ProposalStateConflictError
+from src.core.proposals.exceptions import (
+    ProposalIdempotencyConflictError,
+    ProposalStateConflictError,
+)
+from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -54,6 +59,8 @@ class _FakeConnection:
         self.memo_events = {}
         self.cockpit_acknowledgements = {}
         self.cockpit_acknowledgement_idempotency = {}
+        self.idea_intakes = {}
+        self.suppress_idea_intake_read = False
         self.schema_migrations = {}
         self.executed_sql = []
         self.executed_args = []
@@ -131,6 +138,14 @@ class _FakeConnection:
                 "created_at": args[4],
             }
             return _FakeCursor()
+        if "INSERT INTO proposal_idea_intakes" in sql:
+            inserted = args[0] not in self.idea_intakes
+            fields = "registry_key", "request_fingerprint", "response_json", "created_at_utc"
+            self.idea_intakes.setdefault(args[0], dict(zip(fields, args, strict=True)))
+            return _FakeCursor({"registry_key": args[0]} if inserted else None)
+        if "FROM proposal_idea_intakes" in sql:
+            row = None if self.suppress_idea_intake_read else self.idea_intakes.get(args[0])
+            return _FakeCursor(row)
         if "FROM proposal_idempotency WHERE idempotency_key = %s" in sql:
             return _FakeCursor(self.idempotency.get(args[0]))
         if "INSERT INTO proposal_simulation_idempotency" in sql:
@@ -743,6 +758,21 @@ def test_postgres_repository_idempotency_roundtrip(monkeypatch):
     assert loaded.proposal_id == "pp_001"
     assert loaded.proposal_version_no == 1
     assert loaded.created_at == created_at
+
+
+def test_postgres_repository_claims_replays_and_conflicts_idea_intake(monkeypatch):
+    repository, connection = _build_repository(monkeypatch)
+    record = IdeaProposalIntakeRecord(
+        "scope:key", "sha256:request", '{"intake_status":"ACCEPTED"}', datetime.now(timezone.utc)
+    )
+
+    assert repository.claim_idea_proposal_intake(record).replayed is False
+    assert repository.claim_idea_proposal_intake(record).replayed is True
+    with pytest.raises(ProposalIdempotencyConflictError):
+        repository.claim_idea_proposal_intake(replace(record, request_fingerprint="sha256:changed"))
+    connection.suppress_idea_intake_read = True
+    with pytest.raises(RuntimeError, match="IDEA_PROPOSAL_INTAKE_PERSISTENCE_FAILED"):
+        repository.claim_idea_proposal_intake(replace(record, registry_key="scope:unreadable"))
 
 
 def test_postgres_repository_simulation_idempotency_roundtrip(monkeypatch):

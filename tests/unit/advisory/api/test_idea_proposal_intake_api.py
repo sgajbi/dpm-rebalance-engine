@@ -1,14 +1,11 @@
 from fastapi.testclient import TestClient
 
 from src.api.main import app
-from src.core.proposals.idea_intake_authority import IdeaProposalIntakePrincipal
 from src.core.proposals.idea_proposal_intake import (
     IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS,
     IdeaProposalIntakeRequest,
     acknowledge_idea_proposal_intake,
-    process_idea_proposal_intake,
 )
-from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
 
 
 def _payload() -> dict[str, object]:
@@ -151,41 +148,6 @@ def test_idea_proposal_intake_route_replays_same_idempotency_key_and_payload() -
     assert second_body["idempotency_replay"] is True
     assert second_body["outcome_reason_codes"] == ["idea_intake_receipt_replayed"]
     assert second_body["correlation_id"] == "corr-second"
-
-
-def test_idea_proposal_intake_replay_survives_application_service_reconstruction() -> None:
-    repository = InMemoryProposalRepository()
-    request = IdeaProposalIntakeRequest.model_validate(_payload())
-    principal = IdeaProposalIntakePrincipal(
-        actor_id="svc-lotus-idea",
-        role="SERVICE",
-        tenant_id="tenant-private-bank-sg",
-        legal_entity_code="SGPB",
-        correlation_id="corr-first",
-        service_identity="lotus-idea",
-        capabilities=frozenset({"advisory.idea_proposal_intake.accept"}),
-    )
-
-    first = process_idea_proposal_intake(
-        request,
-        correlation_id="corr-first",
-        idempotency_key="restart-safe-key",
-        principal=principal,
-        repository=repository,
-    )
-    second = process_idea_proposal_intake(
-        request,
-        correlation_id="corr-after-restart",
-        idempotency_key="restart-safe-key",
-        principal=principal,
-        repository=repository,
-    )
-
-    assert first.idempotency_replay is False
-    assert second.idempotency_replay is True
-    assert second.intake_id == first.intake_id
-    assert second.request_fingerprint == first.request_fingerprint
-    assert second.correlation_id == "corr-after-restart"
 
 
 def test_idea_proposal_intake_route_normalizes_idempotency_key() -> None:
