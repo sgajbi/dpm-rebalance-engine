@@ -60,8 +60,10 @@ It is responsible for:
   caller-supplied source-backed candidate portfolios
 - source-safe `lotus-idea` proposal intake that turns accepted conversion intent into one durable,
   portfolio-scoped adviser-review work item and an append-only Advise-owned initial outcome, with
-  trusted local/dev caller scope and exact replay, without inferring proposal creation, suitability,
-  client publication, or execution success
+  trusted local/dev caller scope and exact replay; an explicit compare-and-set reconciliation route
+  links an existing same-portfolio Advise proposal and emits bounded source-owned terminal outcomes
+  without inferring suitability, client publication, orders, fills, settlement, or execution
+  success from transport
 
 It does not own discretionary management workflows, portfolio source data, risk methodology,
 performance methodology, reporting ownership, or downstream execution ownership.
@@ -184,7 +186,7 @@ Boundary rules that matter:
    `lotus-platform/thought-leadership/linkedin/drafts/LI-2026-05-28-043-demo-proof-should-show-the-boundary.md`.
    Current proof capture also validates ready `/platform/capabilities` runtime evidence and blocks
    stale proof reuse when `advisory.bank_demo_proof` or `advisory_bank_demo_proof` is missing.
-9. The `lotus-idea` advisory proposal intake and initial realization boundary is implemented at
+9. The `lotus-idea` advisory proposal intake and realization boundary is implemented at
    `POST /advisory/proposals/idea-intake` with contract evidence under
    `contracts/idea-proposal-intake/`. It proves an executable handoff with trusted
    local/dev caller headers, durable restart-safe v1.6 idempotency conflict detection, exact-payload replay, and
@@ -200,9 +202,15 @@ Boundary rules that matter:
    claims are purged in target-prioritized batches of at most 128 before a new claim unless an
    authorized records process has placed them on legal hold. Each deletion writes sanitized,
    append-only purge evidence in the same database transaction. Purging a replay claim never
-   deletes the durable review work or outcome history. This boundary does not create an advisory
-   proposal record, grant suitability authority, authorize client publication, create orders,
-   certify a data product, or claim a terminal downstream business outcome.
+   deletes the durable review work or outcome history. An adviser-created same-portfolio proposal
+   is explicitly linked through `POST
+   /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` using
+   compare-and-set source-event progression. Advise emits `PROPOSAL_LINKED` and only maps
+   authoritative terminal proposal states to bounded advisory outcomes. The route does not
+   auto-create proposals, grant suitability authority, authorize client publication, create or
+   independently prove orders/fills/settlement, certify a data product, or convert transport
+   success into a business outcome. See
+   [Idea Conversion Realization](docs/architecture/idea-conversion-realization.md).
 
 ## Architecture At A Glance
 
@@ -215,8 +223,9 @@ Main runtime surfaces come from [src/api/main.py](src/api/main.py):
   create, version, transition, approval, delivery, execution, async, and support routes under
   `/advisory/proposals/*`
   plus source-safe `POST /advisory/proposals/idea-intake` and scoped
-  `GET /advisory/proposals/idea-intake/{intake_id}/realization` routes for `lotus-idea`
-  conversion-intent handoff and Advise-owned adviser-review realization
+  `GET /advisory/proposals/idea-intake/{intake_id}/realization` plus explicit
+  `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` routes for
+  `lotus-idea` conversion-intent handoff, proposal linkage, and Advise-owned outcomes
 - advisory workspace
   iterative draft, save, resume, compare, rationale, and lifecycle handoff under
   `/advisory/workspaces/*`

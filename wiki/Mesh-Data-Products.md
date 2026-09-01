@@ -33,10 +33,12 @@ not promoted here.
 - Lotus Idea intake realization: `POST /advisory/proposals/idea-intake` accepts source-safe
   conversion intent and creates deterministic durable adviser-review work plus an initial
   Advise-owned outcome when review is supported. Scoped consumers read the realization through
-  `GET /advisory/proposals/idea-intake/{intake_id}/realization`. Supportability remains
-  `not_certified`; production IdP binding, proposal linkage, later/terminal outcome transitions,
-  suitability, client publication, and supported-feature promotion remain blocked until certified
-  runtime evidence exists.
+  `GET /advisory/proposals/idea-intake/{intake_id}/realization`. Explicit reconciliation through
+  `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` links one
+  existing same-portfolio proposal and emits bounded terminal outcomes only from authoritative
+  Advise proposal state. Supportability remains `not_certified`; production IdP binding,
+  cross-repository Idea consumer proof, suitability, client publication, and supported-feature
+  promotion remain blocked until certified runtime evidence exists.
 
 - Product ID: `lotus-advise:TacticalHouseViewAffectedCohort:v1`
 - Product role: source-owned affected-cohort evaluation for bank-authored tactical house-view instructions and caller-supplied source-backed candidate portfolios

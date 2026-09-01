@@ -437,9 +437,21 @@ For a pre-v1.6 receipt, reconcile that evidence explicitly and then submit the g
 request with a new idempotency key; same-key cross-version replay intentionally conflicts. After
 restore, `scripts/sql/verify_idea_intake_recovery.sql` also proves every current receipt links to the
 same tenant, legal entity, portfolio, intent, candidate, evidence fingerprint, realization, review
-work, and current append-only outcome version. Quarantine scope mismatches, missing initial
-outcomes, duplicate event versions, or a review work item attached to `REJECTED_BEFORE_WORK`; do not
-reconstruct those facts from transport logs.
+work, proposal identity where linked, and current append-only outcome version. The verifier accepts
+the retained legacy receipt shapes while requiring current proposal/outcome identities to match
+their deterministic hashes and the proposal record's portfolio. Quarantine scope mismatches,
+missing outcomes, non-contiguous event versions, orphan or competing proposal links, contradictory
+terminal posture, or a review work item attached to `REJECTED_BEFORE_WORK`; do not reconstruct
+those facts from transport logs.
+
+Proposal reconciliation uses an expected source-event version. HTTP 409 means another actor or
+reconciler advanced the realization or attempted to link a different proposal. Read the scoped
+realization again before retrying; do not overwrite or delete outcome history. HTTP 404 means the
+trusted scope, realization, or proposal relationship cannot be disclosed. Verify tenant,
+legal-entity, authorized portfolio, and proposal portfolio from authoritative records rather than
+relaxing the scope check. A successful command that returns `PROPOSAL_LINKED` is not a terminal
+business outcome. A terminal outcome is valid only when the referenced Advise proposal carries the
+corresponding terminal workflow state.
 
 ## Proposal Lifecycle Integrity
 

@@ -35,6 +35,7 @@ These endpoints accept normalized advisory input contracts and require `Idempote
 - `POST /advisory/proposals`
 - `POST /advisory/proposals/idea-intake`
 - `GET /advisory/proposals/idea-intake/{intake_id}/realization`
+- `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation`
 - `GET /advisory/proposals`
 - `GET /advisory/proposals/{proposal_id}`
 - `GET /advisory/proposals/{proposal_id}/versions/{version_no}`
@@ -84,9 +85,14 @@ one deterministic durable work item in `PENDING_ADVISER_REVIEW` plus an append-o
 `GET /advisory/proposals/idea-intake/{intake_id}/realization` returns this Advise-owned state only
 when the trusted reader capability and tenant, legal-entity, and producer-authorized portfolio scope
 all match; mismatched scope is not disclosed. The realization survives expiry or purge of the
-24-hour transport replay claim. It does not create or link a proposal, run suitability, grant
-advisory approval, create orders, authorize client publication, bind production IdP claims, certify
-a data product, or infer terminal downstream success.
+24-hour transport replay claim. `POST
+/advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` requires the write
+capability, exact trusted scope, an existing same-portfolio proposal, and the expected source-event
+version. It links one proposal once, appends `PROPOSAL_LINKED`, and emits a terminal advisory
+outcome only from authoritative Advise proposal state. Replays are idempotent and competing links
+or stale progression return HTTP 409. It does not auto-create a proposal, run suitability, grant
+advisory approval, create or independently prove orders/fills/settlement, authorize client
+publication, bind production IdP claims, certify a data product, or infer success from transport.
 
 ## Advisory Operations And Support
 

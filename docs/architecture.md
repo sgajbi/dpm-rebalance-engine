@@ -15,6 +15,14 @@ adapter boundaries.
 - `scripts` owns repo-governance, quality, OpenAPI, dependency, migration, and runtime validation
   automation.
 
+## Idea Conversion Realization Boundary
+
+The Idea integration follows the normal API → application/domain → repository → infrastructure
+flow. Intake creates durable adviser-review work; a separate explicit command links an existing
+same-portfolio proposal and appends only Advise-owned proposal outcomes. The design, lifecycle
+diagram, concurrency rules, recovery posture, and non-claim boundaries are documented in
+[Idea Conversion Realization](architecture/idea-conversion-realization.md).
+
 ## Advisory Workspace Application Boundary
 
 The advisory workspace routes are thin HTTP adapters over `WorkspaceApplicationService`.
