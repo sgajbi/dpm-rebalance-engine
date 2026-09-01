@@ -1,9 +1,16 @@
 from __future__ import annotations
 
-from typing import Annotated
-
-from fastapi import Header
-
+from src.api.proposals.idea_intake_parameters import (
+    IdeaProposalActorHeader,
+    IdeaProposalAuthorizationHeader,
+    IdeaProposalCapabilitiesHeader,
+    IdeaProposalLegalEntityHeader,
+    IdeaProposalPrincipalCorrelationHeader,
+    IdeaProposalPrincipalStatusHeader,
+    IdeaProposalRoleHeader,
+    IdeaProposalServiceIdentityHeader,
+    IdeaProposalTenantHeader,
+)
 from src.api.proposals.principal import (
     ProposalPrincipalContext,
     ProposalPrincipalErrors,
@@ -37,66 +44,41 @@ _REALIZATION_READER_ERRORS = ProposalPrincipalErrors(
 )
 
 
-def require_idea_proposal_intake_principal(
-    x_actor_id: Annotated[str | None, Header(alias="X-Actor-Id")] = None,
-    x_role: Annotated[str | None, Header(alias="X-Role")] = None,
-    x_tenant_id: Annotated[str | None, Header(alias="X-Tenant-Id")] = None,
-    x_legal_entity_code: Annotated[str | None, Header(alias="X-Legal-Entity-Code")] = None,
-    x_correlation_id: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
-    x_service_identity: Annotated[str | None, Header(alias="X-Service-Identity")] = None,
-    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
-    x_capabilities: Annotated[str | None, Header(alias="X-Capabilities")] = None,
-    x_principal_status: Annotated[str | None, Header(alias="X-Principal-Status")] = None,
-) -> IdeaProposalIntakePrincipal:
-    return resolve_proposal_principal(
-        required_capability=IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
-        authorized_roles=IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
-        errors=_PRINCIPAL_ERRORS,
-        principal_factory=_build_idea_proposal_intake_principal,
-        headers=ProposalPrincipalHeaders(
-            actor_id=x_actor_id,
-            role=x_role,
-            tenant_id=x_tenant_id,
-            legal_entity_code=x_legal_entity_code,
-            correlation_id=x_correlation_id,
-            service_identity=x_service_identity,
-            authorization=authorization,
-            capabilities=x_capabilities,
-            principal_status=x_principal_status,
-        ),
-        correlation_id_fallback="route-correlation-pending",
-    )
+class _IdeaProposalPrincipalDependency:
+    def __init__(self, *, required_capability: str, errors: ProposalPrincipalErrors) -> None:
+        self._required_capability = required_capability
+        self._errors = errors
 
-
-def require_idea_proposal_realization_reader(
-    x_actor_id: Annotated[str | None, Header(alias="X-Actor-Id")] = None,
-    x_role: Annotated[str | None, Header(alias="X-Role")] = None,
-    x_tenant_id: Annotated[str | None, Header(alias="X-Tenant-Id")] = None,
-    x_legal_entity_code: Annotated[str | None, Header(alias="X-Legal-Entity-Code")] = None,
-    x_correlation_id: Annotated[str | None, Header(alias="X-Correlation-Id")] = None,
-    x_service_identity: Annotated[str | None, Header(alias="X-Service-Identity")] = None,
-    authorization: Annotated[str | None, Header(alias="Authorization")] = None,
-    x_capabilities: Annotated[str | None, Header(alias="X-Capabilities")] = None,
-    x_principal_status: Annotated[str | None, Header(alias="X-Principal-Status")] = None,
-) -> IdeaProposalIntakePrincipal:
-    return resolve_proposal_principal(
-        required_capability=IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY,
-        authorized_roles=IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
-        errors=_REALIZATION_READER_ERRORS,
-        principal_factory=_build_idea_proposal_intake_principal,
-        headers=ProposalPrincipalHeaders(
-            actor_id=x_actor_id,
-            role=x_role,
-            tenant_id=x_tenant_id,
-            legal_entity_code=x_legal_entity_code,
-            correlation_id=x_correlation_id,
-            service_identity=x_service_identity,
-            authorization=authorization,
-            capabilities=x_capabilities,
-            principal_status=x_principal_status,
-        ),
-        correlation_id_fallback="route-correlation-pending",
-    )
+    def __call__(
+        self,
+        x_actor_id: IdeaProposalActorHeader = None,
+        x_role: IdeaProposalRoleHeader = None,
+        x_tenant_id: IdeaProposalTenantHeader = None,
+        x_legal_entity_code: IdeaProposalLegalEntityHeader = None,
+        x_correlation_id: IdeaProposalPrincipalCorrelationHeader = None,
+        x_service_identity: IdeaProposalServiceIdentityHeader = None,
+        authorization: IdeaProposalAuthorizationHeader = None,
+        x_capabilities: IdeaProposalCapabilitiesHeader = None,
+        x_principal_status: IdeaProposalPrincipalStatusHeader = None,
+    ) -> IdeaProposalIntakePrincipal:
+        return resolve_proposal_principal(
+            required_capability=self._required_capability,
+            authorized_roles=IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
+            errors=self._errors,
+            principal_factory=_build_idea_proposal_intake_principal,
+            headers=ProposalPrincipalHeaders(
+                actor_id=x_actor_id,
+                role=x_role,
+                tenant_id=x_tenant_id,
+                legal_entity_code=x_legal_entity_code,
+                correlation_id=x_correlation_id,
+                service_identity=x_service_identity,
+                authorization=authorization,
+                capabilities=x_capabilities,
+                principal_status=x_principal_status,
+            ),
+            correlation_id_fallback="route-correlation-pending",
+        )
 
 
 def _build_idea_proposal_intake_principal(
@@ -111,6 +93,16 @@ def _build_idea_proposal_intake_principal(
         service_identity=context.service_identity,
         capabilities=context.capabilities,
     )
+
+
+require_idea_proposal_intake_principal = _IdeaProposalPrincipalDependency(
+    required_capability=IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
+    errors=_PRINCIPAL_ERRORS,
+)
+require_idea_proposal_realization_reader = _IdeaProposalPrincipalDependency(
+    required_capability=IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY,
+    errors=_REALIZATION_READER_ERRORS,
+)
 
 
 __all__ = [

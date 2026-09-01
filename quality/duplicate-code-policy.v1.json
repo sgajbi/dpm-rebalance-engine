@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.duplicate-code-policy.v1",
-  "policy_version": "lotus-advise-duplicate-code.v2+5fa076933c75",
+  "policy_version": "lotus-advise-duplicate-code.v2+7b7c4719e403",
   "tool": "jscpd",
   "tool_version": "5.0.16",
   "mode": "strict",
@@ -17,7 +17,7 @@
   "max_new_findings": 0,
   "baseline": {
     "path": "quality/duplicate-code-baseline.v1.json",
-    "sha256": "7273544725ba7e0c464fd4fa6900a50e3d6930d43a69d3ad206075c858a189bb",
+    "sha256": "7bfea8fca2ba3c16e952643622b7a6357a3a5ff882614137f84891e1b34723d8",
     "owner": "lotus-advise-quality",
     "reason": "Reviewed duplicate inventory after shared advisory context ownership; new clone fingerprints must fail closed.",
     "expires_on": "2027-08-23"

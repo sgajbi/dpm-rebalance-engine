@@ -44,3 +44,13 @@ IdeaProposalRealizationPortfolioHeader = Annotated[
         examples=["PB_SG_GLOBAL_BAL_001"],
     ),
 ]
+
+IdeaProposalActorHeader = Annotated[str | None, Header(alias="X-Actor-Id")]
+IdeaProposalRoleHeader = Annotated[str | None, Header(alias="X-Role")]
+IdeaProposalTenantHeader = Annotated[str | None, Header(alias="X-Tenant-Id")]
+IdeaProposalLegalEntityHeader = Annotated[str | None, Header(alias="X-Legal-Entity-Code")]
+IdeaProposalPrincipalCorrelationHeader = Annotated[str | None, Header(alias="X-Correlation-Id")]
+IdeaProposalServiceIdentityHeader = Annotated[str | None, Header(alias="X-Service-Identity")]
+IdeaProposalAuthorizationHeader = Annotated[str | None, Header(alias="Authorization")]
+IdeaProposalCapabilitiesHeader = Annotated[str | None, Header(alias="X-Capabilities")]
+IdeaProposalPrincipalStatusHeader = Annotated[str | None, Header(alias="X-Principal-Status")]
