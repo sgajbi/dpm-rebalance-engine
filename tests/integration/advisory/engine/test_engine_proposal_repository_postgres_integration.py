@@ -1453,10 +1453,48 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
         connection.execute(
             """
             UPDATE proposal_idea_review_realizations
+            SET idea_candidate_id = 'idea-candidate-swapped'
+            WHERE realization_id = %s
+            """,
+            (first.realization_id,),
+        )
+        contradictory_candidate_recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_review_realizations
             SET idea_candidate_id = %s
             WHERE realization_id = %s
             """,
             (request.idea_candidate_id, first.realization_id),
+        )
+        connection.execute(
+            """
+            UPDATE proposal_idea_realization_outcomes
+            SET outcome_id = 'ipro_000000000000'
+            WHERE realization_id = %s
+              AND source_event_version = 1
+            """,
+            (first.realization_id,),
+        )
+        contradictory_outcome_id_recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_realization_outcomes
+            SET outcome_id = %s
+            WHERE realization_id = %s
+              AND source_event_version = 1
+            """,
+            (
+                first_repository.get_idea_proposal_realization(
+                    tenant_id=principal.tenant_id,
+                    legal_entity_code=principal.legal_entity_code,
+                    portfolio_id=request.portfolio_id,
+                    intake_id=first.intake_id,
+                )
+                .outcomes[0]
+                .outcome_id,
+                first.realization_id,
+            ),
         )
         connection.execute(
             """
@@ -1536,6 +1574,8 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
     assert next(iter(contradictory_receipt_recovery.values())) is False
     assert next(iter(contradictory_conversion_recovery.values())) is False
     assert next(iter(blank_candidate_recovery.values())) is False
+    assert next(iter(contradictory_candidate_recovery.values())) is False
+    assert next(iter(contradictory_outcome_id_recovery.values())) is False
     assert next(iter(contradictory_outcome_recovery.values())) is False
     assert next(iter(legacy_recovery.values())) is True
     assert next(iter(corrupted_legacy_recovery.values())) is False
