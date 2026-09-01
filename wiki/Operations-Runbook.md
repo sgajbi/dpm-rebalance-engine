@@ -429,6 +429,11 @@ An authorized records process may set `legal_hold` when operational intake evide
 an investigation or preservation order. Held rows continue to replay or conflict after expiry and
 must not be manually deleted. The read-only recovery check validates every required/fixed receipt
 boundary plus expiry, legal-hold, and purge-audit invariants after restore.
+The check also requires a nonblank bounded `portfolio_id` in every restored receipt. A missing or
+changed portfolio scope is not repairable by inference: quarantine the affected claim and trace it
+to the producer-owned Idea candidate evidence before any advisory review-work realization.
+For a pre-v1.6 receipt, reconcile that evidence explicitly and then submit the governed scoped
+request with a new idempotency key; same-key cross-version replay intentionally conflicts.
 
 ## Proposal Lifecycle Integrity
 

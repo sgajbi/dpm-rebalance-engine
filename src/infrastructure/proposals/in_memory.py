@@ -46,6 +46,17 @@ from src.infrastructure.proposals.in_memory_query import (
 )
 
 
+def _purge_expired_idea_proposal_intakes(
+    records: dict[str, IdeaProposalIntakeRecord],
+    *,
+    as_of: datetime,
+) -> None:
+    """Remove expired intake claims unless a legal hold protects them."""
+    for key, stored in tuple(records.items()):
+        if not stored.legal_hold and stored.expires_at_utc <= as_of:
+            del records[key]
+
+
 class InMemoryProposalRepository(ProposalRepository):
     def __init__(self) -> None:
         self._lock = Lock()
@@ -72,9 +83,10 @@ class InMemoryProposalRepository(ProposalRepository):
         self, record: IdeaProposalIntakeRecord
     ) -> IdeaProposalIntakeClaim:
         with self._lock:
-            for key, stored in tuple(self._idea_proposal_intakes.items()):
-                if not stored.legal_hold and stored.expires_at_utc <= record.created_at_utc:
-                    del self._idea_proposal_intakes[key]
+            _purge_expired_idea_proposal_intakes(
+                self._idea_proposal_intakes,
+                as_of=record.created_at_utc,
+            )
             existing = self._idea_proposal_intakes.get(record.registry_key)
             if existing is None:
                 stored = copy_record(record)

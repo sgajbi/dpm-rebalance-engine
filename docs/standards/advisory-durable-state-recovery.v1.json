@@ -54,7 +54,7 @@
         "automatic_purge": "target_prioritized_batches_of_128_before_each_new_intake_claim",
         "purge_audit": "same_transaction_append_only_sanitized_evidence",
         "legal_hold_behavior": "expired_claims_remain_replayable_and_conflict-protected_while_held",
-        "restore_integrity": "expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
+        "restore_integrity": "receipt_requires_nonblank_bounded_portfolio_id_expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
       },
       "restore_checks": [
         {

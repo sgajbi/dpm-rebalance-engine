@@ -20,6 +20,7 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["repository"] == "lotus-advise"
     assert contract["approved_producer_repository"] == "lotus-idea"
     assert contract["approved_producer_product"] == "lotus-idea:IdeaCandidate:v1"
+    assert contract["approved_producer_wire_contract_version"] == "1.6.0"
     assert contract["owned_product"] == "lotus-advise:AdvisoryProposalLifecycleRecord:v1"
     assert contract["source_authority"] == "lotus-idea"
     assert contract["proposal_authority"] == "lotus-advise"
@@ -29,6 +30,29 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["route_existence_proven"] is True
     assert contract["runtime_intake_receipt_proven"] is True
     assert contract["durable_intake_idempotency_proven"] is True
+    assert contract["required_request_fields"] == [
+        "source_system",
+        "source_product",
+        "idea_candidate_id",
+        "conversion_intent_id",
+        "intent_type",
+        "portfolio_id",
+        "source_refs",
+    ]
+    assert contract["portfolio_scope"] == {
+        "required": True,
+        "source": "producer_authorized_governed_candidate_scope",
+        "inference_from_opaque_identifiers_forbidden": True,
+        "included_in_request_fingerprint": True,
+        "included_in_intake_identity": True,
+        "persisted_in_durable_receipt": True,
+        "production_idp_entitlement_validation_proven": False,
+        "pre_scope_contract_transition": {
+            "prior_wire_contract_version": "1.5.0",
+            "same_key_behavior": "conflict_fail_closed",
+            "operator_action": "reconcile_prior_receipt_then_use_new_idempotency_key",
+        },
+    }
     assert contract["idempotency_retention"] == {
         "replay_window_hours": 24,
         "expiry_boundary": "created_at_utc_plus_24_hours",

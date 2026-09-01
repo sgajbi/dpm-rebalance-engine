@@ -3,6 +3,7 @@
   "repository": "lotus-advise",
   "approved_producer_repository": "lotus-idea",
   "approved_producer_product": "lotus-idea:IdeaCandidate:v1",
+  "approved_producer_wire_contract_version": "1.6.0",
   "owned_product": "lotus-advise:AdvisoryProposalLifecycleRecord:v1",
   "source_authority": "lotus-idea",
   "proposal_authority": "lotus-advise",
@@ -12,6 +13,29 @@
   "route_existence_proven": true,
   "runtime_intake_receipt_proven": true,
   "durable_intake_idempotency_proven": true,
+  "required_request_fields": [
+    "source_system",
+    "source_product",
+    "idea_candidate_id",
+    "conversion_intent_id",
+    "intent_type",
+    "portfolio_id",
+    "source_refs"
+  ],
+  "portfolio_scope": {
+    "required": true,
+    "source": "producer_authorized_governed_candidate_scope",
+    "inference_from_opaque_identifiers_forbidden": true,
+    "included_in_request_fingerprint": true,
+    "included_in_intake_identity": true,
+    "persisted_in_durable_receipt": true,
+    "production_idp_entitlement_validation_proven": false,
+    "pre_scope_contract_transition": {
+      "prior_wire_contract_version": "1.5.0",
+      "same_key_behavior": "conflict_fail_closed",
+      "operator_action": "reconcile_prior_receipt_then_use_new_idempotency_key"
+    }
+  },
   "idempotency_retention": {
     "replay_window_hours": 24,
     "expiry_boundary": "created_at_utc_plus_24_hours",

@@ -15,6 +15,7 @@ def _payload() -> dict[str, object]:
         "idea_candidate_id": "idea_candidate_001",
         "conversion_intent_id": "conversion_intent_001",
         "intent_type": "REVIEW_FOR_ADVISORY_PROPOSAL",
+        "portfolio_id": "PB_SG_GLOBAL_BAL_001",
         "source_refs": [
             {
                 "source_system": "lotus-idea",
@@ -63,6 +64,7 @@ def test_idea_proposal_intake_route_returns_source_safe_non_proposal_posture() -
     assert body["source_authority"] == "lotus-idea"
     assert body["proposal_authority"] == "lotus-advise"
     assert body["target_product"] == "lotus-advise:AdvisoryProposalLifecycleRecord:v1"
+    assert body["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
     assert body["route_existence_proven"] is True
     assert body["intake_receipt_accepted"] is True
     assert body["idempotency_replay"] is False
@@ -146,6 +148,7 @@ def test_idea_proposal_intake_route_replays_same_idempotency_key_and_payload() -
     assert second_body["intake_id"] == first_body["intake_id"]
     assert second_body["intake_status"] == "ACCEPTED_REPLAYED"
     assert second_body["idempotency_replay"] is True
+    assert second_body["portfolio_id"] == first_body["portfolio_id"]
     assert second_body["outcome_reason_codes"] == ["idea_intake_receipt_replayed"]
     assert second_body["correlation_id"] == "corr-second"
 
@@ -191,6 +194,26 @@ def test_idea_proposal_intake_route_rejects_invalid_idempotency_keys() -> None:
     assert [response.status_code for response in responses] == [422, 422]
 
 
+def test_idea_proposal_intake_route_requires_canonical_portfolio_scope() -> None:
+    missing = _payload()
+    missing.pop("portfolio_id")
+    blank = {**_payload(), "portfolio_id": "   "}
+    oversized = {**_payload(), "portfolio_id": "p" * 161}
+    control_bearing = {**_payload(), "portfolio_id": "PB_SG_GLOBAL\nBAL_001"}
+
+    with TestClient(app) as client:
+        responses = [
+            client.post(
+                "/advisory/proposals/idea-intake",
+                json=payload,
+                headers=_headers(idempotency_key=f"portfolio-validation-{index}"),
+            )
+            for index, payload in enumerate((missing, blank, oversized, control_bearing))
+        ]
+
+    assert [response.status_code for response in responses] == [422, 422, 422, 422]
+
+
 def test_idea_proposal_intake_idempotency_is_namespaced_by_trusted_scope() -> None:
     with TestClient(app) as client:
         first = client.post(
@@ -234,6 +257,27 @@ def test_idea_proposal_intake_route_rejects_conflicting_idempotency_replay() -> 
     assert first.status_code == 202
     assert second.status_code == 409
     assert second.json()["detail"] == "IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT"
+
+
+def test_idea_proposal_intake_route_conflicts_on_changed_portfolio_scope() -> None:
+    changed_scope = {**_payload(), "portfolio_id": "PB_SG_INCOME_002"}
+
+    with TestClient(app) as client:
+        first = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-intake-idem-portfolio-conflict"),
+        )
+        conflict = client.post(
+            "/advisory/proposals/idea-intake",
+            json=changed_scope,
+            headers=_headers(idempotency_key="idea-intake-idem-portfolio-conflict"),
+        )
+
+    assert first.status_code == 202
+    assert first.json()["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"] == "IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT"
 
 
 def test_idea_proposal_intake_route_returns_bounded_rejection_without_proposal_creation() -> None:
@@ -325,6 +369,20 @@ def test_idea_proposal_intake_id_changes_when_source_evidence_changes() -> None:
     first = acknowledge_idea_proposal_intake(original, correlation_id="corr-a")
     second = acknowledge_idea_proposal_intake(changed, correlation_id="corr-a")
 
+    assert first.intake_id != second.intake_id
+
+
+def test_idea_proposal_intake_id_changes_with_portfolio_scope() -> None:
+    original = IdeaProposalIntakeRequest.model_validate(_payload())
+    changed = IdeaProposalIntakeRequest.model_validate(
+        {**_payload(), "portfolio_id": "PB_SG_INCOME_002"}
+    )
+
+    first = acknowledge_idea_proposal_intake(original, correlation_id="corr-a")
+    second = acknowledge_idea_proposal_intake(changed, correlation_id="corr-a")
+
+    assert first.portfolio_id == "PB_SG_GLOBAL_BAL_001"
+    assert second.portfolio_id == "PB_SG_INCOME_002"
     assert first.intake_id != second.intake_id
 
 

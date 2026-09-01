@@ -83,8 +83,8 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
         == "expired_claims_remain_replayable_and_conflict-protected_while_held"
     )
     assert (
-        retention["restore_integrity"]
-        == "expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
+        retention["restore_integrity"] == "receipt_requires_nonblank_bounded_portfolio_id_"
+        "expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
     )
     restore_checks = {check["check_key"]: check for check in proposal_namespace["restore_checks"]}
     idea_check = restore_checks["idea_intake_restored_claim_integrity"]
@@ -98,6 +98,7 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
         marker in recovery_sql
         for marker in (
             "proposal_record_created",
+            "portfolio_id",
             "certification_blockers",
             "proposal_idea_intake_purge_events",
         )

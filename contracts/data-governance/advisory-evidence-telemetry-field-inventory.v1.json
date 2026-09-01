@@ -391,7 +391,7 @@
     },
     {
       "field_path": "proposal_idea_intakes.response_json",
-      "purpose": "Persist the bounded Advise receipt needed for deterministic replay, including source-safe lineage, trusted scope and explicit non-certification posture.",
+      "purpose": "Persist the bounded Advise receipt needed for deterministic replay, including producer-authorized portfolio identity, source-safe lineage, trusted scope and explicit non-certification posture.",
       "classification": "OPERATIONAL_AUDIT",
       "owner": "idea-proposal-intake",
       "allowed_consumers": ["authorized-advisor", "operator", "support-with-case", "compliance"],
