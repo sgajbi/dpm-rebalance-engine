@@ -122,6 +122,16 @@ WITH recovered_claims AS (
                           = response_json::jsonb -> 'trusted_scope' ->> 'legal_entity_code'
                       AND realization.portfolio_id
                           = response_json::jsonb ->> 'portfolio_id'
+                      AND realization.review_work_id IS NOT DISTINCT FROM
+                          response_json::jsonb ->> 'review_work_id'
+                      AND realization.review_work_status IS NOT DISTINCT FROM
+                          response_json::jsonb ->> 'review_work_status'
+                      AND realization.current_status
+                          = response_json::jsonb ->> 'realization_status'
+                      AND realization.current_source_event_version
+                          = (response_json::jsonb ->> 'source_event_version')::integer
+                      AND realization.source_evidence_fingerprint
+                          = response_json::jsonb ->> 'source_evidence_fingerprint'
                 )
             )
         )
@@ -148,15 +158,40 @@ WITH recovered_claims AS (
         realization_id ~ '^ipr_[0-9a-f]{12}$'
         AND intake_id ~ '^ipi_[0-9a-f]{12}$'
         AND source_evidence_fingerprint ~ '^sha256:[0-9a-f]{64}$'
+        AND idea_candidate_id = btrim(idea_candidate_id) AND idea_candidate_id <> ''
+        AND idea_candidate_id !~ '[[:cntrl:]]'
+        AND conversion_intent_id = btrim(conversion_intent_id)
+        AND conversion_intent_id <> ''
+        AND conversion_intent_id !~ '[[:cntrl:]]'
         AND tenant_id = btrim(tenant_id) AND tenant_id <> ''
         AND legal_entity_code = btrim(legal_entity_code) AND legal_entity_code <> ''
         AND portfolio_id = btrim(portfolio_id) AND portfolio_id <> ''
         AND current_source_event_version = 1
+        AND realization_id = 'ipr_' || left(
+            encode(
+                sha256(
+                    convert_to(
+                        tenant_id || '|' || legal_entity_code || '|' || portfolio_id || '|'
+                            || conversion_intent_id,
+                        'UTF8'
+                    )
+                ),
+                'hex'
+            ),
+            12
+        )
         AND updated_at_utc >= created_at_utc
         AND (
             (
                 current_status = 'ACCEPTED_FOR_REVIEW'
                 AND review_work_id ~ '^iarw_[0-9a-f]{12}$'
+                AND review_work_id = 'iarw_' || left(
+                    encode(
+                        sha256(convert_to(realization_id || '|review-work', 'UTF8')),
+                        'hex'
+                    ),
+                    12
+                )
                 AND review_work_status = 'PENDING_ADVISER_REVIEW'
             ) OR (
                 current_status = 'REJECTED_BEFORE_WORK'
