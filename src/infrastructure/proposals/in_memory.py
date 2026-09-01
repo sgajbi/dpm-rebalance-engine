@@ -19,6 +19,7 @@ from src.core.proposals.idea_review_realization import (
     IdeaProposalRealizationHistoryRecord,
     IdeaProposalRealizationOutcomeRecord,
     IdeaProposalRealizationRecord,
+    validate_realization_progression,
 )
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
@@ -130,19 +131,21 @@ def _validate_idea_realization_progression(
     outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...],
     proposal: ProposalRecord | None,
 ) -> None:
-    if current is None or current.current_source_event_version != expected_source_event_version:
+    if current is None:
         raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_VERSION_CONFLICT")
-    if realization.current_source_event_version != expected_source_event_version + len(outcomes):
-        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
-    if proposal is None or proposal.portfolio_id != realization.portfolio_id:
+    validate_realization_progression(
+        current_source_event_version=current.current_source_event_version,
+        expected_source_event_version=expected_source_event_version,
+        realization=realization,
+        outcomes=outcomes,
+    )
+    if proposal is None:
         raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROPOSAL_INVALID")
-    if proposal.created_at < realization.created_at_utc:
+    if (
+        proposal.portfolio_id != realization.portfolio_id
+        or proposal.created_at < realization.created_at_utc
+    ):
         raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROPOSAL_INVALID")
-    for offset, outcome in enumerate(outcomes, start=1):
-        if outcome.source_event_version != expected_source_event_version + offset:
-            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
-        if outcome.realization_id != realization.realization_id:
-            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
 
 
 class InMemoryProposalRepository(ProposalRepository):

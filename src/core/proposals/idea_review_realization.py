@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
+from src.core.proposals.exceptions import ProposalStateConflictError
+
 IdeaProposalRealizationStatus = Literal[
     "ACCEPTED_FOR_REVIEW",
     "PROPOSAL_LINKED",
@@ -62,3 +64,40 @@ class IdeaProposalRealizationHistoryRecord:
 
     realization: IdeaProposalRealizationRecord
     outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...]
+
+
+def validate_realization_progression(
+    *,
+    current_source_event_version: int,
+    expected_source_event_version: int,
+    realization: IdeaProposalRealizationRecord,
+    outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...],
+) -> None:
+    """Enforce the shared compare-and-set and append-only outcome sequence."""
+
+    if current_source_event_version != expected_source_event_version:
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_VERSION_CONFLICT")
+    expected_final_version = expected_source_event_version + len(outcomes)
+    if realization.current_source_event_version != expected_final_version:
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
+    if not all(
+        _matches_expected_outcome(
+            outcome=outcome,
+            realization_id=realization.realization_id,
+            source_event_version=expected_source_event_version + offset,
+        )
+        for offset, outcome in enumerate(outcomes, start=1)
+    ):
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
+
+
+def _matches_expected_outcome(
+    *,
+    outcome: IdeaProposalRealizationOutcomeRecord,
+    realization_id: str,
+    source_event_version: int,
+) -> bool:
+    return (
+        outcome.realization_id == realization_id
+        and outcome.source_event_version == source_event_version
+    )
