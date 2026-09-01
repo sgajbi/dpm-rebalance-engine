@@ -1194,6 +1194,19 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
             replace(record, request_fingerprint=f"sha256:{uuid.uuid4().hex}")
         )
 
+    _assert_idea_intake_expiry_and_legal_hold(
+        first_repository=first_repository,
+        second_repository=second_repository,
+        record=record,
+    )
+
+
+def _assert_idea_intake_expiry_and_legal_hold(
+    *,
+    first_repository: PostgresProposalRepository,
+    second_repository: PostgresProposalRepository,
+    record: IdeaProposalIntakeRecord,
+) -> None:
     replacement = replace(
         record,
         request_fingerprint=f"sha256:{uuid.uuid4().hex}",

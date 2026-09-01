@@ -46,6 +46,19 @@ from src.infrastructure.proposals.in_memory_query import (
 )
 
 
+def _retained_idea_proposal_intakes(
+    records: dict[str, IdeaProposalIntakeRecord],
+    *,
+    as_of: datetime,
+) -> dict[str, IdeaProposalIntakeRecord]:
+    """Keep replayable claims and every claim protected by legal hold."""
+    return {
+        registry_key: record
+        for registry_key, record in records.items()
+        if record.legal_hold or record.expires_at_utc > as_of
+    }
+
+
 class InMemoryProposalRepository(ProposalRepository):
     def __init__(self) -> None:
         self._lock = Lock()
@@ -72,11 +85,10 @@ class InMemoryProposalRepository(ProposalRepository):
         self, record: IdeaProposalIntakeRecord
     ) -> IdeaProposalIntakeClaim:
         with self._lock:
-            self._idea_proposal_intakes = {
-                registry_key: stored
-                for registry_key, stored in self._idea_proposal_intakes.items()
-                if stored.legal_hold or stored.expires_at_utc > record.created_at_utc
-            }
+            self._idea_proposal_intakes = _retained_idea_proposal_intakes(
+                self._idea_proposal_intakes,
+                as_of=record.created_at_utc,
+            )
             existing = self._idea_proposal_intakes.get(record.registry_key)
             if existing is None:
                 stored = copy_record(record)
