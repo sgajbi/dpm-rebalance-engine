@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-01T13:17:05.827225+00:00`
+- Generated At: `2026-09-01T13:50:36.201431+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1108`
 - Packages: `42`
 - Modules: `1066`
-- Total Python lines: `202391`
+- Total Python lines: `202522`
 
 ## Largest Files
 
@@ -25,7 +25,7 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
-| 10 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1644 |
+| 10 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1670 |
 
 ## Largest Functions And Maintainability Hotspots
 
@@ -47,8 +47,8 @@
 - Current baseline uses largest-function and router-hotspot evidence as deterministic
   complexity proxies.
 - Radon config executable: `True`
-- Radon analyzed block inventory: `5089`
-- Radon complexity rank inventory: `A=4957, B=132`
+- Radon analyzed block inventory: `5090`
+- Radon complexity rank inventory: `A=4958, B=132`
 - Radon worst complexity: `rank=B, complexity=10`
 - Radon C/D/E/F-ranked block enforcement is repo-native through
   `make complexity-regression-gate` and the `lint` lane.
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5875, missing=5690, covered=185, coverage=3.1%`
+- Interrogate docstring inventory: `total=5876, missing=5691, covered=185, coverage=3.1%`
 - Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;
   absolute public API and module-ownership thresholds remain report-only until
   classified.
