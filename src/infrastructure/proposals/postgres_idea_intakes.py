@@ -15,6 +15,7 @@ def claim_idea_proposal_intake(
     connect: Callable[[], Any],
     record: IdeaProposalIntakeRecord,
 ) -> IdeaProposalIntakeClaim:
+    """Atomically persist or replay a scope-keyed Idea intake claim."""
     with closing(connect()) as connection:
         inserted = connection.execute(
             """
@@ -34,8 +35,7 @@ def claim_idea_proposal_intake(
         row = connection.execute(
             """
             SELECT registry_key, request_fingerprint, response_json, created_at_utc
-            FROM proposal_idea_intakes
-            WHERE registry_key = %s
+            FROM proposal_idea_intakes WHERE registry_key = %s
             """,
             (record.registry_key,),
         ).fetchone()

@@ -1,16 +1,16 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-01T06:53:49.612098+00:00`
+- Generated At: `2026-09-01T07:24:51.942874+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
 
 ## Code Size
 
-- Python files: `1106`
+- Python files: `1105`
 - Packages: `42`
-- Modules: `1064`
-- Total Python lines: `200642`
+- Modules: `1063`
+- Total Python lines: `200628`
 
 ## Largest Files
 
@@ -21,7 +21,7 @@
 | 3 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2675 |
 | 4 | `tests/unit/advisory/api/test_api_workspace.py` | 2568 |
 | 5 | `scripts/validate_cross_service_parity_live.py` | 2155 |
-| 6 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 1978 |
+| 6 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 2008 |
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
@@ -31,7 +31,7 @@
 
 | Rank | Function | File | Line | Lines |
 | ---: | --- | --- | ---: | ---: |
-| 1 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 63 | 508 |
+| 1 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 70 | 516 |
 | 2 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 405 |
 | 3 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 120 | 311 |
 | 4 | `test_resolve_stateful_context_with_lotus_core_builds_simulation_request` | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 1331 | 225 |
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5837, missing=5663, covered=174, coverage=3.0%`
+- Interrogate docstring inventory: `total=5836, missing=5658, covered=178, coverage=3.1%`
 - Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;
   absolute public API and module-ownership thresholds remain report-only until
   classified.

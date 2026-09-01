@@ -2,9 +2,18 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextlib import closing
+from copy import deepcopy
 from typing import Any
 
-from src.core.proposals.models import ProposalWorkflowEventRecord
+from src.core.proposals.contract_types import ProposalWorkflowState
+from src.core.proposals.exceptions import ProposalStateConflictError
+from src.core.proposals.models import (
+    ProposalApprovalRecordData,
+    ProposalRecord,
+    ProposalTransitionResult,
+    ProposalWorkflowEventRecord,
+)
+from src.infrastructure.proposals import postgres_approvals, postgres_records
 from src.infrastructure.proposals.postgres_mappers import json_dump, to_event
 
 ConnectionFactory = Callable[[], Any]
@@ -100,6 +109,40 @@ def insert_event(*, connection: Any, event: ProposalWorkflowEventRecord) -> None
         raise ValueError("PROPOSAL_WORKFLOW_EVENT_IDENTITY_CONFLICT")
 
 
+def transition_proposal(
+    *,
+    connect: ConnectionFactory,
+    proposal: ProposalRecord,
+    event: ProposalWorkflowEventRecord,
+    approval: ProposalApprovalRecordData | None,
+    expected_current_state: ProposalWorkflowState | None,
+    expected_current_version_no: int | None,
+) -> ProposalTransitionResult:
+    """Commit one proposal state transition and its audit evidence atomically."""
+    with closing(connect()) as connection:
+        if expected_current_state is None or expected_current_version_no is None:
+            postgres_records.upsert_proposal(connection=connection, proposal=proposal)
+        elif not postgres_records.update_proposal_if_current(
+            connection=connection,
+            proposal=proposal,
+            expected_current_state=expected_current_state,
+            expected_current_version_no=expected_current_version_no,
+        ):
+            connection.rollback()
+            raise ProposalStateConflictError(
+                "STATE_CONFLICT: proposal aggregate changed during transition"
+            )
+        insert_event(connection=connection, event=event)
+        if approval is not None:
+            postgres_approvals.insert_approval(connection=connection, approval=approval)
+        connection.commit()
+    return ProposalTransitionResult(
+        proposal=deepcopy(proposal),
+        event=deepcopy(event),
+        approval=deepcopy(approval) if approval is not None else None,
+    )
+
+
 def _get_event(*, connection: Any, event_id: str) -> ProposalWorkflowEventRecord | None:
     query = f"""
         SELECT
@@ -118,4 +161,5 @@ __all__ = [
     "insert_event",
     "list_events",
     "list_events_for_proposals",
+    "transition_proposal",
 ]

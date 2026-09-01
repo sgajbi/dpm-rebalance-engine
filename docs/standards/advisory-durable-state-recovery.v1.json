@@ -66,7 +66,7 @@
         },
         {
           "check_key": "idea_intake_restart_replay",
-          "command": "python -m pytest tests/unit/advisory/api/test_idea_proposal_intake_api.py tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py -k idea_intake -q",
+          "command": "make idea-intake-recovery-check",
           "evidence_path": "output/durable-state-recovery/idea-intake-restart-replay.txt"
         }
       ],
