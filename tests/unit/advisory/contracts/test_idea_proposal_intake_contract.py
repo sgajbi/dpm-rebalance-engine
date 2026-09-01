@@ -124,3 +124,11 @@ def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape(
     assert "response_json::jsonb ?& ARRAY[" in recovery_sql
     assert '"proposal_linkage_outcome_not_certified"' in recovery_sql
     assert '"terminal_realization_outcomes_not_certified"' in recovery_sql
+    assert "realization.review_work_id IS NOT DISTINCT FROM" in recovery_sql
+    assert "realization.current_status" in recovery_sql
+    assert "realization.current_source_event_version" in recovery_sql
+    assert "realization.source_evidence_fingerprint" in recovery_sql
+    assert "idea_candidate_id = btrim(idea_candidate_id)" in recovery_sql
+    assert "conversion_intent_id = btrim(conversion_intent_id)" in recovery_sql
+    assert "tenant_id || '|' || legal_entity_code || '|' || portfolio_id || '|'" in recovery_sql
+    assert "realization_id || '|review-work'" in recovery_sql

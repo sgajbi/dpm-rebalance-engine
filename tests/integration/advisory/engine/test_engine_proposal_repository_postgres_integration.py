@@ -1401,6 +1401,65 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
         recovery = connection.execute(recovery_sql).fetchone()
         connection.execute(
             """
+            UPDATE proposal_idea_intakes
+            SET response_json = jsonb_set(
+                response_json::jsonb,
+                '{source_event_version}',
+                '2'::jsonb
+            )::text
+            WHERE response_json::jsonb ->> 'realization_id' = %s
+            """,
+            (first.realization_id,),
+        )
+        contradictory_receipt_recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_intakes
+            SET response_json = jsonb_set(
+                response_json::jsonb,
+                '{source_event_version}',
+                '1'::jsonb
+            )::text
+            WHERE response_json::jsonb ->> 'realization_id' = %s
+            """,
+            (first.realization_id,),
+        )
+        connection.execute(
+            """
+            UPDATE proposal_idea_review_realizations
+            SET conversion_intent_id = 'conversion-intent-swapped'
+            WHERE realization_id = %s
+            """,
+            (first.realization_id,),
+        )
+        contradictory_conversion_recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_review_realizations
+            SET conversion_intent_id = %s
+            WHERE realization_id = %s
+            """,
+            (request.conversion_intent_id, first.realization_id),
+        )
+        connection.execute(
+            """
+            UPDATE proposal_idea_review_realizations
+            SET idea_candidate_id = ''
+            WHERE realization_id = %s
+            """,
+            (first.realization_id,),
+        )
+        blank_candidate_recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_review_realizations
+            SET idea_candidate_id = %s
+            WHERE realization_id = %s
+            """,
+            (request.idea_candidate_id, first.realization_id),
+        )
+        connection.execute(
+            """
             UPDATE proposal_idea_realization_outcomes
             SET status = 'REJECTED_BEFORE_WORK',
                 reason_code = 'idea_conversion_rejected_before_advisory_work',
@@ -1474,6 +1533,9 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
         "review_work_items": 1,
     }
     assert next(iter(recovery.values())) is True
+    assert next(iter(contradictory_receipt_recovery.values())) is False
+    assert next(iter(contradictory_conversion_recovery.values())) is False
+    assert next(iter(blank_candidate_recovery.values())) is False
     assert next(iter(contradictory_outcome_recovery.values())) is False
     assert next(iter(legacy_recovery.values())) is True
     assert next(iter(corrupted_legacy_recovery.values())) is False
