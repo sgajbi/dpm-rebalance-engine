@@ -77,6 +77,8 @@ def load_idea_proposal_realization_history(
     normalized_portfolio_id = _required_printable(
         portfolio_id, "IDEA_PROPOSAL_PORTFOLIO_ID_REQUIRED"
     )
+    if principal.authorized_portfolio_id != normalized_portfolio_id:
+        raise ProposalNotFoundError("IDEA_PROPOSAL_REALIZATION_NOT_FOUND")
     history = repository.get_idea_proposal_realization(
         intake_id=normalized_intake_id,
         tenant_id=principal.tenant_id,

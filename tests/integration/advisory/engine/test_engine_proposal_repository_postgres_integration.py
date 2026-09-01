@@ -1401,6 +1401,31 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
         recovery = connection.execute(recovery_sql).fetchone()
         connection.execute(
             """
+            UPDATE proposal_idea_realization_outcomes
+            SET status = 'REJECTED_BEFORE_WORK',
+                reason_code = 'idea_conversion_rejected_before_advisory_work',
+                review_work_id = NULL,
+                terminal = TRUE
+            WHERE realization_id = %s
+              AND source_event_version = 1
+            """,
+            (first.realization_id,),
+        )
+        contradictory_outcome_recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_realization_outcomes
+            SET status = 'ACCEPTED_FOR_REVIEW',
+                reason_code = 'idea_conversion_accepted_for_adviser_review',
+                review_work_id = %s,
+                terminal = FALSE
+            WHERE realization_id = %s
+              AND source_event_version = 1
+            """,
+            (first.review_work_id, first.realization_id),
+        )
+        connection.execute(
+            """
             UPDATE proposal_idea_intakes
             SET response_json = (
                 response_json::jsonb
@@ -1449,6 +1474,7 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
         "review_work_items": 1,
     }
     assert next(iter(recovery.values())) is True
+    assert next(iter(contradictory_outcome_recovery.values())) is False
     assert next(iter(legacy_recovery.values())) is True
     assert next(iter(corrupted_legacy_recovery.values())) is False
 
