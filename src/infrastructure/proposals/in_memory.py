@@ -162,7 +162,7 @@ class InMemoryProposalRepository(ProposalRepository):
             if existing is None:
                 existing = copy_record(record)
                 self._idea_proposal_intakes[record.registry_key] = existing
-            self._store_idea_realization_claim(record)
+            self._store_idea_realization_claim(existing if replayed else record)
             return IdeaProposalIntakeClaim(record=copy_record(existing), replayed=replayed)
 
     def _existing_idea_intake_or_conflict(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import closing
+from dataclasses import replace
 from typing import Any, Callable, cast
 
 from src.core.proposals.exceptions import ProposalIdempotencyConflictError
@@ -90,14 +91,29 @@ def claim_idea_proposal_intake(
         if str(row["request_fingerprint"]) != record.request_fingerprint:
             connection.rollback()
             raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT")
+        realization_claim = record
+        if inserted is None:
+            origin_timestamp = row["created_at_utc"]
+            realization_claim = replace(
+                record,
+                realization=replace(
+                    record.realization,
+                    created_at_utc=origin_timestamp,
+                    updated_at_utc=origin_timestamp,
+                ),
+                initial_outcome=replace(
+                    record.initial_outcome,
+                    occurred_at_utc=origin_timestamp,
+                ),
+            )
         realization = _claim_realization(
             connection=connection,
-            requested=record.realization,
+            requested=realization_claim.realization,
             source_claim_registry_key=record.registry_key,
         )
         initial_outcome = _claim_initial_outcome(
             connection=connection,
-            requested=record.initial_outcome,
+            requested=realization_claim.initial_outcome,
         )
         existing = IdeaProposalIntakeRecord(
             registry_key=str(row["registry_key"]),
