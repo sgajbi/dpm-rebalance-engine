@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-01T14:22:02.289820+00:00`
+- Generated At: `2026-09-01T14:39:30.390355+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1108`
 - Packages: `42`
 - Modules: `1066`
-- Total Python lines: `202565`
+- Total Python lines: `202635`
 
 ## Largest Files
 
@@ -25,7 +25,7 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
-| 10 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1670 |
+| 10 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1732 |
 
 ## Largest Functions And Maintainability Hotspots
 
@@ -34,13 +34,13 @@
 | 1 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 405 |
 | 2 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 120 | 311 |
 | 3 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 187 | 296 |
-| 4 | `test_resolve_stateful_context_with_lotus_core_builds_simulation_request` | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 1331 | 225 |
-| 5 | `test_proof_pack_indexes_assets_and_blocks_sensitive_committed_material` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_models.py` | 381 | 216 |
-| 6 | `_live_runtime_payload` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_capture.py` | 26 | 187 |
-| 7 | `test_lifecycle_endpoints_use_separate_request_and_response_objects` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 469 | 185 |
-| 8 | `assert_live_workspace_flow` | `scripts/live_workspace_flow.py` | 121 | 181 |
-| 9 | `test_openapi_enrichment_adds_operation_docs_tags_errors_and_schema_examples` | `tests/unit/advisory/api/test_openapi_enrichment.py` | 6 | 179 |
-| 10 | `_current_progress_model_and_domain` | `scripts/refactor_health_report.py` | 17 | 178 |
+| 4 | `test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery` | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1315 | 227 |
+| 5 | `test_resolve_stateful_context_with_lotus_core_builds_simulation_request` | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 1331 | 225 |
+| 6 | `test_proof_pack_indexes_assets_and_blocks_sensitive_committed_material` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_models.py` | 381 | 216 |
+| 7 | `_live_runtime_payload` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_capture.py` | 26 | 187 |
+| 8 | `test_lifecycle_endpoints_use_separate_request_and_response_objects` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 469 | 185 |
+| 9 | `assert_live_workspace_flow` | `scripts/live_workspace_flow.py` | 121 | 181 |
+| 10 | `test_openapi_enrichment_adds_operation_docs_tags_errors_and_schema_examples` | `tests/unit/advisory/api/test_openapi_enrichment.py` | 6 | 179 |
 
 ## Complexity
 
