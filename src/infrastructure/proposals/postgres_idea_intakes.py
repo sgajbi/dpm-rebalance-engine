@@ -90,7 +90,11 @@ def claim_idea_proposal_intake(
         if str(row["request_fingerprint"]) != record.request_fingerprint:
             connection.rollback()
             raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT")
-        realization = _claim_realization(connection=connection, requested=record.realization)
+        realization = _claim_realization(
+            connection=connection,
+            requested=record.realization,
+            source_claim_registry_key=record.registry_key,
+        )
         initial_outcome = _claim_initial_outcome(
             connection=connection,
             requested=record.initial_outcome,
@@ -154,22 +158,27 @@ def get_idea_proposal_realization(
 
 
 def _claim_realization(
-    *, connection: Any, requested: IdeaProposalRealizationRecord
+    *,
+    connection: Any,
+    requested: IdeaProposalRealizationRecord,
+    source_claim_registry_key: str,
 ) -> IdeaProposalRealizationRecord:
     connection.execute(
         """
         INSERT INTO proposal_idea_review_realizations (
-            realization_id, intake_id, review_work_id, review_work_status,
+            realization_id, intake_id, source_claim_registry_key,
+            review_work_id, review_work_status,
             tenant_id, legal_entity_code,
             portfolio_id, idea_candidate_id, conversion_intent_id,
             source_evidence_fingerprint, current_status, current_source_event_version,
             created_at_utc, updated_at_utc
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON CONFLICT (realization_id) DO NOTHING
         """,
         (
             requested.realization_id,
             requested.intake_id,
+            source_claim_registry_key,
             requested.review_work_id,
             requested.review_work_status,
             requested.tenant_id,

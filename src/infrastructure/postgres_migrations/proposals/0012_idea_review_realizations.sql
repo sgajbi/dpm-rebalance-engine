@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS proposal_idea_review_realizations (
     realization_id TEXT PRIMARY KEY,
     intake_id TEXT NOT NULL,
+    source_claim_registry_key TEXT NOT NULL,
     review_work_id TEXT UNIQUE,
     review_work_status TEXT,
     tenant_id TEXT NOT NULL,
@@ -19,6 +20,8 @@ CREATE TABLE IF NOT EXISTS proposal_idea_review_realizations (
         UNIQUE (tenant_id, legal_entity_code, portfolio_id, intake_id),
     CONSTRAINT ck_proposal_idea_realization_id
         CHECK (realization_id ~ '^ipr_[0-9a-f]{12}$'),
+    CONSTRAINT ck_proposal_idea_realization_source_claim
+        CHECK (source_claim_registry_key ~ '^[0-9a-f]{64}:sha256:[0-9a-f]{64}$'),
     CONSTRAINT ck_proposal_idea_review_work_id
         CHECK (review_work_id IS NULL OR review_work_id ~ '^iarw_[0-9a-f]{12}$'),
     CONSTRAINT ck_proposal_idea_realization_required_scope

@@ -74,7 +74,10 @@ persists the scoped intake idempotency decision through the proposal repository 
 conflict behavior survive restart, and detects changed-payload replay with HTTP 409. The replay
 window is 24 hours: expired unheld claims are purged in target-prioritized batches of at most 128
 before a new claim, with sanitized append-only purge evidence written in the same transaction.
-Legal hold prevents purge and preserves replay/conflict protection. Accepted review intent creates
+Legal hold prevents purge and preserves replay/conflict protection. The durable realization retains
+the original claim registry identity so recovery can reconcile creation chronology against either
+the live origin receipt or its purge event without rejecting later claims for the same conversion.
+Accepted review intent creates
 one deterministic durable work item in `PENDING_ADVISER_REVIEW` plus an append-only
 `ACCEPTED_FOR_REVIEW` outcome. Unsupported intent creates `REJECTED_BEFORE_WORK` and no work item.
 `GET /advisory/proposals/idea-intake/{intake_id}/realization` returns this Advise-owned state only

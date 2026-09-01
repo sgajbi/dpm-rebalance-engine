@@ -97,7 +97,8 @@ _IDEA_INTAKE_FIELDS = (
     "registry_key request_fingerprint response_json created_at_utc expires_at_utc legal_hold"
 )
 _IDEA_REALIZATION_FIELDS = (
-    "realization_id intake_id review_work_id review_work_status tenant_id legal_entity_code "
+    "realization_id intake_id source_claim_registry_key review_work_id review_work_status "
+    "tenant_id legal_entity_code "
     "portfolio_id "
     "idea_candidate_id conversion_intent_id source_evidence_fingerprint current_status "
     "current_source_event_version created_at_utc updated_at_utc"

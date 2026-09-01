@@ -66,6 +66,9 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
         "purge_policy": "target_prioritized_batches_before_new_claim_unless_legal_hold",
         "purge_batch_size": 128,
         "purge_audit_evidence": "proposal_idea_intake_purge_events",
+        "realization_origin_evidence": (
+            "source_claim_registry_key_bound_to_live_receipt_or_purge_event"
+        ),
         "legal_hold_supported": True,
         "raw_idempotency_key_persisted": False,
     }
@@ -128,8 +131,10 @@ def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape(
     assert "realization.current_status" in recovery_sql
     assert "realization.current_source_event_version" in recovery_sql
     assert "realization.source_evidence_fingerprint" in recovery_sql
-    assert "realization.created_at_utc = intake.created_at_utc" in recovery_sql
-    assert "realization.updated_at_utc = intake.created_at_utc" in recovery_sql
+    assert "realization.created_at_utc <= intake.created_at_utc" in recovery_sql
+    assert "source_claim.registry_key = realization.source_claim_registry_key" in recovery_sql
+    assert "source_claim.created_at_utc = realization.created_at_utc" in recovery_sql
+    assert "source_claim_purge.claim_created_at_utc = realization.created_at_utc" in recovery_sql
     assert "idea_candidate_id = btrim(idea_candidate_id)" in recovery_sql
     assert "conversion_intent_id = btrim(conversion_intent_id)" in recovery_sql
     assert "tenant_id || '|' || legal_entity_code || '|' || portfolio_id || '|'" in recovery_sql

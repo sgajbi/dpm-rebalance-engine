@@ -225,7 +225,10 @@ Current repository posture:
    identifiers. Pre-v1.6 same-key replay conflicts until an operator reconciles the unscoped
    receipt and the producer submits the scoped request with a new key. Claims have a 24-hour replay window, are automatically purged on
    subsequent intake after expiry in target-prioritized batches of at most 128, write sanitized
-   purge evidence in the same transaction, and remain protected while under legal hold. Accepted
+   purge evidence in the same transaction, and remain protected while under legal hold. Each
+   durable realization retains its original claim registry identity; recovery binds its creation
+   chronology to either that live receipt or its append-only purge event while allowing later
+   idempotency claims to reuse the same economic realization. Accepted
    review intent creates exactly one deterministic durable `PENDING_ADVISER_REVIEW` work item and
    an append-only `ACCEPTED_FOR_REVIEW` outcome. Unsupported intent creates a terminal
    `REJECTED_BEFORE_WORK` outcome and no work item. The scoped read fails closed across tenant,
