@@ -54,13 +54,8 @@ def test_idea_intake_expiry_allows_reuse_unless_legal_hold_applies() -> None:
 
     held_repository = InMemoryProposalRepository()
     held_repository.claim_idea_proposal_intake(replace(first, legal_hold=True))
-    held_replacement = replace(
-        replacement,
-        created_at_utc=replacement.expires_at_utc,
-        expires_at_utc=replacement.expires_at_utc + timedelta(hours=24),
-    )
     with pytest.raises(ProposalIdempotencyConflictError):
-        held_repository.claim_idea_proposal_intake(held_replacement)
+        held_repository.claim_idea_proposal_intake(replacement)
 
 
 def _proposal(proposal_id: str, created_by: str, state: str = "DRAFT") -> ProposalRecord:

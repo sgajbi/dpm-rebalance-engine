@@ -49,6 +49,44 @@ def _row(field_names: str, args) -> dict:
     return dict(zip(field_names.split(), args, strict=True))
 
 
+def _matching(rows, **criteria):
+    return [
+        row for row in rows if all(row[field] == expected for field, expected in criteria.items())
+    ]
+
+
+def _sorted_matching(rows, *sort_fields, reverse=False, **criteria):
+    return sorted(
+        _matching(rows, **criteria),
+        key=lambda row: tuple(row[field] for field in sort_fields),
+        reverse=reverse,
+    )
+
+
+def _first_matching(rows, **criteria):
+    return next(iter(_matching(rows, **criteria)), None)
+
+
+def _ordered_parent_rows(rows, parent_ids, *sort_fields):
+    parent_order = {parent_id: index for index, parent_id in enumerate(parent_ids)}
+    return sorted(
+        (row for row in rows if row["proposal_id"] in parent_order),
+        key=lambda row: (
+            parent_order[row["proposal_id"]],
+            *(row[field] for field in sort_fields),
+        ),
+    )
+
+
+def _apply_proposal_filters(rows, sql, args, arg_index, *, prefix=""):
+    for clause, field, matches in _PROPOSAL_FILTERS:
+        if f"{prefix}{clause}" in sql:
+            expected = args[arg_index]
+            arg_index += 1
+            rows = [row for row in rows if matches(row[field], expected)]
+    return rows, arg_index
+
+
 _IDEMPOTENCY_FIELDS = "idempotency_key request_hash proposal_id proposal_version_no created_at"
 _SIMULATION_IDEMPOTENCY_FIELDS = "idempotency_key request_hash response_json created_at"
 _IDEA_INTAKE_FIELDS = (
@@ -102,8 +140,23 @@ _APPROVAL_FIELDS = (
 _TRANSACTIONAL_STORES = (
     "idempotency simulation_idempotency operations proposals versions events approvals memos "
     "memo_idempotency memo_events cockpit_acknowledgements "
-    "cockpit_acknowledgement_idempotency idea_intakes schema_migrations"
+    "cockpit_acknowledgement_idempotency idea_intakes idea_intake_purge_events schema_migrations"
 ).split()
+_MIGRATION_DEFAULTS = (
+    ("lifecycle_origin", "proposals", "DIRECT_CREATE"),
+    ("source_workspace_id", "proposals", None),
+    ("payload_json", "operations", "{}"),
+    ("attempt_count", "operations", 0),
+    ("max_attempts", "operations", 3),
+    ("lease_expires_at", "operations", None),
+)
+_PROPOSAL_FILTERS = (
+    ("portfolio_id = %s", "portfolio_id", lambda actual, expected: actual == expected),
+    ("current_state = %s", "current_state", lambda actual, expected: actual == expected),
+    ("created_by = %s", "created_by", lambda actual, expected: actual == expected),
+    ("created_at >= %s", "created_at", lambda actual, expected: actual >= expected),
+    ("created_at <= %s", "created_at", lambda actual, expected: actual <= expected),
+)
 
 
 class _FakeConnection:
@@ -122,48 +175,16 @@ class _FakeConnection:
         self.executed_args.append(tuple(args or ()))
         if _is_transactional_write_sql(sql):
             self._ensure_transaction_snapshot()
-        if sql == "SELECT pg_advisory_lock(%s::bigint)":
+        if sql in {
+            "SELECT pg_advisory_lock(%s::bigint)",
+            "SELECT pg_advisory_unlock(%s::bigint)",
+        } or sql.startswith(("CREATE TABLE", "CREATE INDEX", "CREATE UNIQUE INDEX")):
             return _FakeCursor()
-        if sql == "SELECT pg_advisory_unlock(%s::bigint)":
-            return _FakeCursor()
-        if sql.startswith("CREATE TABLE"):
-            return _FakeCursor()
-        if sql.startswith("ALTER TABLE proposal_records ADD COLUMN IF NOT EXISTS lifecycle_origin"):
-            for row in self.proposals.values():
-                row.setdefault("lifecycle_origin", "DIRECT_CREATE")
-            return _FakeCursor()
-        if sql.startswith(
-            "ALTER TABLE proposal_records ADD COLUMN IF NOT EXISTS source_workspace_id"
-        ):
-            for row in self.proposals.values():
-                row.setdefault("source_workspace_id", None)
-            return _FakeCursor()
-        if sql.startswith(
-            "ALTER TABLE proposal_async_operations ADD COLUMN IF NOT EXISTS payload_json"
-        ):
-            for row in self.operations.values():
-                row.setdefault("payload_json", "{}")
-            return _FakeCursor()
-        if sql.startswith(
-            "ALTER TABLE proposal_async_operations ADD COLUMN IF NOT EXISTS attempt_count"
-        ):
-            for row in self.operations.values():
-                row.setdefault("attempt_count", 0)
-            return _FakeCursor()
-        if sql.startswith(
-            "ALTER TABLE proposal_async_operations ADD COLUMN IF NOT EXISTS max_attempts"
-        ):
-            for row in self.operations.values():
-                row.setdefault("max_attempts", 3)
-            return _FakeCursor()
-        if sql.startswith(
-            "ALTER TABLE proposal_async_operations ADD COLUMN IF NOT EXISTS lease_expires_at"
-        ):
-            for row in self.operations.values():
-                row.setdefault("lease_expires_at", None)
-            return _FakeCursor()
-        if sql.startswith("CREATE INDEX") or sql.startswith("CREATE UNIQUE INDEX"):
-            return _FakeCursor()
+        for field, store, default in _MIGRATION_DEFAULTS:
+            if sql.startswith("ALTER TABLE") and f"ADD COLUMN IF NOT EXISTS {field}" in sql:
+                for row in getattr(self, store).values():
+                    row.setdefault(field, default)
+                return _FakeCursor()
         if sql.startswith("ALTER TABLE"):
             return _FakeCursor()
         if "FROM schema_migrations" in sql:
@@ -182,12 +203,26 @@ class _FakeConnection:
             self.idempotency[args[0]] = _row(_IDEMPOTENCY_FIELDS, args)
             return _FakeCursor()
         if "DELETE FROM proposal_idea_intakes" in sql:
-            as_of = args[0]
-            self.idea_intakes = {
-                registry_key: stored
-                for registry_key, stored in self.idea_intakes.items()
-                if stored["legal_hold"] or stored["expires_at_utc"] > as_of
-            }
+            as_of, target_key, limit, purged_at = args
+            expired = sorted(
+                (
+                    stored
+                    for stored in self.idea_intakes.values()
+                    if not stored["legal_hold"] and stored["expires_at_utc"] <= as_of
+                ),
+                key=lambda stored: (
+                    stored["registry_key"] != target_key,
+                    stored["expires_at_utc"],
+                    stored["registry_key"],
+                ),
+            )[:limit]
+            for stored in expired:
+                self.idea_intake_purge_events[stored["registry_key"]] = {
+                    **stored,
+                    "purged_at_utc": purged_at,
+                    "reason_code": "REPLAY_WINDOW_EXPIRED",
+                }
+                del self.idea_intakes[stored["registry_key"]]
             return _FakeCursor()
         if "INSERT INTO proposal_idea_intakes" in sql:
             inserted = args[0] not in self.idea_intakes
@@ -214,46 +249,37 @@ class _FakeConnection:
         if "FROM proposal_memos WHERE memo_id = %s" in sql:
             return _FakeCursor(self.memos.get(args[0]))
         if "FROM proposal_memos WHERE proposal_id = %s AND proposal_version_no = %s" in sql:
-            row = next(
-                (
-                    memo
-                    for memo in self.memos.values()
-                    if memo["proposal_id"] == args[0] and memo["proposal_version_no"] == args[1]
-                ),
-                None,
+            row = _first_matching(
+                self.memos.values(),
+                proposal_id=args[0],
+                proposal_version_no=args[1],
             )
             return _FakeCursor(row)
         if "FROM proposal_memos WHERE proposal_id = %s" in sql:
-            rows = [memo for memo in self.memos.values() if memo["proposal_id"] == args[0]]
-            rows = sorted(
-                rows,
-                key=lambda row: (
-                    row["proposal_version_no"],
-                    row["created_at"],
-                    row["memo_id"],
-                ),
+            rows = _sorted_matching(
+                self.memos.values(),
+                "proposal_version_no",
+                "created_at",
+                "memo_id",
+                proposal_id=args[0],
             )
             return _FakeCursor(rows=rows)
         if "FROM proposal_memos" in sql and "WHERE proposal_id = ANY(%s)" in sql:
-            proposal_ids = list(args[0])
-            memo_order = {proposal_id: index for index, proposal_id in enumerate(proposal_ids)}
-            rows = [memo for memo in self.memos.values() if memo["proposal_id"] in memo_order]
-            rows = sorted(
-                rows,
-                key=lambda row: (
-                    memo_order[row["proposal_id"]],
-                    row["proposal_version_no"],
-                    row["created_at"],
-                    row["memo_id"],
-                ),
+            rows = _ordered_parent_rows(
+                self.memos.values(),
+                args[0],
+                "proposal_version_no",
+                "created_at",
+                "memo_id",
             )
             return _FakeCursor(rows=rows)
         if "INSERT INTO proposal_memo_events" in sql:
             self.memo_events.setdefault(args[0], _row(_MEMO_EVENT_FIELDS, args))
             return _FakeCursor()
         if "FROM proposal_memo_events" in sql and "ORDER BY occurred_at ASC, event_id ASC" in sql:
-            rows = [row for row in self.memo_events.values() if row["memo_id"] == args[0]]
-            rows = sorted(rows, key=lambda row: (row["occurred_at"], row["event_id"]))
+            rows = _sorted_matching(
+                self.memo_events.values(), "occurred_at", "event_id", memo_id=args[0]
+            )
             return _FakeCursor(rows=rows)
         if "INSERT INTO advisor_cockpit_acknowledgements" in sql:
             self.cockpit_acknowledgements[args[1]] = _row(_ACKNOWLEDGEMENT_FIELDS, args)
@@ -283,13 +309,8 @@ class _FakeConnection:
             if "ON CONFLICT (idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING" in sql:
                 inserted_operation_id = args[0]
                 idempotency_key = args[4]
-                existing = next(
-                    (
-                        operation
-                        for operation in self.operations.values()
-                        if operation["idempotency_key"] == idempotency_key
-                    ),
-                    None,
+                existing = _first_matching(
+                    self.operations.values(), idempotency_key=idempotency_key
                 )
                 if existing is None:
                     self.operations[inserted_operation_id] = operation
@@ -300,28 +321,18 @@ class _FakeConnection:
         if "FROM proposal_async_operations WHERE operation_id = %s" in sql:
             return _FakeCursor(self.operations.get(args[0]))
         if "FROM proposal_async_operations WHERE correlation_id = %s" in sql:
-            row = next(
-                (
-                    operation
-                    for operation in self.operations.values()
-                    if operation["correlation_id"] == args[0]
-                ),
-                None,
-            )
+            row = _first_matching(self.operations.values(), correlation_id=args[0])
             return _FakeCursor(row)
         if (
             "FROM proposal_async_operations WHERE idempotency_key = %s" in sql
             and "ORDER BY created_at DESC, operation_id DESC" in sql
         ):
-            rows = [
-                operation
-                for operation in self.operations.values()
-                if operation["idempotency_key"] == args[0]
-            ]
-            rows = sorted(
-                rows,
-                key=lambda row: (row["created_at"], row["operation_id"]),
+            rows = _sorted_matching(
+                self.operations.values(),
+                "created_at",
+                "operation_id",
                 reverse=True,
+                idempotency_key=args[0],
             )
             return _FakeCursor(rows[0] if rows else None)
         if (
@@ -354,58 +365,18 @@ class _FakeConnection:
             return _FakeCursor(self.proposals.get(args[0]))
         if "FROM proposal_records" in sql and "ORDER BY created_at DESC, proposal_id DESC" in sql:
             rows = list(self.proposals.values())
-            arg_index = 0
-            if "portfolio_id = %s" in sql:
-                portfolio_id = args[arg_index]
-                arg_index += 1
-                rows = [row for row in rows if row["portfolio_id"] == portfolio_id]
-            if "current_state = %s" in sql:
-                state = args[arg_index]
-                arg_index += 1
-                rows = [row for row in rows if row["current_state"] == state]
-            if "created_by = %s" in sql:
-                created_by = args[arg_index]
-                arg_index += 1
-                rows = [row for row in rows if row["created_by"] == created_by]
-            if "created_at >= %s" in sql:
-                created_from = args[arg_index]
-                arg_index += 1
-                rows = [row for row in rows if row["created_at"] >= created_from]
-            if "created_at <= %s" in sql:
-                created_to = args[arg_index]
-                arg_index += 1
-                rows = [row for row in rows if row["created_at"] <= created_to]
+            rows, arg_index = _apply_proposal_filters(rows, sql, args, 0)
             if "FROM proposal_records cursor_record WHERE cursor_record.proposal_id = %s" in sql:
                 cursor = args[arg_index]
                 arg_index += 1
                 cursor_row = self.proposals.get(cursor)
                 if cursor_row is None:
                     return _FakeCursor(rows=[])
-                if "cursor_record.portfolio_id = %s" in sql:
-                    cursor_portfolio_id = args[arg_index]
-                    arg_index += 1
-                    if cursor_row["portfolio_id"] != cursor_portfolio_id:
-                        return _FakeCursor(rows=[])
-                if "cursor_record.current_state = %s" in sql:
-                    cursor_state = args[arg_index]
-                    arg_index += 1
-                    if cursor_row["current_state"] != cursor_state:
-                        return _FakeCursor(rows=[])
-                if "cursor_record.created_by = %s" in sql:
-                    cursor_created_by = args[arg_index]
-                    arg_index += 1
-                    if cursor_row["created_by"] != cursor_created_by:
-                        return _FakeCursor(rows=[])
-                if "cursor_record.created_at >= %s" in sql:
-                    cursor_created_from = args[arg_index]
-                    arg_index += 1
-                    if cursor_row["created_at"] < cursor_created_from:
-                        return _FakeCursor(rows=[])
-                if "cursor_record.created_at <= %s" in sql:
-                    cursor_created_to = args[arg_index]
-                    arg_index += 1
-                    if cursor_row["created_at"] > cursor_created_to:
-                        return _FakeCursor(rows=[])
+                cursor_rows, arg_index = _apply_proposal_filters(
+                    [cursor_row], sql, args, arg_index, prefix="cursor_record."
+                )
+                if not cursor_rows:
+                    return _FakeCursor(rows=[])
                 cursor_key = (cursor_row["created_at"], cursor_row["proposal_id"])
                 rows = [row for row in rows if (row["created_at"], row["proposal_id"]) < cursor_key]
             rows = sorted(
@@ -422,14 +393,12 @@ class _FakeConnection:
         if "FROM proposal_versions WHERE proposal_id = %s AND version_no = %s" in sql:
             return _FakeCursor(self.versions.get((args[0], args[1])))
         if "FROM proposal_versions" in sql and "ORDER BY version_no ASC" in sql:
-            proposal_id = args[0]
-            rows = [row for (pid, _), row in self.versions.items() if pid == proposal_id]
-            rows = sorted(rows, key=lambda row: row["version_no"])
+            rows = _sorted_matching(self.versions.values(), "version_no", proposal_id=args[0])
             return _FakeCursor(rows=rows)
         if "FROM proposal_versions" in sql and "ORDER BY version_no DESC" in sql:
-            proposal_id = args[0]
-            rows = [row for (pid, _), row in self.versions.items() if pid == proposal_id]
-            rows = sorted(rows, key=lambda row: row["version_no"], reverse=True)
+            rows = _sorted_matching(
+                self.versions.values(), "version_no", reverse=True, proposal_id=args[0]
+            )
             return _FakeCursor(rows[0] if rows else None)
         if "INSERT INTO proposal_workflow_events" in sql:
             self.events.setdefault(args[0], _row(_WORKFLOW_EVENT_FIELDS, args))
@@ -440,21 +409,12 @@ class _FakeConnection:
             "FROM proposal_workflow_events" in sql
             and "ORDER BY occurred_at ASC, event_id ASC" in sql
         ):
-            rows = [row for row in self.events.values() if row["proposal_id"] == args[0]]
-            rows = sorted(rows, key=lambda row: (row["occurred_at"], row["event_id"]))
+            rows = _sorted_matching(
+                self.events.values(), "occurred_at", "event_id", proposal_id=args[0]
+            )
             return _FakeCursor(rows=rows)
         if "FROM proposal_workflow_events" in sql and "WHERE proposal_id = ANY(%s)" in sql:
-            proposal_ids = list(args[0])
-            event_order = {proposal_id: index for index, proposal_id in enumerate(proposal_ids)}
-            rows = [row for row in self.events.values() if row["proposal_id"] in event_order]
-            rows = sorted(
-                rows,
-                key=lambda row: (
-                    event_order[row["proposal_id"]],
-                    row["occurred_at"],
-                    row["event_id"],
-                ),
-            )
+            rows = _ordered_parent_rows(self.events.values(), args[0], "occurred_at", "event_id")
             return _FakeCursor(rows=rows)
         if "INSERT INTO proposal_approvals" in sql:
             self.approvals.setdefault(args[0], _row(_APPROVAL_FIELDS, args))
@@ -462,20 +422,13 @@ class _FakeConnection:
         if "FROM proposal_approvals" in sql and "WHERE approval_id = %s" in sql:
             return _FakeCursor(self.approvals.get(args[0]))
         if "FROM proposal_approvals" in sql and "ORDER BY occurred_at ASC, approval_id ASC" in sql:
-            rows = [row for row in self.approvals.values() if row["proposal_id"] == args[0]]
-            rows = sorted(rows, key=lambda row: (row["occurred_at"], row["approval_id"]))
+            rows = _sorted_matching(
+                self.approvals.values(), "occurred_at", "approval_id", proposal_id=args[0]
+            )
             return _FakeCursor(rows=rows)
         if "FROM proposal_approvals" in sql and "WHERE proposal_id = ANY(%s)" in sql:
-            proposal_ids = list(args[0])
-            approval_order = {proposal_id: index for index, proposal_id in enumerate(proposal_ids)}
-            rows = [row for row in self.approvals.values() if row["proposal_id"] in approval_order]
-            rows = sorted(
-                rows,
-                key=lambda row: (
-                    approval_order[row["proposal_id"]],
-                    row["occurred_at"],
-                    row["approval_id"],
-                ),
+            rows = _ordered_parent_rows(
+                self.approvals.values(), args[0], "occurred_at", "approval_id"
             )
             return _FakeCursor(rows=rows)
         raise AssertionError(f"Unhandled SQL in fake connection: {sql}")
@@ -663,6 +616,13 @@ def test_postgres_repository_reuses_expired_intake_key_but_preserves_legal_hold(
         expires_at_utc=record.expires_at_utc + timedelta(hours=24),
     )
     assert repository.claim_idea_proposal_intake(replacement).replayed is False
+    purge_sql_index = next(
+        index
+        for index, sql in enumerate(connection.executed_sql)
+        if "INSERT INTO proposal_idea_intake_purge_events" in sql
+    )
+    assert "response_json" not in connection.executed_sql[purge_sql_index]
+    assert connection.executed_args[purge_sql_index][2] == 128
 
     connection.idea_intakes[record.registry_key]["legal_hold"] = True
     held_replacement = replace(

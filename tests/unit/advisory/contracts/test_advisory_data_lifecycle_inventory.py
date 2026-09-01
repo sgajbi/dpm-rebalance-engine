@@ -55,11 +55,11 @@ def test_advisory_data_lifecycle_inventory_requires_raw_payload_masking() -> Non
     assert any("raw sensitive payload copies" in failure for failure in failures)
 
 
-def test_idea_intake_durable_fields_are_governed_as_non_metric_audit_evidence() -> None:
-    prefix = "proposal_idea_intakes."
+def test_idea_intake_claim_and_purge_fields_are_governed_audit_evidence() -> None:
+    prefix = "proposal_idea_intake"
     fields = [item for item in load_inventory()["fields"] if item["field_path"].startswith(prefix)]
 
-    assert len(fields) == 6
+    assert len(fields) == 12
     assert {item["retention_policy"] for item in fields} == {"OPERATIONAL_AUDIT_RECORD"}
     assert all(not item["telemetry_label_allowed"] for item in fields)
     assert all("postgres" in item["stores"] for item in fields)

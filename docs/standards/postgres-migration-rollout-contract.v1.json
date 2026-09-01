@@ -394,7 +394,7 @@
       "compatibility_window": {
         "old_and_new_application_versions_supported": true,
         "minimum_rollout_window": "one_full_deploy_wave",
-        "consumer_contract": "adds durable scoped Idea intake replay decisions with a 24-hour expiry boundary and legal-hold protection before the intake route depends on repository-backed idempotency"
+        "consumer_contract": "adds durable scoped Idea intake replay decisions with a 24-hour expiry boundary, legal-hold protection, bounded purge and same-transaction sanitized purge evidence before the intake route depends on repository-backed idempotency"
       },
       "lock_behavior": {
         "transaction_scope": "single_namespace_transaction",

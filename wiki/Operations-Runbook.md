@@ -422,10 +422,13 @@ be added as application constants.
 The `proposal_idea_intakes` registry is a bounded replay control rather than an advisory business
 record. Each claim has an explicit 24-hour replay expiry, matching the route's established
 idempotency window. Before claiming a new intake, the repository deletes expired rows that are not
-on legal hold; the partial expiry index keeps that purge bounded. An authorized records process may
-set `legal_hold` when operational intake evidence is in scope for an investigation or preservation
-order. Held rows continue to replay or conflict after expiry and must not be manually deleted. The
-read-only recovery check verifies the expiry invariant and legal-hold schema after restore.
+on legal hold. Each claim transaction prioritizes the caller's registry key and deletes at most 128
+eligible rows using `FOR UPDATE SKIP LOCKED`; the partial expiry index bounds selection. Each
+deletion writes a sanitized row to `proposal_idea_intake_purge_events` in the same transaction.
+An authorized records process may set `legal_hold` when operational intake evidence is in scope for
+an investigation or preservation order. Held rows continue to replay or conflict after expiry and
+must not be manually deleted. The read-only recovery check validates every required/fixed receipt
+boundary plus expiry, legal-hold, and purge-audit invariants after restore.
 
 ## Proposal Lifecycle Integrity
 

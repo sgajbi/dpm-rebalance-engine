@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 IDEA_PROPOSAL_INTAKE_REPLAY_RETENTION = timedelta(hours=24)
+IDEA_PROPOSAL_INTAKE_PURGE_BATCH_SIZE = 128
 
 
 @dataclass(frozen=True)
