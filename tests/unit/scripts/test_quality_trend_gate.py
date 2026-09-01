@@ -213,7 +213,7 @@ def test_current_policy_has_only_revision_bound_python_growth_exceptions() -> No
     assert "contradictory realization/outcome rejection" in realization_exception["reason"]
     assert "expired-key reuse" in realization_exception["reason"]
     assert "#607" in realization_exception["reason"]
-    assert proposal_outcome_exception["allowed_delta"] == 1550
+    assert proposal_outcome_exception["allowed_delta"] == 1723
     assert (
         "source-authoritative Idea-to-Advise proposal linkage"
         in proposal_outcome_exception["reason"]

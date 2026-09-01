@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+e8758cfb0fad",
+  "policy_version": "lotus-advise-quality-trend.v1+372ccbe57020",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -61,9 +61,9 @@
       {
         "metric": "total_python_lines",
         "base_sha": "8b4bb56e2657d0dfe26168e141e3632a66dc1f26",
-        "head_python_content_fingerprint": "5c07e96101515702219d44686cd08f1cf3d5608d49740d578597a5c24fce8583",
-        "allowed_delta": 1550,
-        "reason": "Reviewed #602 proposal-outcome realization slice: the measured growth implements the source-authoritative Idea-to-Advise proposal linkage and terminal reconciliation contract, append-only versioned outcomes, compare-and-set/idempotent concurrency behavior, PostgreSQL migration and restart recovery proof, entitlement-first API handling, OpenAPI and data-product contract truth, plus behavioral unit, HTTP, recovery, migration, and live PostgreSQL tests. Review follow-up centralizes the shared progression invariant, preserves original-intake replay after mutable proposal progression, enforces one-realization-per-proposal parity in memory, and restores the B-ranked complexity inventory to the exact mainline count of 132; this exception permits only the measured Python content for this issue-backed lifecycle closure and does not relax coverage, complexity, typing, or test assertions.",
+        "head_python_content_fingerprint": "0867909a2006a735fd620b7b90fbb31303994ccc399c39bdac171340d4ac735e",
+        "allowed_delta": 1723,
+        "reason": "Reviewed #602 proposal-outcome realization slice: the measured growth implements the source-authoritative Idea-to-Advise proposal linkage and terminal reconciliation contract, append-only versioned outcomes, compare-and-set/idempotent concurrency behavior, PostgreSQL migration and restart recovery proof, entitlement-first API handling, OpenAPI and data-product contract truth, plus behavioral unit, HTTP, recovery, migration, and live PostgreSQL tests. Review follow-up centralizes the shared progression invariant, preserves original-intake replay after mutable proposal progression, enforces one-realization-per-proposal parity in memory, proves PostgreSQL missing-state, invalid-link, chronology and lost-compare-and-set failures, and restores the B-ranked complexity inventory to the exact mainline count of 132; this exception permits only the measured Python content for this issue-backed lifecycle closure and does not relax coverage, complexity, typing, or test assertions.",
         "approver": "sgajbi",
         "expires_on": "2026-09-16"
       }
