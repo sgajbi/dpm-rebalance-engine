@@ -192,18 +192,23 @@ def test_reviewed_exception_does_not_apply_to_different_python_content() -> None
     assert results[1].allowed_delta == 0
 
 
-def test_current_policy_has_no_global_python_growth_exception() -> None:
+def test_current_policy_has_only_revision_bound_python_growth_exceptions() -> None:
     policy = _policy()
     entries = policy["exceptions"]["entries"]
 
-    assert len(entries) == 1
-    exception = entries[0]
-    assert exception["metric"] == "total_python_lines"
-    assert exception["base_sha"] == "e879984ed78262ff2dc97bb7f345e1209fe53103"
-    assert exception["allowed_delta"] > 200
-    assert exception["approver"] == "sgajbi"
-    assert "production +313 lines" in exception["reason"]
-    assert "tests +259 lines" in exception["reason"]
+    assert len(entries) == 2
+    exceptions_by_base = {entry["base_sha"]: entry for entry in entries}
+    benchmark_exception = exceptions_by_base["e879984ed78262ff2dc97bb7f345e1209fe53103"]
+    realization_exception = exceptions_by_base["4337fb939bc9d675a49e640678b01fbc40f9fd9d"]
+    assert all(entry["metric"] == "total_python_lines" for entry in entries)
+    assert all(len(entry["head_python_content_fingerprint"]) == 64 for entry in entries)
+    assert all(entry["approver"] == "sgajbi" for entry in entries)
+    assert "production +313 lines" in benchmark_exception["reason"]
+    assert "tests +259 lines" in benchmark_exception["reason"]
+    assert realization_exception["allowed_delta"] == 1272
+    assert "+838 net production lines" in realization_exception["reason"]
+    assert "+434 net test lines" in realization_exception["reason"]
+    assert "#607" in realization_exception["reason"]
     total_lines = next(
         metric for metric in policy["metrics"] if metric["name"] == "total_python_lines"
     )
