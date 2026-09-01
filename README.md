@@ -187,7 +187,9 @@ Boundary rules that matter:
    `POST /advisory/proposals/idea-intake` with contract evidence under
    `contracts/idea-proposal-intake/`. It proves an executable handoff receipt with trusted
    local/dev caller headers, durable restart-safe idempotency conflict detection, safe replay, and
-   bounded accepted/rejected outcomes. It does not create advisory proposal records, durable
+   bounded accepted/rejected outcomes. Intake replay claims retain a 24-hour reuse window; expired
+   claims are purged before a new claim unless an authorized records process has placed them on
+   legal hold. It does not create advisory proposal records, durable
    advisory review work, or a source-owned business-outcome stream; grant suitability
    authority, authorize client publication, create orders, certify a data product, or promote a
    supported feature.

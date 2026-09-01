@@ -419,6 +419,14 @@ record, actor, and idempotency references. Corrections append compensating recor
 historical evidence. Jurisdiction-specific durations require approved bank policy input and must not
 be added as application constants.
 
+The `proposal_idea_intakes` registry is a bounded replay control rather than an advisory business
+record. Each claim has an explicit 24-hour replay expiry, matching the route's established
+idempotency window. Before claiming a new intake, the repository deletes expired rows that are not
+on legal hold; the partial expiry index keeps that purge bounded. An authorized records process may
+set `legal_hold` when operational intake evidence is in scope for an investigation or preservation
+order. Held rows continue to replay or conflict after expiry and must not be manually deleted. The
+read-only recovery check verifies the expiry invariant and legal-hold schema after restore.
+
 ## Proposal Lifecycle Integrity
 
 The proposal migration namespace validates lifecycle relational integrity before recording

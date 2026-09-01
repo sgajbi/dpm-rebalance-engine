@@ -42,6 +42,8 @@ REQUIRED_FIELD_PATHS = frozenset(
         "proposal_idea_intakes.request_fingerprint",
         "proposal_idea_intakes.response_json",
         "proposal_idea_intakes.created_at_utc",
+        "proposal_idea_intakes.expires_at_utc",
+        "proposal_idea_intakes.legal_hold",
         "logs.extra_fields",
         "metrics.labels",
         "traces.attributes",

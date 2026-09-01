@@ -12,6 +12,13 @@
   "route_existence_proven": true,
   "runtime_intake_receipt_proven": true,
   "durable_intake_idempotency_proven": true,
+  "idempotency_retention": {
+    "replay_window_hours": 24,
+    "expiry_boundary": "created_at_utc_plus_24_hours",
+    "purge_policy": "delete_expired_claims_before_new_claim_unless_legal_hold",
+    "legal_hold_supported": true,
+    "raw_idempotency_key_persisted": false
+  },
   "downstream_execution_proven": false,
   "supported_feature_promoted": false,
   "receipt_outcomes": [

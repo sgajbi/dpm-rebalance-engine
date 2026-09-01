@@ -3,7 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from src.core.proposals.exceptions import ProposalStateConflictError
+from src.core.proposals.exceptions import (
+    ProposalIdempotencyConflictError,
+    ProposalStateConflictError,
+)
+from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -26,6 +30,49 @@ IN_MEMORY_QUERY_PATH = REPO_ROOT / "src/infrastructure/proposals/in_memory_query
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _idea_intake_record(
+    *,
+    created_at: datetime,
+    request_fingerprint: str = "sha256:request",
+    legal_hold: bool = False,
+) -> IdeaProposalIntakeRecord:
+    return IdeaProposalIntakeRecord(
+        registry_key="scope:retained-key",
+        request_fingerprint=request_fingerprint,
+        response_json='{"intake_status":"ACCEPTED"}',
+        created_at_utc=created_at,
+        expires_at_utc=created_at + timedelta(hours=24),
+        legal_hold=legal_hold,
+    )
+
+
+def test_idea_intake_replay_window_expires_and_allows_key_reuse() -> None:
+    repository = InMemoryProposalRepository()
+    created_at = _now()
+    first = _idea_intake_record(created_at=created_at)
+
+    assert repository.claim_idea_proposal_intake(first).replayed is False
+    replacement = _idea_intake_record(
+        created_at=first.expires_at_utc,
+        request_fingerprint="sha256:replacement",
+    )
+    assert repository.claim_idea_proposal_intake(replacement).replayed is False
+
+
+def test_idea_intake_legal_hold_blocks_expiry_purge_and_key_reuse() -> None:
+    repository = InMemoryProposalRepository()
+    created_at = _now()
+    held = _idea_intake_record(created_at=created_at, legal_hold=True)
+    repository.claim_idea_proposal_intake(held)
+
+    replacement = _idea_intake_record(
+        created_at=held.expires_at_utc,
+        request_fingerprint="sha256:replacement",
+    )
+    with pytest.raises(ProposalIdempotencyConflictError):
+        repository.claim_idea_proposal_intake(replacement)
 
 
 def _proposal(proposal_id: str, created_by: str, state: str = "DRAFT") -> ProposalRecord:

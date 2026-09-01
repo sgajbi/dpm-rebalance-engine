@@ -394,7 +394,7 @@
       "compatibility_window": {
         "old_and_new_application_versions_supported": true,
         "minimum_rollout_window": "one_full_deploy_wave",
-        "consumer_contract": "adds durable scoped Idea intake replay decisions before the intake route depends on repository-backed idempotency"
+        "consumer_contract": "adds durable scoped Idea intake replay decisions with a 24-hour expiry boundary and legal-hold protection before the intake route depends on repository-backed idempotency"
       },
       "lock_behavior": {
         "transaction_scope": "single_namespace_transaction",
@@ -411,7 +411,7 @@
       "rollback": {
         "forward_fix_required": true,
         "previous_app_version_compatible": true,
-        "limitations": "older application versions ignore the additive table; retained intake decisions must not be deleted during rollback"
+        "limitations": "older application versions ignore the additive table; do not delete unexpired or legal-held intake decisions during rollback"
       },
       "rehearsal": {
         "profile_key": "local_postgres_migration_smoke",

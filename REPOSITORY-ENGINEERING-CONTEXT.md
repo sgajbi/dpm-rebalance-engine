@@ -217,7 +217,9 @@ Current repository posture:
 17. `POST /advisory/proposals/idea-intake` is implemented as a source-safe `lotus-idea`
    conversion-intent intake receipt. It proves trusted local/dev caller scope, durable
    PostgreSQL-backed idempotency conflict detection, restart-safe replay, and bounded
-   accepted/rejected outcomes. It is not certified as proposal realization, does not persist
+   accepted/rejected outcomes. Claims have a 24-hour replay window, are automatically purged on
+   subsequent intake after expiry, and remain protected from purge while under legal hold. It is
+   not certified as proposal realization, does not persist
    advisory review work or proposal lifecycle records, does not publish a source-owned business
    outcome stream, does not run suitability,
    does not authorize client publication, and must not be listed as a supported feature until the
