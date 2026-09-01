@@ -679,6 +679,38 @@ def test_postgres_repository_claims_replays_and_conflicts_idea_intake(monkeypatc
         repository.claim_idea_proposal_intake(replace(record, registry_key="scope:unreadable"))
 
 
+def test_postgres_repository_replays_original_intake_after_realization_progresses(monkeypatch):
+    repository, connection = _build_repository(monkeypatch)
+    record = _idea_intake_record(
+        datetime.now(timezone.utc),
+        registry_key="scope:progressed-realization-replay",
+    )
+    repository.claim_idea_proposal_intake(record)
+    stored = connection.idea_realizations[record.realization.realization_id]
+    stored.update(
+        review_work_status="PROPOSAL_LINKED",
+        proposal_id="pp_idea_linked",
+        current_status="PROPOSAL_LINKED",
+        current_source_event_version=2,
+        updated_at_utc=record.realization.updated_at_utc + timedelta(minutes=1),
+    )
+
+    replay = repository.claim_idea_proposal_intake(record)
+
+    assert replay.replayed is True
+    assert stored["proposal_id"] == "pp_idea_linked"
+    assert stored["current_source_event_version"] == 2
+    with pytest.raises(
+        ProposalIdempotencyConflictError, match="IDEA_PROPOSAL_REALIZATION_CONFLICT"
+    ):
+        repository.claim_idea_proposal_intake(
+            replace(
+                record,
+                realization=replace(record.realization, portfolio_id="PB_SG_OTHER_002"),
+            )
+        )
+
+
 def test_postgres_repository_reads_realization_only_in_exact_trusted_scope(monkeypatch):
     repository, _ = _build_repository(monkeypatch)
     record = _idea_intake_record(

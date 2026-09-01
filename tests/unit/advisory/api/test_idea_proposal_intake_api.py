@@ -774,9 +774,16 @@ def test_idea_realization_links_existing_same_portfolio_proposal_idempotently() 
             json={"proposal_id": "pp_idea_linked", "expected_source_event_version": 1},
             headers=_reconciliation_headers(),
         )
+        intake_replay = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-proposal-link"),
+        )
 
     assert first.status_code == 200
     assert replay.status_code == 200
+    assert intake_replay.status_code == 202
+    assert intake_replay.json()["idempotency_replay"] is True
     assert first.json() == replay.json()
     body = first.json()
     assert body["proposal_id"] == "pp_idea_linked"
