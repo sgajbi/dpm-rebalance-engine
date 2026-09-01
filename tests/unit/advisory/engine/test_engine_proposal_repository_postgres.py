@@ -13,6 +13,7 @@ from src.core.advisor_cockpit.persistence import (
 )
 from src.core.proposals.exceptions import (
     ProposalIdempotencyConflictError,
+    ProposalNotFoundError,
     ProposalStateConflictError,
 )
 from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
@@ -181,6 +182,7 @@ class _FakeConnection:
         for field in _TRANSACTIONAL_STORES:
             setattr(self, field, {})
         self.suppress_idea_intake_read = False
+        self.suppress_idea_realization_update = False
         self.executed_sql = []
         self.executed_args = []
         self.rollback_count = 0
@@ -251,6 +253,22 @@ class _FakeConnection:
         if "INSERT INTO proposal_idea_review_realizations" in sql:
             self.idea_realizations.setdefault(args[0], _row(_IDEA_REALIZATION_FIELDS, args))
             return _FakeCursor()
+        if sql.startswith("UPDATE proposal_idea_review_realizations SET"):
+            if self.suppress_idea_realization_update:
+                return _FakeCursor()
+            realization_id = args[5]
+            expected_version = args[6]
+            stored = self.idea_realizations.get(realization_id)
+            if stored is None or stored["current_source_event_version"] != expected_version:
+                return _FakeCursor()
+            stored.update(
+                review_work_status=args[0],
+                proposal_id=args[1],
+                current_status=args[2],
+                current_source_event_version=args[3],
+                updated_at_utc=args[4],
+            )
+            return _FakeCursor({"realization_id": realization_id})
         if "FROM proposal_idea_review_realizations" in sql:
             if "WHERE realization_id = %s" in sql:
                 return _FakeCursor(self.idea_realizations.get(args[0]))
@@ -738,6 +756,161 @@ def test_postgres_repository_reads_realization_only_in_exact_trusted_scope(monke
         )
         is None
     )
+
+
+def test_postgres_repository_advances_realization_and_appends_ordered_outcome(monkeypatch):
+    repository, connection = _build_repository(monkeypatch)
+    created_at = datetime.now(timezone.utc)
+    record = _idea_intake_record(created_at, registry_key="scope:realization-advance")
+    repository.claim_idea_proposal_intake(record)
+    proposal = ProposalRecord(
+        proposal_id="pp_idea_realization_001",
+        portfolio_id=record.realization.portfolio_id,
+        created_by="advisor-001",
+        created_at=created_at + timedelta(seconds=1),
+        last_event_at=created_at + timedelta(seconds=1),
+        current_state="DRAFT",
+        current_version_no=1,
+    )
+    repository.create_proposal(proposal)
+    connection.proposals[proposal.proposal_id]["created_at"] = proposal.created_at
+    advanced = replace(
+        record.realization,
+        review_work_status="PROPOSAL_LINKED",
+        proposal_id=proposal.proposal_id,
+        current_status="PROPOSAL_LINKED",
+        current_source_event_version=2,
+        updated_at_utc=created_at + timedelta(seconds=2),
+    )
+    linked = IdeaProposalRealizationOutcomeRecord(
+        outcome_id="ipro_linked_002",
+        realization_id=advanced.realization_id,
+        source_event_version=2,
+        status="PROPOSAL_LINKED",
+        reason_code="advise_proposal_linked",
+        occurred_at_utc=advanced.updated_at_utc,
+        review_work_id=advanced.review_work_id,
+        proposal_id=proposal.proposal_id,
+        terminal=False,
+    )
+
+    history = repository.advance_idea_proposal_realization(
+        expected_source_event_version=1,
+        realization=advanced,
+        outcomes=(linked,),
+    )
+
+    assert history.realization == advanced
+    assert history.outcomes == (record.initial_outcome, linked)
+
+    with pytest.raises(
+        ProposalStateConflictError,
+        match="IDEA_PROPOSAL_REALIZATION_SCOPE_CONFLICT",
+    ):
+        repository.advance_idea_proposal_realization(
+            expected_source_event_version=2,
+            realization=replace(advanced, portfolio_id="PB_SG_OTHER_002"),
+            outcomes=(),
+        )
+
+
+def test_postgres_repository_realization_advance_fails_closed_on_missing_state_or_proposal(
+    monkeypatch,
+):
+    repository, connection = _build_repository(monkeypatch)
+    created_at = datetime.now(timezone.utc)
+    record = _idea_intake_record(created_at, registry_key="scope:realization-fail-closed")
+    repository.claim_idea_proposal_intake(record)
+
+    with pytest.raises(ProposalNotFoundError, match="IDEA_PROPOSAL_REALIZATION_NOT_FOUND"):
+        repository.advance_idea_proposal_realization(
+            expected_source_event_version=1,
+            realization=replace(
+                record.realization,
+                realization_id="ipr_missing",
+                current_source_event_version=2,
+                proposal_id="pp_missing",
+            ),
+            outcomes=(),
+        )
+
+    advanced = replace(
+        record.realization,
+        proposal_id="pp_missing",
+        review_work_status="PROPOSAL_LINKED",
+        current_status="PROPOSAL_LINKED",
+        current_source_event_version=2,
+    )
+    linked = replace(
+        record.initial_outcome,
+        outcome_id="ipro_missing_proposal_002",
+        source_event_version=2,
+        status="PROPOSAL_LINKED",
+        reason_code="advise_proposal_linked",
+        proposal_id="pp_missing",
+    )
+    with pytest.raises(
+        ProposalNotFoundError,
+        match="IDEA_PROPOSAL_RECONCILIATION_PROPOSAL_NOT_FOUND",
+    ):
+        repository.advance_idea_proposal_realization(
+            expected_source_event_version=1,
+            realization=advanced,
+            outcomes=(linked,),
+        )
+
+    connection.proposals["pp_predates_realization"] = {
+        "proposal_id": "pp_predates_realization",
+        "portfolio_id": record.realization.portfolio_id,
+        "created_at": created_at - timedelta(seconds=1),
+    }
+    with pytest.raises(
+        ProposalNotFoundError,
+        match="IDEA_PROPOSAL_RECONCILIATION_PROPOSAL_NOT_FOUND",
+    ):
+        repository.advance_idea_proposal_realization(
+            expected_source_event_version=1,
+            realization=replace(advanced, proposal_id="pp_predates_realization"),
+            outcomes=(replace(linked, proposal_id="pp_predates_realization"),),
+        )
+
+
+def test_postgres_repository_realization_advance_detects_lost_compare_and_set(monkeypatch):
+    repository, connection = _build_repository(monkeypatch)
+    created_at = datetime.now(timezone.utc)
+    record = _idea_intake_record(created_at, registry_key="scope:realization-lost-cas")
+    repository.claim_idea_proposal_intake(record)
+    proposal_id = "pp_idea_lost_cas"
+    connection.proposals[proposal_id] = {
+        "proposal_id": proposal_id,
+        "portfolio_id": record.realization.portfolio_id,
+        "created_at": created_at + timedelta(seconds=1),
+    }
+    connection.suppress_idea_realization_update = True
+    linked = replace(
+        record.initial_outcome,
+        outcome_id="ipro_lost_cas_002",
+        source_event_version=2,
+        status="PROPOSAL_LINKED",
+        reason_code="advise_proposal_linked",
+        proposal_id=proposal_id,
+    )
+
+    with pytest.raises(
+        ProposalStateConflictError,
+        match="IDEA_PROPOSAL_REALIZATION_VERSION_CONFLICT",
+    ):
+        repository.advance_idea_proposal_realization(
+            expected_source_event_version=1,
+            realization=replace(
+                record.realization,
+                proposal_id=proposal_id,
+                review_work_status="PROPOSAL_LINKED",
+                current_status="PROPOSAL_LINKED",
+                current_source_event_version=2,
+            ),
+            outcomes=(linked,),
+        )
 
 
 def test_postgres_repository_reuses_expired_intake_key_but_preserves_legal_hold(monkeypatch):
