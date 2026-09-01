@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-01T12:46:37.716075+00:00`
+- Generated At: `2026-09-01T13:17:05.827225+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1108`
 - Packages: `42`
 - Modules: `1066`
-- Total Python lines: `202335`
+- Total Python lines: `202391`
 
 ## Largest Files
 
@@ -25,7 +25,7 @@
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
 | 8 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
-| 10 | `tests/unit/advisory/api/test_lotus_ai_advisory_copilot.py` | 1615 |
+| 10 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1644 |
 
 ## Largest Functions And Maintainability Hotspots
 
