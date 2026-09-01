@@ -5,6 +5,20 @@ WITH recovered_claims AS (
         AND response_json::jsonb ->> 'request_fingerprint' = request_fingerprint
         AND response_json::jsonb ->> 'idempotency_replay' = 'false'
         AND response_json::jsonb ->> 'intake_status' IN ('ACCEPTED', 'REJECTED')
+        AND (
+            (
+                response_json::jsonb ->> 'intake_status' = 'ACCEPTED'
+                AND (response_json::jsonb ->> 'intake_receipt_accepted')::boolean IS TRUE
+                AND response_json::jsonb -> 'outcome_reason_codes'
+                    = '["idea_intake_receipt_accepted"]'::jsonb
+            )
+            OR (
+                response_json::jsonb ->> 'intake_status' = 'REJECTED'
+                AND (response_json::jsonb ->> 'intake_receipt_accepted')::boolean IS FALSE
+                AND response_json::jsonb -> 'outcome_reason_codes'
+                    = '["advisory_proposal_creation_not_certified", "idea_intake_receipt_rejected_no_proposal_created"]'::jsonb
+            )
+        )
         AND response_json::jsonb ->> 'received_at' IS NOT NULL
         AND (response_json::jsonb ->> 'received_at')::timestamptz = created_at_utc
         AND jsonb_typeof(response_json::jsonb -> 'trusted_scope') = 'object'
