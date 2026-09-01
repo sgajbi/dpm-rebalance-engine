@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.duplicate-code-baseline.v1",
-  "baseline_version": "lotus-advise-duplicate-baseline.v3",
+  "baseline_version": "lotus-advise-duplicate-baseline.v4",
   "fingerprints": [
     "jscpd.v1|python|scripts/advisory_copilot_evaluation_gate.py|scripts/advisory_copilot_safety_gate.py|c1b2d044f385dd777121b5014f2c9eacec8896443be9e27f4fe37cf064ed3208|occurrence=1",
     "jscpd.v1|python|scripts/durable_state_recovery_contract.py|scripts/postgres_migration_rollout_contract.py|893623c4e5fc4adb1b1ec88b02d7c9c1b6757a31ae807d3b8e812a6177c82c25|occurrence=1",
@@ -18,7 +18,6 @@
     "jscpd.v1|python|src/api/proposals/advisor_cockpit_principal.py|src/api/proposals/policy_control_principal.py|03cd967c9ea6ec58a6e0b3d216543cc25d434ed79d853db4f743c738cc861a30|occurrence=4",
     "jscpd.v1|python|src/api/proposals/advisor_cockpit_principal.py|src/api/proposals/policy_control_principal.py|62dd0e681157bd6d3b8c714275efc8b3e0cae24e02cd93a19897c9560396eb64|occurrence=1",
     "jscpd.v1|python|src/api/proposals/advisor_cockpit_principal.py|src/api/proposals/policy_control_principal.py|73e6dd37ed5259812cf968f636ed63f2ec43deea06a2276dca928f941c60ee41|occurrence=1",
-    "jscpd.v1|python|src/api/proposals/advisor_cockpit_principal.py|src/api/proposals/policy_control_principal.py|73e6dd37ed5259812cf968f636ed63f2ec43deea06a2276dca928f941c60ee41|occurrence=2",
     "jscpd.v1|python|src/api/proposals/advisor_cockpit_principal.py|src/api/proposals/policy_control_principal.py|f2a853f246de82ee4ad2f00d4c3c332ab85ad930d994786258b4d195685056b7|occurrence=1",
     "jscpd.v1|python|src/api/proposals/routes_policy_evaluation_packages.py|src/api/proposals/routes_policy_evaluation_packages.py|4620bfaf0febc3bf60fc82b6cff2671554bab7f7669b67cbabbc21e6332600cd|occurrence=1",
     "jscpd.v1|python|src/core/advisory_copilot/section_models.py|src/core/advisory_copilot/section_models.py|3b2c0aa335bb987d12c17b874f1211fcaefc41ba30ab90bcd411cd50ba8eb8fc|occurrence=1",
