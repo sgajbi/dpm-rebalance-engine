@@ -73,8 +73,9 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
 
     assert "proposal_idea_intakes" in proposal_namespace["durable_records"]
     restore_checks = {check["check_key"]: check for check in proposal_namespace["restore_checks"]}
-    idea_check = restore_checks["idea_intake_restart_replay"]
+    idea_check = restore_checks["idea_intake_restored_claim_integrity"]
     assert idea_check["command"] == "make idea-intake-recovery-check"
     makefile = Path("Makefile").read_text(encoding="utf-8")
-    assert "os.environ['PROPOSAL_POSTGRES_INTEGRATION_DSN']" in makefile
-    assert "os.environ['PROPOSAL_POSTGRES_DSN']" in makefile
+    command = makefile.split("idea-intake-recovery-check:", 1)[1].split("\n\n", 1)[0]
+    assert "SET TRANSACTION READ ONLY" in command
+    assert "PROPOSAL_POSTGRES_DSN" in command and "pytest" not in command

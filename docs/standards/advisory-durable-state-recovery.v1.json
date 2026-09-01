@@ -65,7 +65,7 @@
           "evidence_path": "output/durable-state-recovery/proposal-replay-async-quarantine.txt"
         },
         {
-          "check_key": "idea_intake_restart_replay",
+          "check_key": "idea_intake_restored_claim_integrity",
           "command": "make idea-intake-recovery-check",
           "evidence_path": "output/durable-state-recovery/idea-intake-restart-replay.txt"
         }

@@ -108,7 +108,7 @@ durable-state-recovery-gate:
 	python scripts/durable_state_recovery_contract.py --emit-drill-evidence output/durable-state-recovery/recovery-drill-evidence.json
 
 idea-intake-recovery-check:
-	python -c "import os, pytest; os.environ['PROPOSAL_POSTGRES_INTEGRATION_DSN'] = os.environ['PROPOSAL_POSTGRES_DSN']; raise SystemExit(pytest.main(['tests/unit/advisory/api/test_idea_proposal_intake_api.py', 'tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py', '-k', 'idea_intake', '-q']))"
+	python -c "import os, pathlib, psycopg; connection = psycopg.connect(os.environ['PROPOSAL_POSTGRES_DSN']); connection.execute('SET TRANSACTION READ ONLY'); result = connection.execute(pathlib.Path('scripts/sql/verify_idea_intake_recovery.sql').read_text(encoding='utf-8')).fetchone(); connection.rollback(); connection.close(); assert result == (True,), 'IDEA_INTAKE_RECOVERY_INTEGRITY_FAILED'"
 
 docs-source-reference-gate:
 	python scripts/documentation_source_reference_check.py
