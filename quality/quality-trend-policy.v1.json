@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+f0b6b3709113",
+  "policy_version": "lotus-advise-quality-trend.v1+4ea87c1aacf6",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -52,9 +52,9 @@
       {
         "metric": "total_python_lines",
         "base_sha": "4337fb939bc9d675a49e640678b01fbc40f9fd9d",
-        "head_python_content_fingerprint": "7971e712cc5cd97b714068390972c94a56e980477a5527e0b9f2563773518711",
-        "allowed_delta": 1564,
-        "reason": "Reviewed #607 bounded realization slice: +885 net production lines implement deterministic Idea conversion realization identity, durable adviser-review work, append-only Advise-owned initial outcomes, fail-closed scoped read, PostgreSQL migration/recovery controls, repository adapters, one capability-configured principal dependency, scoped in-memory parity, and a narrowly bounded upgrade for still-valid receipts written by the immediately preceding release; +679 net test lines prove API authority, economic-identity conflict handling, accepted/rejected work posture, concurrent claims, atomic conflict rejection with corrected retry, restart replay, cross-tenant isolation, legacy-receipt replay, exact pre-realization recovery validation, deliberate legacy-receipt corruption rejection, live PostgreSQL recovery, and exact exception binding. Complexity remains at the mainline B-ranked inventory and a newly resolved duplicate fingerprint remains removed.",
+        "head_python_content_fingerprint": "15e0b9b0c709c295a8b83fa93d6cf4772f7581ec0390636392613cff9ac10a61",
+        "allowed_delta": 1695,
+        "reason": "Reviewed #607 bounded realization slice: +930 net production lines implement deterministic Idea conversion realization identity, durable adviser-review work, append-only Advise-owned initial outcomes, exact trusted portfolio-entitlement enforcement before realization lookup, PostgreSQL migration/recovery controls with parent/outcome reconciliation, repository adapters, one capability-configured principal dependency, scoped in-memory parity, and a narrowly bounded upgrade of realization fields and current certification evidence for still-valid receipts written by the immediately preceding release; +765 net test lines prove API authority and pre-lookup scope rejection, economic-identity conflict handling, accepted/rejected work posture, concurrent claims, atomic conflict rejection with corrected retry, restart replay, cross-tenant isolation, legacy-receipt replay without obsolete blockers, exact pre-realization recovery validation, contradictory realization/outcome rejection, deliberate legacy-receipt corruption rejection, live PostgreSQL recovery, and exact exception binding. Complexity remains at the mainline B-ranked inventory and a newly resolved duplicate fingerprint remains removed.",
         "approver": "sgajbi",
         "expires_on": "2026-09-15"
       }
