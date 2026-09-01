@@ -205,9 +205,10 @@ def test_current_policy_has_only_revision_bound_python_growth_exceptions() -> No
     assert all(entry["approver"] == "sgajbi" for entry in entries)
     assert "production +313 lines" in benchmark_exception["reason"]
     assert "tests +259 lines" in benchmark_exception["reason"]
-    assert 200 < realization_exception["allowed_delta"] < 1500
-    assert "net production lines" in realization_exception["reason"]
-    assert "net test lines" in realization_exception["reason"]
+    assert realization_exception["allowed_delta"] == 1508
+    assert "+885 net production lines" in realization_exception["reason"]
+    assert "+623 net test lines" in realization_exception["reason"]
+    assert "atomic conflict rejection with corrected retry" in realization_exception["reason"]
     assert "#607" in realization_exception["reason"]
     total_lines = next(
         metric for metric in policy["metrics"] if metric["name"] == "total_python_lines"
