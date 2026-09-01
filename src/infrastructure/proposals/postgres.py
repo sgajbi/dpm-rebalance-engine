@@ -1,6 +1,5 @@
 from contextlib import closing
 from datetime import datetime
-from importlib.util import find_spec
 from typing import Any, Optional, cast
 
 from src.core.advisor_cockpit.persistence import (
@@ -34,6 +33,7 @@ from src.infrastructure.proposals import (
 from src.infrastructure.proposals import (
     postgres_cockpit_acknowledgements as _cockpit_acknowledgements,
 )
+from src.infrastructure.proposals import postgres_connection as _postgres_connection
 from src.infrastructure.proposals import postgres_idea_intakes as _idea_intakes
 from src.infrastructure.proposals import (
     postgres_idempotency as _idempotency,
@@ -56,8 +56,7 @@ class PostgresProposalRepository:
     def __init__(self, *, dsn: str) -> None:
         if not dsn:
             raise RuntimeError("PROPOSAL_POSTGRES_DSN_REQUIRED")
-        if find_spec("psycopg") is None:
-            raise RuntimeError("PROPOSAL_POSTGRES_DRIVER_MISSING")
+        _postgres_connection.ensure_postgres_driver()
         self._dsn = dsn
         self._init_db()
 
@@ -393,16 +392,8 @@ class PostgresProposalRepository:
         )
 
     def _connect(self) -> Any:
-        psycopg, dict_row = _import_psycopg()
-        return psycopg.connect(self._dsn, row_factory=dict_row)
+        return _postgres_connection.connect_postgres(self._dsn)
 
     def _init_db(self) -> None:
         with closing(self._connect()) as connection:
             apply_postgres_migrations(connection=connection, namespace="proposals")
-
-
-def _import_psycopg() -> tuple[Any, Any]:
-    import psycopg
-    from psycopg.rows import dict_row
-
-    return psycopg, dict_row

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Annotated, cast
+from typing import cast
 
-from fastapi import Depends, Path, Request, status
+from fastapi import Depends, Request, status
 
 import src.api.proposals.router as shared
 from src.api.observability import correlation_id_var
@@ -10,6 +10,7 @@ from src.api.proposals.errors import reject_unexpected_query_params, run_proposa
 from src.api.proposals.idea_intake_parameters import (
     IdeaProposalIntakeCorrelationIdHeader,
     IdeaProposalIntakeIdempotencyKeyHeader,
+    IdeaProposalIntakeIdPath,
     IdeaProposalRealizationPortfolioHeader,
 )
 from src.api.proposals.idea_intake_principal import (
@@ -104,10 +105,7 @@ def accept_idea_proposal_intake(
 )
 def read_idea_proposal_realization(
     request: Request,
-    intake_id: Annotated[
-        str,
-        Path(min_length=1, max_length=160, examples=["ipi_7a1d2b3c4d5e"]),
-    ],
+    intake_id: IdeaProposalIntakeIdPath,
     portfolio_id: IdeaProposalRealizationPortfolioHeader,
     principal: IdeaProposalIntakePrincipal = Depends(require_idea_proposal_realization_reader),
     repository: ProposalRepository = Depends(shared.get_proposal_repository),
