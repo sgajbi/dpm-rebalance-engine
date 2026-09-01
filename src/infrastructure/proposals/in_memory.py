@@ -155,49 +155,50 @@ class InMemoryProposalRepository(ProposalRepository):
                 self._idea_proposal_intakes,
                 as_of=record.created_at_utc,
             )
-            existing = self._idea_proposal_intakes.get(record.registry_key)
-            if existing is not None and existing.request_fingerprint != record.request_fingerprint:
-                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT")
-            existing_realization = self._idea_proposal_realizations.get(
-                record.realization.realization_id
-            )
-            if existing_realization is not None and not _same_idea_realization_identity(
-                existing_realization, record.realization
-            ):
-                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_REALIZATION_CONFLICT")
-            outcomes = self._idea_proposal_realization_outcomes.get(
-                record.realization.realization_id, []
-            )
-            existing_outcome = next(
-                (
-                    outcome
-                    for outcome in outcomes
-                    if outcome.source_event_version == record.initial_outcome.source_event_version
-                ),
-                None,
-            )
-            if existing_outcome is not None and not _same_idea_realization_outcome(
-                existing_outcome, record.initial_outcome
-            ):
-                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_REALIZATION_CONFLICT")
-
+            existing = self._existing_idea_intake_or_conflict(record)
             replayed = existing is not None
             if existing is None:
                 existing = copy_record(record)
                 self._idea_proposal_intakes[record.registry_key] = existing
-            if existing_realization is None:
-                stored_realization = copy_record(record.realization)
-                self._idea_proposal_realizations[record.realization.realization_id] = (
-                    stored_realization
-                )
-                self._idea_realization_by_intake[record.realization.intake_id] = (
-                    record.realization.realization_id
-                )
-            if existing_outcome is None:
-                self._idea_proposal_realization_outcomes.setdefault(
-                    record.realization.realization_id, []
-                ).append(copy_record(record.initial_outcome))
+            self._claim_idea_realization_under_lock(record.realization)
+            self._claim_initial_idea_outcome_under_lock(record.initial_outcome)
             return IdeaProposalIntakeClaim(record=copy_record(existing), replayed=replayed)
+
+    def _existing_idea_intake_or_conflict(
+        self, requested: IdeaProposalIntakeRecord
+    ) -> IdeaProposalIntakeRecord | None:
+        existing = self._idea_proposal_intakes.get(requested.registry_key)
+        if existing is not None and existing.request_fingerprint != requested.request_fingerprint:
+            raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT")
+        return existing
+
+    def _claim_idea_realization_under_lock(self, requested: IdeaProposalRealizationRecord) -> None:
+        existing = self._idea_proposal_realizations.get(requested.realization_id)
+        if existing is not None:
+            if not _same_idea_realization_identity(existing, requested):
+                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_REALIZATION_CONFLICT")
+            return
+        stored = copy_record(requested)
+        self._idea_proposal_realizations[requested.realization_id] = stored
+        self._idea_realization_by_intake[requested.intake_id] = requested.realization_id
+
+    def _claim_initial_idea_outcome_under_lock(
+        self, requested: IdeaProposalRealizationOutcomeRecord
+    ) -> None:
+        outcomes = self._idea_proposal_realization_outcomes.setdefault(requested.realization_id, [])
+        existing = next(
+            (
+                outcome
+                for outcome in outcomes
+                if outcome.source_event_version == requested.source_event_version
+            ),
+            None,
+        )
+        if existing is not None:
+            if not _same_idea_realization_outcome(existing, requested):
+                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_REALIZATION_CONFLICT")
+            return
+        outcomes.append(copy_record(requested))
 
     def get_idea_proposal_realization(
         self,
