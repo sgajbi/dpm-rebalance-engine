@@ -67,6 +67,7 @@ def base_options() -> EngineOptions:
 
 @pytest.fixture(autouse=True)
 def postgres_runtime_test_harness(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("IDEA_PROPOSAL_RECONCILIATION_ENABLED", "true")
     monkeypatch.setenv("PROPOSAL_STORE_BACKEND", "POSTGRES")
     monkeypatch.setenv("PROPOSAL_POSTGRES_DSN", "postgresql://test:test@localhost:5432/proposals")
     monkeypatch.setenv("POLICY_STORE_BACKEND", "POSTGRES")

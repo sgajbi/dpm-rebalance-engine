@@ -129,6 +129,11 @@ tables and rehearse with production-like row counts before production apply.
   plaintext DSNs, database passwords, local image builds, or mutable image tags. Use the immutable
   image digest reference from release evidence and inject environment-specific values at deploy
   time.
+- Migration `proposals:0013` adds statuses that pre-0013 application readers cannot parse.
+  `IDEA_PROPOSAL_RECONCILIATION_ENABLED` defaults to `false`; apply the migration, complete a full
+  deployment wave, prove all pre-0013 pods are drained, and only then enable reconciliation writes.
+  Disable the flag before rollback. Once any later realization outcome exists, pre-0013 pods must
+  not serve realization reads or original-intake replays.
 
 ## CI Smoke Checks
 

@@ -50,6 +50,12 @@ class _FakeCursor:
         return list(self._rows)
 
 
+class _FakeUniqueViolation(Exception):
+    def __init__(self, constraint_name: str):
+        super().__init__(constraint_name)
+        self.diag = type("Diagnostics", (), {"constraint_name": constraint_name})()
+
+
 def _row(field_names: str, args) -> dict:
     return dict(zip(field_names.split(), args, strict=True))
 
@@ -261,6 +267,16 @@ class _FakeConnection:
             stored = self.idea_realizations.get(realization_id)
             if stored is None or stored["current_source_event_version"] != expected_version:
                 return _FakeCursor()
+            proposal_owner = next(
+                (
+                    row
+                    for other_id, row in self.idea_realizations.items()
+                    if other_id != realization_id and row["proposal_id"] == args[1]
+                ),
+                None,
+            )
+            if proposal_owner is not None:
+                raise _FakeUniqueViolation("uq_proposal_idea_realization_proposal")
             stored.update(
                 review_work_status=args[0],
                 proposal_id=args[1],
@@ -873,6 +889,93 @@ def test_postgres_repository_realization_advance_fails_closed_on_missing_state_o
             realization=replace(advanced, proposal_id="pp_predates_realization"),
             outcomes=(replace(linked, proposal_id="pp_predates_realization"),),
         )
+
+
+def test_postgres_repository_translates_proposal_ownership_race_and_rolls_back(monkeypatch):
+    repository, connection = _build_repository(monkeypatch)
+    created_at = datetime.now(timezone.utc)
+    first = _idea_intake_record(created_at, registry_key="scope:first-owner")
+    second_realization = replace(
+        first.realization,
+        realization_id="ipr_competing_owner",
+        intake_id="ipi_competing_owner",
+        review_work_id="iarw_competing_owner",
+        idea_candidate_id="idea_candidate_competing",
+        conversion_intent_id="conversion_intent_competing",
+    )
+    second = replace(
+        first,
+        registry_key="scope:competing-owner",
+        realization=second_realization,
+        initial_outcome=replace(
+            first.initial_outcome,
+            outcome_id="ipro_competing_owner",
+            realization_id=second_realization.realization_id,
+            review_work_id=second_realization.review_work_id,
+        ),
+    )
+    repository.claim_idea_proposal_intake(first)
+    repository.claim_idea_proposal_intake(second)
+    proposal = ProposalRecord(
+        proposal_id="pp_one_realization_only",
+        portfolio_id=first.realization.portfolio_id,
+        created_by="advisor-001",
+        created_at=created_at + timedelta(seconds=1),
+        last_event_at=created_at + timedelta(seconds=1),
+        current_state="DRAFT",
+        current_version_no=1,
+    )
+    repository.create_proposal(proposal)
+    connection.proposals[proposal.proposal_id]["created_at"] = proposal.created_at
+
+    def advanced(record: IdeaProposalIntakeRecord, outcome_id: str):
+        realization = replace(
+            record.realization,
+            review_work_status="PROPOSAL_LINKED",
+            proposal_id=proposal.proposal_id,
+            current_status="PROPOSAL_LINKED",
+            current_source_event_version=2,
+            updated_at_utc=created_at + timedelta(seconds=2),
+        )
+        outcome = replace(
+            record.initial_outcome,
+            outcome_id=outcome_id,
+            realization_id=realization.realization_id,
+            source_event_version=2,
+            status="PROPOSAL_LINKED",
+            reason_code="advise_proposal_linked",
+            occurred_at_utc=realization.updated_at_utc,
+            review_work_id=realization.review_work_id,
+            proposal_id=proposal.proposal_id,
+        )
+        return realization, outcome
+
+    first_realization, first_outcome = advanced(first, "ipro_first_link")
+    repository.advance_idea_proposal_realization(
+        expected_source_event_version=1,
+        realization=first_realization,
+        outcomes=(first_outcome,),
+    )
+    second_realization, second_outcome = advanced(second, "ipro_competing_link")
+
+    with pytest.raises(
+        ProposalStateConflictError,
+        match="IDEA_PROPOSAL_REALIZATION_PROPOSAL_CONFLICT",
+    ):
+        repository.advance_idea_proposal_realization(
+            expected_source_event_version=1,
+            realization=second_realization,
+            outcomes=(second_outcome,),
+        )
+
+    assert connection.rollback_count == 1
+    assert (
+        connection.idea_realizations[second.realization.realization_id][
+            "current_source_event_version"
+        ]
+        == 1
+    )
+    assert (second.realization.realization_id, 2) not in connection.idea_realization_outcomes
 
 
 def test_postgres_repository_realization_advance_detects_lost_compare_and_set(monkeypatch):

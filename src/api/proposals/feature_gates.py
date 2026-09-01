@@ -25,3 +25,13 @@ def assert_proposal_async_operations_enabled() -> None:
         default=True,
         detail="PROPOSAL_ASYNC_OPERATIONS_DISABLED",
     )
+
+
+def assert_idea_proposal_reconciliation_enabled() -> None:
+    """Keep outcome writes off until every pre-0013 application pod is drained."""
+
+    assert_feature_enabled(
+        name="IDEA_PROPOSAL_RECONCILIATION_ENABLED",
+        default=False,
+        detail="IDEA_PROPOSAL_RECONCILIATION_DISABLED",
+    )

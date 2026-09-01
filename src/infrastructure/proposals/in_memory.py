@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime
 from threading import Lock
 from typing import Optional
@@ -158,7 +159,11 @@ class InMemoryProposalRepository(ProposalRepository):
                 existing = copy_record(record)
                 self._idea_proposal_intakes[record.registry_key] = existing
             self._store_idea_realization_claim(existing if replayed else record)
-            return IdeaProposalIntakeClaim(record=copy_record(existing), replayed=replayed)
+            current_realization = self._idea_proposal_realizations[
+                existing.realization.realization_id
+            ]
+            replay_record = replace(existing, realization=copy_record(current_realization))
+            return IdeaProposalIntakeClaim(record=copy_record(replay_record), replayed=replayed)
 
     def _existing_idea_intake_or_conflict(
         self, requested: IdeaProposalIntakeRecord

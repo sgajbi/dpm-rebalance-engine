@@ -462,9 +462,10 @@
       "phase": "expand",
       "operation_class": "add_nullable_column_constraints_and_foreign_keys",
       "compatibility_window": {
-        "old_and_new_application_versions_supported": true,
+        "old_and_new_application_versions_supported": false,
         "minimum_rollout_window": "one_full_deploy_wave",
-        "consumer_contract": "adds explicit Advise proposal linkage and monotonic terminal realization outcomes without changing the existing Idea intake request"
+        "consumer_contract": "adds explicit Advise proposal linkage and monotonic terminal realization outcomes without changing the existing Idea intake request",
+        "write_activation_control": "IDEA_PROPOSAL_RECONCILIATION_ENABLED defaults false; enable it only after migration 0013 is applied and every pre-0013 application pod is drained"
       },
       "lock_behavior": {
         "transaction_scope": "single_namespace_transaction",
@@ -480,8 +481,9 @@
       },
       "rollback": {
         "forward_fix_required": true,
-        "previous_app_version_compatible": true,
-        "limitations": "older application versions ignore proposal_id and later outcomes; never delete linked proposal identity or append-only outcome history"
+        "previous_app_version_compatible": false,
+        "previous_version_recovery_control": "disable IDEA_PROPOSAL_RECONCILIATION_ENABLED before rollback and do not route realization reads or intake replays to pre-0013 pods after any proposal outcome has been written",
+        "limitations": "pre-0013 application versions cannot read or replay advanced realization statuses; never delete linked proposal identity or append-only outcome history"
       },
       "rehearsal": {
         "profile_key": "local_postgres_migration_smoke",
