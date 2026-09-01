@@ -1355,6 +1355,26 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
     assert replay.review_work_id == first.review_work_id
     assert replay.review_work_status == "PENDING_ADVISER_REVIEW"
     assert replay.realization_status == "ACCEPTED_FOR_REVIEW"
+    later_claim = process_idea_proposal_intake(
+        request,
+        correlation_id="corr-portfolio-later-claim",
+        idempotency_key="idea-intake-portfolio-later-claim",
+        principal=principal,
+        repository=second_repository,
+        received_at=created_at + timedelta(seconds=2),
+    )
+    assert later_claim.idempotency_replay is False
+    assert later_claim.realization_id == first.realization_id
+    expired_key_reclaim = process_idea_proposal_intake(
+        request,
+        correlation_id="corr-portfolio-expired-key-reclaim",
+        idempotency_key="idea-intake-portfolio-recovery",
+        principal=principal,
+        repository=second_repository,
+        received_at=created_at + timedelta(hours=24, seconds=1),
+    )
+    assert expired_key_reclaim.idempotency_replay is False
+    assert expired_key_reclaim.realization_id == first.realization_id
     with pytest.raises(ProposalIdempotencyConflictError):
         process_idea_proposal_intake(
             request.model_copy(update={"portfolio_id": "PB_SG_INCOME_002"}),
@@ -1362,7 +1382,7 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
             idempotency_key="idea-intake-portfolio-recovery",
             principal=principal,
             repository=second_repository,
-            received_at=created_at + timedelta(seconds=2),
+            received_at=created_at + timedelta(seconds=3),
         )
 
     rejected = process_idea_proposal_intake(
@@ -1377,7 +1397,7 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
         idempotency_key="idea-intake-rejected-before-work",
         principal=principal,
         repository=second_repository,
-        received_at=created_at + timedelta(seconds=3),
+        received_at=created_at + timedelta(seconds=4),
     )
     assert rejected.realization_status == "REJECTED_BEFORE_WORK"
     assert rejected.review_work_id is None

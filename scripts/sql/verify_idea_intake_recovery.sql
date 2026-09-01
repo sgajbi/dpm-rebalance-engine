@@ -132,8 +132,8 @@ WITH recovered_claims AS (
                           = (response_json::jsonb ->> 'source_event_version')::integer
                       AND realization.source_evidence_fingerprint
                           = response_json::jsonb ->> 'source_evidence_fingerprint'
-                      AND realization.created_at_utc = intake.created_at_utc
-                      AND realization.updated_at_utc = intake.created_at_utc
+                      AND realization.created_at_utc <= intake.created_at_utc
+                      AND realization.updated_at_utc = realization.created_at_utc
                 )
             )
         )
@@ -159,6 +159,7 @@ WITH recovered_claims AS (
     SELECT COALESCE(
         realization_id ~ '^ipr_[0-9a-f]{12}$'
         AND intake_id ~ '^ipi_[0-9a-f]{12}$'
+        AND source_claim_registry_key ~ '^[0-9a-f]{64}:sha256:[0-9a-f]{64}$'
         AND source_evidence_fingerprint ~ '^sha256:[0-9a-f]{64}$'
         AND idea_candidate_id = btrim(idea_candidate_id) AND idea_candidate_id <> ''
         AND idea_candidate_id !~ '[[:cntrl:]]'
@@ -202,6 +203,21 @@ WITH recovered_claims AS (
             12
         )
         AND updated_at_utc = created_at_utc
+        AND (
+            EXISTS (
+                SELECT 1
+                FROM proposal_idea_intakes source_claim
+                WHERE source_claim.registry_key = realization.source_claim_registry_key
+                  AND source_claim.created_at_utc = realization.created_at_utc
+            )
+            OR EXISTS (
+                SELECT 1
+                FROM proposal_idea_intake_purge_events source_claim_purge
+                WHERE source_claim_purge.registry_key_digest
+                    = realization.source_claim_registry_key
+                  AND source_claim_purge.claim_created_at_utc = realization.created_at_utc
+            )
+        )
         AND (
             (
                 current_status = 'ACCEPTED_FOR_REVIEW'

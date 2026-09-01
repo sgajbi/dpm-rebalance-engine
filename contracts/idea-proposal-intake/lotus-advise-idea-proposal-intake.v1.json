@@ -47,6 +47,7 @@
     "purge_policy": "target_prioritized_batches_before_new_claim_unless_legal_hold",
     "purge_batch_size": 128,
     "purge_audit_evidence": "proposal_idea_intake_purge_events",
+    "realization_origin_evidence": "source_claim_registry_key_bound_to_live_receipt_or_purge_event",
     "legal_hold_supported": true,
     "raw_idempotency_key_persisted": false
   },

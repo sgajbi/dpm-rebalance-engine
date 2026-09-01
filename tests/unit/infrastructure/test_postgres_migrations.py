@@ -261,4 +261,6 @@ def test_idea_realization_migration_scopes_intake_identity() -> None:
     assert "intake_id TEXT NOT NULL," in sql
     assert "intake_id TEXT NOT NULL UNIQUE" not in sql
     assert "CONSTRAINT uq_proposal_idea_realization_intake_scope" in sql
+    assert "source_claim_registry_key TEXT NOT NULL" in sql
+    assert "CONSTRAINT ck_proposal_idea_realization_source_claim" in sql
     assert "UNIQUE (tenant_id, legal_entity_code, portfolio_id, intake_id)" in sql
