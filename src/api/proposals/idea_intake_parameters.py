@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Header
+from fastapi import Header, Path
 
 from src.core.common.idempotency import MAX_IDEMPOTENCY_KEY_LENGTH
 
@@ -43,6 +43,11 @@ IdeaProposalRealizationPortfolioHeader = Annotated[
         max_length=160,
         examples=["PB_SG_GLOBAL_BAL_001"],
     ),
+]
+
+IdeaProposalIntakeIdPath = Annotated[
+    str,
+    Path(min_length=1, max_length=160, examples=["ipi_7a1d2b3c4d5e"]),
 ]
 
 IdeaProposalActorHeader = Annotated[str | None, Header(alias="X-Actor-Id")]

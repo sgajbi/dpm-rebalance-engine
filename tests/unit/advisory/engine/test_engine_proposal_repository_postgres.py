@@ -6,7 +6,7 @@ from types import ModuleType
 
 import pytest
 
-import src.infrastructure.proposals.postgres as postgres_module
+import src.infrastructure.proposals.postgres_connection as postgres_connection
 from src.core.advisor_cockpit.persistence import (
     CockpitAcknowledgementIdempotencyRecord,
     CockpitAcknowledgementRecord,
@@ -551,7 +551,7 @@ def _is_transactional_write_sql(sql: str) -> bool:
 
 def _build_repository(monkeypatch, connection=None):
     connection = connection or _FakeConnection()
-    monkeypatch.setattr(postgres_module, "find_spec", lambda _name: object())
+    monkeypatch.setattr(postgres_connection, "find_spec", lambda _name: object())
     monkeypatch.setattr(
         PostgresProposalRepository,
         "_connect",
@@ -571,7 +571,7 @@ def test_postgres_repository_requires_dsn():
 
 
 def test_postgres_repository_requires_driver(monkeypatch):
-    monkeypatch.setattr(postgres_module, "find_spec", lambda _name: None)
+    monkeypatch.setattr(postgres_connection, "find_spec", lambda _name: None)
     try:
         PostgresProposalRepository(dsn="postgresql://user:pass@localhost:5432/proposals")
     except RuntimeError as exc:
@@ -1815,7 +1815,7 @@ def test_import_psycopg_returns_driver_and_row_factory(monkeypatch):
     monkeypatch.setitem(sys.modules, "psycopg", fake_psycopg)
     monkeypatch.setitem(sys.modules, "psycopg.rows", fake_psycopg_rows)
 
-    psycopg, dict_row = postgres_module._import_psycopg()
+    psycopg, dict_row = postgres_connection._import_psycopg()
     assert psycopg is fake_psycopg
     assert dict_row is fake_dict_row
 
@@ -1831,7 +1831,7 @@ def test_postgres_repository_connect_uses_dsn_and_row_factory(monkeypatch):
 
     fake_row_factory = object()
     monkeypatch.setattr(
-        postgres_module,
+        postgres_connection,
         "_import_psycopg",
         lambda: (_FakeDriver(), fake_row_factory),
     )
