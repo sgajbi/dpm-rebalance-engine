@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+2a2cb5baad93",
+  "policy_version": "lotus-advise-quality-trend.v1+778fbcf24e38",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -57,6 +57,15 @@
         "reason": "Reviewed #607 bounded realization slice: +993 net production lines implement deterministic Idea conversion realization identity, durable adviser-review work, append-only Advise-owned initial outcomes, exact trusted portfolio-entitlement enforcement before realization lookup, PostgreSQL migration/recovery controls with exact receipt/realization/outcome, deterministic intake/realization/review-work/outcome identity, immutable atomic intake/realization/initial-outcome chronology reconciliation, original-claim provenance retained across receipt purge and other idempotency claims without treating transport timestamps as a total order, and legacy replay realization chronology anchored to the stored origin receipt, repository adapters, one capability-configured principal dependency that preserves the certified callable surface, scoped in-memory parity, and a narrowly bounded upgrade of realization fields and current certification evidence for still-valid receipts written by the immediately preceding release; +1031 net test lines prove API authority, pre-lookup scope rejection and authorized-scope audit metadata, typed principal resolution, economic-identity conflict handling, accepted/rejected work posture, concurrent claims, atomic conflict rejection with corrected retry, restart replay, cross-tenant isolation, later, out-of-order, and expired-key reuse of one economic realization, legacy-receipt replay with origin-timestamp preservation and without obsolete blockers, exact pre-realization recovery validation, contradictory realization/outcome rejection plus contradictory receipt-field rejection, swapped or blank source-identity rejection, deterministic intake/outcome identity rejection, corrupted outcome and whole-chain chronology rejection, deliberate legacy-receipt corruption rejection, live PostgreSQL recovery, and exact exception binding. Complexity remains at the mainline B-ranked inventory and a newly resolved duplicate fingerprint remains removed.",
         "approver": "sgajbi",
         "expires_on": "2026-09-15"
+      },
+      {
+        "metric": "total_python_lines",
+        "base_sha": "8b4bb56e2657d0dfe26168e141e3632a66dc1f26",
+        "head_python_content_fingerprint": "816f8f60b5ed03de5f2da961d0106d305320442cea8992307521468076eedd2c",
+        "allowed_delta": 1494,
+        "reason": "Reviewed #602 proposal-outcome realization slice: the measured growth implements the source-authoritative Idea-to-Advise proposal linkage and terminal reconciliation contract, append-only versioned outcomes, compare-and-set/idempotent concurrency behavior, PostgreSQL migration and restart recovery proof, entitlement-first API handling, OpenAPI and data-product contract truth, plus behavioral unit, HTTP, recovery, migration, and live PostgreSQL tests. The follow-up refactor centralizes the shared progression invariant and restores the B-ranked complexity inventory to the exact mainline count of 132; this exception permits only the measured Python content for this issue-backed lifecycle closure and does not relax coverage, complexity, typing, or test assertions.",
+        "approver": "sgajbi",
+        "expires_on": "2026-09-16"
       }
     ]
   }

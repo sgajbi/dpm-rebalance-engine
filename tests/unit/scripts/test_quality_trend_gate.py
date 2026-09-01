@@ -196,10 +196,11 @@ def test_current_policy_has_only_revision_bound_python_growth_exceptions() -> No
     policy = _policy()
     entries = policy["exceptions"]["entries"]
 
-    assert len(entries) == 2
+    assert len(entries) == 3
     exceptions_by_base = {entry["base_sha"]: entry for entry in entries}
     benchmark_exception = exceptions_by_base["e879984ed78262ff2dc97bb7f345e1209fe53103"]
     realization_exception = exceptions_by_base["4337fb939bc9d675a49e640678b01fbc40f9fd9d"]
+    proposal_outcome_exception = exceptions_by_base["8b4bb56e2657d0dfe26168e141e3632a66dc1f26"]
     assert all(entry["metric"] == "total_python_lines" for entry in entries)
     assert all(len(entry["head_python_content_fingerprint"]) == 64 for entry in entries)
     assert all(entry["approver"] == "sgajbi" for entry in entries)
@@ -212,6 +213,13 @@ def test_current_policy_has_only_revision_bound_python_growth_exceptions() -> No
     assert "contradictory realization/outcome rejection" in realization_exception["reason"]
     assert "expired-key reuse" in realization_exception["reason"]
     assert "#607" in realization_exception["reason"]
+    assert proposal_outcome_exception["allowed_delta"] == 1494
+    assert (
+        "source-authoritative Idea-to-Advise proposal linkage"
+        in proposal_outcome_exception["reason"]
+    )
+    assert "restores the B-ranked complexity inventory" in proposal_outcome_exception["reason"]
+    assert "#602" in proposal_outcome_exception["reason"]
     total_lines = next(
         metric for metric in policy["metrics"] if metric["name"] == "total_python_lines"
     )
