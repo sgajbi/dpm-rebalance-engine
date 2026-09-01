@@ -1,11 +1,16 @@
+import json
+from dataclasses import replace
+
 from fastapi.testclient import TestClient
 
+import src.api.proposals.router as proposals_router
 from src.api.main import app
 from src.core.proposals.idea_proposal_intake import (
     IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS,
     IdeaProposalIntakeRequest,
     acknowledge_idea_proposal_intake,
 )
+from src.infrastructure.proposals.in_memory import InMemoryProposalRepository
 
 
 def _payload() -> dict[str, object]:
@@ -163,6 +168,51 @@ def test_idea_proposal_intake_route_replays_same_idempotency_key_and_payload() -
     assert second_body["portfolio_id"] == first_body["portfolio_id"]
     assert second_body["outcome_reason_codes"] == ["idea_intake_receipt_replayed"]
     assert second_body["correlation_id"] == "corr-second"
+
+
+def test_idea_proposal_intake_route_upgrades_pre_realization_replay_receipt() -> None:
+    with TestClient(app) as client:
+        first = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-intake-idem-legacy-replay"),
+        )
+        repository = proposals_router.get_proposal_repository()
+        assert isinstance(repository, InMemoryProposalRepository)
+        registry_key, stored = next(iter(repository._idea_proposal_intakes.items()))  # noqa: SLF001
+        legacy_payload = json.loads(stored.response_json)
+        for field in (
+            "realization_id",
+            "review_work_id",
+            "review_work_status",
+            "realization_status",
+            "source_event_version",
+            "source_evidence_fingerprint",
+        ):
+            legacy_payload.pop(field)
+        repository._idea_proposal_intakes[registry_key] = replace(  # noqa: SLF001
+            stored,
+            response_json=json.dumps(legacy_payload),
+        )
+        repository._idea_proposal_realizations.clear()  # noqa: SLF001
+        repository._idea_realization_by_intake.clear()  # noqa: SLF001
+        repository._idea_proposal_realization_outcomes.clear()  # noqa: SLF001
+
+        replay = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-intake-idem-legacy-replay"),
+        )
+
+    assert first.status_code == 202
+    assert replay.status_code == 202
+    body = replay.json()
+    assert body["idempotency_replay"] is True
+    assert body["realization_id"].startswith("ipr_")
+    assert body["review_work_id"].startswith("iarw_")
+    assert body["review_work_status"] == "PENDING_ADVISER_REVIEW"
+    assert body["realization_status"] == "ACCEPTED_FOR_REVIEW"
+    assert body["source_event_version"] == 1
 
 
 def test_idea_proposal_intake_route_normalizes_idempotency_key() -> None:

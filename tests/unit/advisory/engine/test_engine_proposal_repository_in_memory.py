@@ -122,6 +122,50 @@ def test_idea_intake_creates_one_scope_checked_review_realization() -> None:
     )
 
 
+def test_idea_intake_keeps_same_intake_identity_isolated_between_tenants() -> None:
+    first = _idea_intake_record(_now())
+    second_realization = replace(
+        first.realization,
+        realization_id="ipr_abcdef123456",
+        review_work_id="iarw_abcdef123456",
+        tenant_id="tenant-private-bank-hk",
+        legal_entity_code="HKPB",
+    )
+    second = replace(
+        first,
+        registry_key="scope:retained-key-hk",
+        realization=second_realization,
+        initial_outcome=replace(
+            first.initial_outcome,
+            outcome_id="ipro_abcdef123456",
+            realization_id=second_realization.realization_id,
+            review_work_id=second_realization.review_work_id,
+        ),
+    )
+    repository = InMemoryProposalRepository()
+
+    repository.claim_idea_proposal_intake(first)
+    repository.claim_idea_proposal_intake(second)
+
+    first_history = repository.get_idea_proposal_realization(
+        intake_id=first.realization.intake_id,
+        tenant_id=first.realization.tenant_id,
+        legal_entity_code=first.realization.legal_entity_code,
+        portfolio_id=first.realization.portfolio_id,
+    )
+    second_history = repository.get_idea_proposal_realization(
+        intake_id=second.realization.intake_id,
+        tenant_id=second.realization.tenant_id,
+        legal_entity_code=second.realization.legal_entity_code,
+        portfolio_id=second.realization.portfolio_id,
+    )
+
+    assert first_history is not None
+    assert second_history is not None
+    assert first_history.realization.realization_id == first.realization.realization_id
+    assert second_history.realization.realization_id == second.realization.realization_id
+
+
 def _proposal(proposal_id: str, created_by: str, state: str = "DRAFT") -> ProposalRecord:
     now = _now()
     return ProposalRecord(
