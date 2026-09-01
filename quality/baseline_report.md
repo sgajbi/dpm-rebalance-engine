@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-01T15:15:01.782034+00:00`
+- Generated At: `2026-09-01T15:31:28.091018+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1108`
 - Packages: `42`
 - Modules: `1066`
-- Total Python lines: `202741`
+- Total Python lines: `202778`
 
 ## Largest Files
 
@@ -21,9 +21,9 @@
 | 3 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2675 |
 | 4 | `tests/unit/advisory/api/test_api_workspace.py` | 2568 |
 | 5 | `scripts/validate_cross_service_parity_live.py` | 2155 |
-| 6 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 1971 |
+| 6 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 1972 |
 | 7 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
-| 8 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1830 |
+| 8 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1850 |
 | 9 | `tests/unit/advisory/api/test_api_advisory_policy_evaluations.py` | 1760 |
 | 10 | `tests/unit/advisory/api/test_api_advisory_proposal_simulate.py` | 1737 |
 
@@ -32,9 +32,9 @@
 | Rank | Function | File | Line | Lines |
 | ---: | --- | --- | ---: | ---: |
 | 1 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 405 |
-| 2 | `test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery` | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1315 | 325 |
+| 2 | `test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery` | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1315 | 345 |
 | 3 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 120 | 311 |
-| 4 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 187 | 296 |
+| 4 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 188 | 296 |
 | 5 | `test_resolve_stateful_context_with_lotus_core_builds_simulation_request` | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 1331 | 225 |
 | 6 | `test_proof_pack_indexes_assets_and_blocks_sensitive_committed_material` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_models.py` | 381 | 216 |
 | 7 | `_live_runtime_payload` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_capture.py` | 26 | 187 |
