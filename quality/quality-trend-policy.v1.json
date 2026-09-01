@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+5a3f4162126e",
+  "policy_version": "lotus-advise-quality-trend.v1+d90066109dcb",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -52,9 +52,9 @@
       {
         "metric": "total_python_lines",
         "base_sha": "4337fb939bc9d675a49e640678b01fbc40f9fd9d",
-        "head_python_content_fingerprint": "f86f590a5fd671de0171896c1861b6a7e7e7b710fdea60cffe9cd38cb2ac349e",
-        "allowed_delta": 1277,
-        "reason": "Reviewed #607 bounded realization slice: +838 net production lines implement deterministic Idea conversion realization identity, durable adviser-review work, append-only Advise-owned initial outcomes, fail-closed scoped read, PostgreSQL migration/recovery controls, and repository adapters; +439 net test lines prove API authority, economic-identity conflict handling, accepted/rejected work posture, concurrent claims, restart replay, live PostgreSQL recovery, and exact exception binding. Complexity was refactored back to the mainline B-ranked inventory before this content-bound exception.",
+        "head_python_content_fingerprint": "8d9e61c400b4303946c7c9c0bdc30cba5a01b089eddbf54805557926c0f7baf3",
+        "allowed_delta": 1279,
+        "reason": "Reviewed #607 bounded realization slice: +840 net production lines implement deterministic Idea conversion realization identity, durable adviser-review work, append-only Advise-owned initial outcomes, fail-closed scoped read, PostgreSQL migration/recovery controls, repository adapters, and a single capability-configured principal dependency; +439 net test lines prove API authority, economic-identity conflict handling, accepted/rejected work posture, concurrent claims, restart replay, live PostgreSQL recovery, and exact exception binding. Complexity was refactored back to the mainline B-ranked inventory and a newly resolved duplicate fingerprint was removed before this content-bound exception.",
         "approver": "sgajbi",
         "expires_on": "2026-09-15"
       }
