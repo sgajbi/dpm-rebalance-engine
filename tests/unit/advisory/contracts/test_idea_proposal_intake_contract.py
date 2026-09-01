@@ -33,6 +33,13 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["route_existence_proven"] is True
     assert contract["runtime_intake_receipt_proven"] is True
     assert contract["durable_intake_idempotency_proven"] is True
+    assert contract["idempotency_retention"] == {
+        "replay_window_hours": 24,
+        "expiry_boundary": "created_at_utc_plus_24_hours",
+        "purge_policy": "delete_expired_claims_before_new_claim_unless_legal_hold",
+        "legal_hold_supported": True,
+        "raw_idempotency_key_persisted": False,
+    }
     assert contract["downstream_execution_proven"] is False
     assert contract["supported_feature_promoted"] is False
 

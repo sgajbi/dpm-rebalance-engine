@@ -1164,11 +1164,13 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
         PostgresProposalRepository(dsn=_DSN),
     )
     _reset_tables(first_repository)
+    created_at = datetime.now(timezone.utc)
     record = IdeaProposalIntakeRecord(
         registry_key=f"sha256:{uuid.uuid4().hex}:sha256:{uuid.uuid4().hex}",
         request_fingerprint=f"sha256:{uuid.uuid4().hex}",
         response_json='{"intake_status":"ACCEPTED"}',
-        created_at_utc=datetime.now(timezone.utc),
+        created_at_utc=created_at,
+        expires_at_utc=created_at + timedelta(hours=24),
     )
 
     barrier = Barrier(2)
@@ -1191,6 +1193,32 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
         second_repository.claim_idea_proposal_intake(
             replace(record, request_fingerprint=f"sha256:{uuid.uuid4().hex}")
         )
+
+    replacement = replace(
+        record,
+        request_fingerprint=f"sha256:{uuid.uuid4().hex}",
+        created_at_utc=record.expires_at_utc,
+        expires_at_utc=record.expires_at_utc + timedelta(hours=24),
+    )
+    assert second_repository.claim_idea_proposal_intake(replacement).replayed is False
+
+    with closing(first_repository._connect()) as connection:  # noqa: SLF001
+        connection.execute(
+            "UPDATE proposal_idea_intakes SET legal_hold = TRUE WHERE registry_key = %s",
+            (record.registry_key,),
+        )
+        connection.commit()
+    held_replacement = replace(
+        replacement,
+        request_fingerprint=f"sha256:{uuid.uuid4().hex}",
+        created_at_utc=replacement.expires_at_utc,
+        expires_at_utc=replacement.expires_at_utc + timedelta(hours=24),
+    )
+    with pytest.raises(
+        ProposalIdempotencyConflictError,
+        match="IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT",
+    ):
+        second_repository.claim_idea_proposal_intake(held_replacement)
 
 
 def _reset_tables(repository: PostgresProposalRepository) -> None:

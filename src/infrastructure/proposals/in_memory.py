@@ -72,6 +72,11 @@ class InMemoryProposalRepository(ProposalRepository):
         self, record: IdeaProposalIntakeRecord
     ) -> IdeaProposalIntakeClaim:
         with self._lock:
+            self._idea_proposal_intakes = {
+                registry_key: stored
+                for registry_key, stored in self._idea_proposal_intakes.items()
+                if stored.legal_hold or stored.expires_at_utc > record.created_at_utc
+            }
             existing = self._idea_proposal_intakes.get(record.registry_key)
             if existing is None:
                 stored = copy_record(record)

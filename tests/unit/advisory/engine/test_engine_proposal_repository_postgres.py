@@ -138,9 +138,24 @@ class _FakeConnection:
                 "created_at": args[4],
             }
             return _FakeCursor()
+        if "DELETE FROM proposal_idea_intakes" in sql:
+            as_of = args[0]
+            self.idea_intakes = {
+                registry_key: stored
+                for registry_key, stored in self.idea_intakes.items()
+                if stored["legal_hold"] or stored["expires_at_utc"] > as_of
+            }
+            return _FakeCursor()
         if "INSERT INTO proposal_idea_intakes" in sql:
             inserted = args[0] not in self.idea_intakes
-            fields = "registry_key", "request_fingerprint", "response_json", "created_at_utc"
+            fields = (
+                "registry_key",
+                "request_fingerprint",
+                "response_json",
+                "created_at_utc",
+                "expires_at_utc",
+                "legal_hold",
+            )
             self.idea_intakes.setdefault(args[0], dict(zip(fields, args, strict=True)))
             return _FakeCursor({"registry_key": args[0]} if inserted else None)
         if "FROM proposal_idea_intakes" in sql:
@@ -762,8 +777,13 @@ def test_postgres_repository_idempotency_roundtrip(monkeypatch):
 
 def test_postgres_repository_claims_replays_and_conflicts_idea_intake(monkeypatch):
     repository, connection = _build_repository(monkeypatch)
+    created_at = datetime.now(timezone.utc)
     record = IdeaProposalIntakeRecord(
-        "scope:key", "sha256:request", '{"intake_status":"ACCEPTED"}', datetime.now(timezone.utc)
+        "scope:key",
+        "sha256:request",
+        '{"intake_status":"ACCEPTED"}',
+        created_at,
+        created_at + timedelta(hours=24),
     )
 
     assert repository.claim_idea_proposal_intake(record).replayed is False
@@ -773,6 +793,37 @@ def test_postgres_repository_claims_replays_and_conflicts_idea_intake(monkeypatc
     connection.suppress_idea_intake_read = True
     with pytest.raises(RuntimeError, match="IDEA_PROPOSAL_INTAKE_PERSISTENCE_FAILED"):
         repository.claim_idea_proposal_intake(replace(record, registry_key="scope:unreadable"))
+
+
+def test_postgres_repository_reuses_expired_intake_key_but_preserves_legal_hold(monkeypatch):
+    repository, connection = _build_repository(monkeypatch)
+    created_at = datetime.now(timezone.utc)
+    record = IdeaProposalIntakeRecord(
+        "scope:retained-key",
+        "sha256:request",
+        '{"intake_status":"ACCEPTED"}',
+        created_at,
+        created_at + timedelta(hours=24),
+    )
+    repository.claim_idea_proposal_intake(record)
+
+    replacement = replace(
+        record,
+        request_fingerprint="sha256:replacement",
+        created_at_utc=record.expires_at_utc,
+        expires_at_utc=record.expires_at_utc + timedelta(hours=24),
+    )
+    assert repository.claim_idea_proposal_intake(replacement).replayed is False
+
+    connection.idea_intakes[record.registry_key]["legal_hold"] = True
+    held_replacement = replace(
+        replacement,
+        request_fingerprint="sha256:held-replacement",
+        created_at_utc=replacement.expires_at_utc,
+        expires_at_utc=replacement.expires_at_utc + timedelta(hours=24),
+    )
+    with pytest.raises(ProposalIdempotencyConflictError):
+        repository.claim_idea_proposal_intake(held_replacement)
 
 
 def test_postgres_repository_simulation_idempotency_roundtrip(monkeypatch):

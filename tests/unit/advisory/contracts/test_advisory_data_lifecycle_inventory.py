@@ -64,6 +64,8 @@ def test_idea_intake_durable_fields_are_governed_as_non_metric_audit_evidence() 
         "proposal_idea_intakes.request_fingerprint",
         "proposal_idea_intakes.response_json",
         "proposal_idea_intakes.created_at_utc",
+        "proposal_idea_intakes.expires_at_utc",
+        "proposal_idea_intakes.legal_hold",
     ):
         assert fields[field_path]["retention_policy"] == "OPERATIONAL_AUDIT_RECORD"
         assert fields[field_path]["telemetry_label_allowed"] is False

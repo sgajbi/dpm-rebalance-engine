@@ -48,6 +48,12 @@
         "cockpit_acknowledgements",
         "cockpit_acknowledgement_idempotency"
       ],
+      "idea_intake_retention": {
+        "replay_window_hours": 24,
+        "automatic_purge": "before_each_new_intake_claim",
+        "legal_hold_behavior": "expired_claims_remain_replayable_and_conflict-protected_while_held",
+        "restore_integrity": "expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
+      },
       "restore_checks": [
         {
           "check_key": "proposal_migration_state",

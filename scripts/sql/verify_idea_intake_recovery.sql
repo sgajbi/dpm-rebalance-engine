@@ -21,6 +21,8 @@ WITH recovered_claims AS (
         )
         AND response_json::jsonb ->> 'received_at' IS NOT NULL
         AND (response_json::jsonb ->> 'received_at')::timestamptz = created_at_utc
+        AND expires_at_utc = created_at_utc + INTERVAL '24 hours'
+        AND pg_typeof(legal_hold) = 'boolean'::regtype
         AND jsonb_typeof(response_json::jsonb -> 'trusted_scope') = 'object'
         AS is_valid
     FROM proposal_idea_intakes

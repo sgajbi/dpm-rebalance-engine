@@ -72,6 +72,16 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
     )
 
     assert "proposal_idea_intakes" in proposal_namespace["durable_records"]
+    assert proposal_namespace["idea_intake_retention"] == {
+        "replay_window_hours": 24,
+        "automatic_purge": "before_each_new_intake_claim",
+        "legal_hold_behavior": (
+            "expired_claims_remain_replayable_and_conflict-protected_while_held"
+        ),
+        "restore_integrity": (
+            "expiry_must_equal_creation_plus_24_hours_and_legal_hold_must_remain_boolean"
+        ),
+    }
     restore_checks = {check["check_key"]: check for check in proposal_namespace["restore_checks"]}
     idea_check = restore_checks["idea_intake_restored_claim_integrity"]
     assert idea_check["command"] == "make idea-intake-recovery-check"

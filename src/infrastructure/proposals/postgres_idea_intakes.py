@@ -17,11 +17,19 @@ def claim_idea_proposal_intake(
 ) -> IdeaProposalIntakeClaim:
     """Atomically persist or replay a scope-keyed Idea intake claim."""
     with closing(connect()) as connection:
+        connection.execute(
+            """
+            DELETE FROM proposal_idea_intakes
+            WHERE expires_at_utc <= %s AND legal_hold = FALSE
+            """,
+            (record.created_at_utc,),
+        )
         inserted = connection.execute(
             """
             INSERT INTO proposal_idea_intakes (
-                registry_key, request_fingerprint, response_json, created_at_utc
-            ) VALUES (%s, %s, %s, %s)
+                registry_key, request_fingerprint, response_json, created_at_utc,
+                expires_at_utc, legal_hold
+            ) VALUES (%s, %s, %s, %s, %s, %s)
             ON CONFLICT (registry_key) DO NOTHING
             RETURNING registry_key
             """,
@@ -30,11 +38,14 @@ def claim_idea_proposal_intake(
                 record.request_fingerprint,
                 record.response_json,
                 record.created_at_utc,
+                record.expires_at_utc,
+                record.legal_hold,
             ),
         ).fetchone()
         row = connection.execute(
             """
-            SELECT registry_key, request_fingerprint, response_json, created_at_utc
+            SELECT registry_key, request_fingerprint, response_json, created_at_utc,
+                   expires_at_utc, legal_hold
             FROM proposal_idea_intakes WHERE registry_key = %s
             """,
             (record.registry_key,),
@@ -47,6 +58,8 @@ def claim_idea_proposal_intake(
             request_fingerprint=str(row["request_fingerprint"]),
             response_json=str(row["response_json"]),
             created_at_utc=row["created_at_utc"],
+            expires_at_utc=row["expires_at_utc"],
+            legal_hold=bool(row["legal_hold"]),
         )
         if existing.request_fingerprint != record.request_fingerprint:
             connection.rollback()

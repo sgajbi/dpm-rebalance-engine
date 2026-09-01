@@ -420,6 +420,36 @@
       "source_boundary": "lotus-advise"
     },
     {
+      "field_path": "proposal_idea_intakes.expires_at_utc",
+      "purpose": "Persist the fixed 24-hour replay boundary after which an unheld intake claim is eligible for automatic purge and key reuse.",
+      "classification": "OPERATIONAL_AUDIT",
+      "owner": "idea-proposal-intake",
+      "allowed_consumers": ["operator", "support-with-case", "compliance"],
+      "retention_policy": "OPERATIONAL_AUDIT_RECORD",
+      "purge_policy": "purge_after_24_hour_replay_window_unless_legal_hold",
+      "masking": "bounded_utc_timestamp_only",
+      "stores": ["postgres"],
+      "telemetry_label_allowed": false,
+      "api_projection_allowed": false,
+      "downstream_payload_allowed": false,
+      "source_boundary": "lotus-advise"
+    },
+    {
+      "field_path": "proposal_idea_intakes.legal_hold",
+      "purpose": "Prevent automatic expiry purge when an authorized records process has placed the operational intake evidence on legal hold.",
+      "classification": "OPERATIONAL_AUDIT",
+      "owner": "idea-proposal-intake",
+      "allowed_consumers": ["operator", "support-with-case", "compliance"],
+      "retention_policy": "OPERATIONAL_AUDIT_RECORD",
+      "purge_policy": "never_purge_while_true",
+      "masking": "boolean_control_only",
+      "stores": ["postgres"],
+      "telemetry_label_allowed": false,
+      "api_projection_allowed": false,
+      "downstream_payload_allowed": false,
+      "source_boundary": "lotus-advise"
+    },
+    {
       "field_path": "logs.extra_fields",
       "purpose": "Emit bounded route, status, latency, and stable reason-code diagnostics.",
       "classification": "INTERNAL_SUPPORTABILITY",

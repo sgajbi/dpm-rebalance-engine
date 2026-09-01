@@ -13,7 +13,10 @@ from src.core.proposals.idea_intake_authority import (
     IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
     IdeaProposalIntakePrincipal,
 )
-from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
+from src.core.proposals.idea_intake_persistence import (
+    IDEA_PROPOSAL_INTAKE_REPLAY_RETENTION,
+    IdeaProposalIntakeRecord,
+)
 from src.core.proposals.repository import ProposalRepository
 
 IdeaProposalIntakeStatus = Literal["ACCEPTED", "ACCEPTED_REPLAYED", "REJECTED"]
@@ -343,6 +346,7 @@ def process_idea_proposal_intake(
         principal=principal,
         received_at=received_at,
     )
+    created_at_utc = _parse_received_at(response.received_at)
     claim = repository.claim_idea_proposal_intake(
         IdeaProposalIntakeRecord(
             registry_key=_registry_key(
@@ -351,7 +355,8 @@ def process_idea_proposal_intake(
             ),
             request_fingerprint=response.request_fingerprint,
             response_json=response.model_dump_json(),
-            created_at_utc=_parse_received_at(response.received_at),
+            created_at_utc=created_at_utc,
+            expires_at_utc=created_at_utc + IDEA_PROPOSAL_INTAKE_REPLAY_RETENTION,
         )
     )
     if not claim.replayed:
