@@ -214,9 +214,10 @@ Current repository posture:
    lineage truth,
 16. execution handoff, status, and delivery projections carry explicit ownership-boundary evidence
    so advisory posture cannot be confused with downstream execution system-of-record truth,
-17. `POST /advisory/proposals/idea-intake` and
-   `GET /advisory/proposals/idea-intake/{intake_id}/realization` implement a source-safe
-   `lotus-idea` conversion-intent intake and Advise-owned initial realization boundary. It proves
+17. `POST /advisory/proposals/idea-intake`,
+   `GET /advisory/proposals/idea-intake/{intake_id}/realization`, and
+   `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` implement
+   a source-safe `lotus-idea` conversion-intent intake and Advise-owned realization boundary. It proves
    trusted local/dev caller scope, durable
    PostgreSQL-backed idempotency conflict detection, restart-safe replay, and bounded
    accepted/rejected outcomes. The required canonical portfolio identity comes from the
@@ -234,10 +235,14 @@ Current repository posture:
    an append-only `ACCEPTED_FOR_REVIEW` outcome. Unsupported intent creates a terminal
    `REJECTED_BEFORE_WORK` outcome and no work item. The scoped read fails closed across tenant,
    legal-entity, portfolio, or capability mismatch. Replay claims may expire without deleting the
-   durable realization or outcome history. This slice does not create proposal lifecycle records,
-   link a proposal, publish later/terminal outcome transitions, run suitability,
-   does not authorize client publication, and must not be listed as a supported feature until the
-   downstream realization blockers are closed with runtime evidence,
+   durable realization or outcome history. Explicit reconciliation links one existing
+   same-portfolio proposal to one realization using compare-and-set event progression and emits
+   `PROPOSAL_LINKED` plus terminal `ADVISORY_REJECTED`, `ADVISORY_CANCELLED`, `ADVISORY_EXPIRED`, or
+   `ADVISORY_COMPLETED` only from authoritative Advise proposal state. `ADVISORY_COMPLETED` closes
+   the advisory realization; it does not independently prove orders, fills, settlement, or an
+   external execution outcome. This slice does not auto-create proposal lifecycle records, run
+   suitability, authorize client publication, bind production IdP claims, or promote a supported
+   product feature before Idea consumer reconciliation is certified,
 18. completed advisory copilot output must pass the Advise-owned approved provider/model inventory
    in `src/core/advisory_copilot/model_governance.py` and
    `contracts/advisory-copilot/approved-model-inventory.v1.json`, then pass the executable

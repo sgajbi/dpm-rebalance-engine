@@ -154,6 +154,8 @@ Current governed usage includes:
 - source-safe conversion intake and scoped realization read through
   `POST /advisory/proposals/idea-intake` and
   `GET /advisory/proposals/idea-intake/{intake_id}/realization`
+- explicit same-portfolio proposal linkage and authoritative outcome reconciliation through
+  `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation`
 - downstream reconciliation of policy-evaluation workflow receipts with Advise-produced
   source-owned as-of identity, trusted legal-entity/booking-center/proposal/version/portfolio scope,
   and source-safe tenant/service/correlation/trace hashes
@@ -169,9 +171,13 @@ Boundary rule:
   source-owned outcome; rejected-before-work intent creates no work item
 - transport acceptance never means proposal acceptance, suitability, mandate action, report
   completion, execution success, or client publication
-- this boundary remains `not_certified`; it uses trusted local/dev caller headers and does not link
-  proposal records, publish later review outcomes, create orders, bind production IdP claims, or
-  promote a supported feature
+- an existing Advise proposal is linked only through explicit compare-and-set reconciliation;
+  non-terminal proposal states remain `PROPOSAL_LINKED`, while terminal outcomes come only from
+  authoritative `REJECTED`, `CANCELLED`, `EXPIRED`, or `EXECUTED` proposal state
+- `ADVISORY_COMPLETED` closes the Advise proposal realization but does not independently prove an
+  external order, fill, or settlement
+- this boundary remains `not_certified`; it uses trusted local/dev caller headers and does not
+  auto-create proposals, create orders, bind production IdP claims, or promote a supported feature
 
 ```mermaid
 flowchart LR
@@ -179,7 +185,10 @@ flowchart LR
     A -->|accepted review intent| W[Durable adviser-review work]
     A -->|unsupported intent| R[Rejected-before-work outcome]
     W --> O[Accepted-for-review outcome]
-    O -. future source-owned transition .-> P[Proposal linkage and terminal outcome]
+    O -->|explicit same-portfolio link| P[Advise proposal]
+    P -->|authoritative state| T[Linked or terminal Advise outcome]
+    T -->|source-owned reconciliation| I[Idea outcome posture]
+    H[HTTP success or timeout] -. never business outcome .-> I
 ```
 
 ## `lotus-report`
