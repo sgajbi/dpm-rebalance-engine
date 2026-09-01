@@ -16,6 +16,7 @@ from src.api.proposals.idea_intake_parameters import (
 from src.api.proposals.idea_intake_principal import (
     require_idea_proposal_intake_principal,
     require_idea_proposal_realization_reader,
+    require_idea_proposal_realization_writer,
 )
 from src.api.proposals.idea_intake_responses import IDEA_PROPOSAL_INTAKE_RESPONSES
 from src.core.proposals.correlation import normalize_optional_correlation_id, resolve_correlation_id
@@ -25,6 +26,10 @@ from src.core.proposals.idea_proposal_intake import (
     IdeaProposalIntakeRequest,
     IdeaProposalIntakeResponse,
     process_idea_proposal_intake,
+)
+from src.core.proposals.idea_realization_commands import (
+    IdeaProposalReconciliationRequest,
+    reconcile_idea_proposal_realization,
 )
 from src.core.proposals.idea_realization_read_model import (
     IdeaProposalRealizationHistoryResponse,
@@ -119,6 +124,58 @@ def read_idea_proposal_realization(
                 repository=repository,
                 intake_id=intake_id,
                 portfolio_id=portfolio_id,
+                principal=principal,
+            )
+        ),
+    )
+
+
+@shared.router.post(
+    "/advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation",
+    response_model=IdeaProposalRealizationHistoryResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Advisory Proposal Lifecycle"],
+    summary="Link and reconcile an Advise proposal for an Idea realization",
+    description=(
+        "Links one existing same-portfolio Advise proposal to the durable Idea review work and "
+        "appends monotonic Advise-owned outcomes. A terminal outcome is emitted only when the "
+        "authoritative proposal lifecycle is REJECTED, CANCELLED, EXPIRED, or EXECUTED. The "
+        "EXECUTED mapping closes the advisory realization only; it does not independently prove "
+        "orders, fills, settlement, suitability, or client publication."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Trusted realization writer principal is missing or invalid."
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "description": "Principal lacks the realization write capability."
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "description": "The scoped realization or same-portfolio proposal was not found."
+        },
+        status.HTTP_409_CONFLICT: {
+            "description": "The expected version or proposal linkage conflicts with current state."
+        },
+    },
+)
+def reconcile_idea_proposal(
+    request: Request,
+    payload: IdeaProposalReconciliationRequest,
+    intake_id: IdeaProposalIntakeIdPath,
+    portfolio_id: IdeaProposalRealizationPortfolioHeader,
+    principal: IdeaProposalIntakePrincipal = Depends(require_idea_proposal_realization_writer),
+    repository: ProposalRepository = Depends(shared.get_proposal_repository),
+) -> IdeaProposalRealizationHistoryResponse:
+    shared._assert_lifecycle_enabled()
+    reject_unexpected_query_params(request, allowed_params=set())
+    return cast(
+        IdeaProposalRealizationHistoryResponse,
+        run_proposal_operation(
+            lambda: reconcile_idea_proposal_realization(
+                repository=repository,
+                intake_id=intake_id,
+                portfolio_id=portfolio_id,
+                payload=payload,
                 principal=principal,
             )
         ),

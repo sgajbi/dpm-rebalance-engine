@@ -35,9 +35,9 @@ IdeaProposalIntentType = Literal[
 
 IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS = [
     "suitability_policy_authority_remains_lotus_advise",
-    "advisory_proposal_creation_not_certified",
-    "proposal_linkage_outcome_not_certified",
-    "terminal_realization_outcomes_not_certified",
+    "proposal_requires_explicit_advise_lifecycle_creation",
+    "idea_outcome_consumer_reconciliation_not_certified",
+    "production_identity_binding_not_certified",
     "client_publication_authority_blocked",
 ]
 
@@ -407,8 +407,10 @@ def acknowledge_idea_proposal_intake(
             "src/api/proposals/routes_idea_intake.py",
             "src/core/proposals/idea_proposal_intake.py",
             "src/core/proposals/idea_review_realization.py",
+            "src/core/proposals/idea_realization_commands.py",
             "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
             "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql",
+            "src/infrastructure/postgres_migrations/proposals/0013_idea_proposal_outcomes.sql",
         ],
         received_at=timestamp.isoformat(),
         correlation_id=correlation_id,

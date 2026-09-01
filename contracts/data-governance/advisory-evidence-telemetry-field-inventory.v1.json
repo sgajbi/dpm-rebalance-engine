@@ -600,6 +600,21 @@
       "source_boundary": "lotus-idea"
     },
     {
+      "field_path": "proposal_idea_review_realizations.proposal_id",
+      "purpose": "Link the Idea conversion realization to exactly one authoritative Advise proposal.",
+      "classification": "HIGH_CARDINALITY_IDENTIFIER",
+      "owner": "idea-review-realization",
+      "allowed_consumers": ["authorized-advisor", "operator", "support-with-case", "compliance"],
+      "retention_policy": "ADVISORY_PROPOSAL_RECORD",
+      "purge_policy": "purge_with_advisory_review_realization_unless_legal_hold",
+      "masking": "never_use_as_metric_label_or_unbounded_log_field",
+      "stores": ["postgres", "api"],
+      "telemetry_label_allowed": false,
+      "api_projection_allowed": true,
+      "downstream_payload_allowed": true,
+      "source_boundary": "lotus-advise"
+    },
+    {
       "field_path": "proposal_idea_review_realizations.current_status",
       "purpose": "Project the current Advise-owned realization posture without treating receipt acceptance as completion.",
       "classification": "INTERNAL_SUPPORTABILITY",

@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from src.core.proposals.exceptions import ProposalNotFoundError, ProposalValidationError
 from src.core.proposals.idea_intake_authority import IdeaProposalIntakePrincipal
 from src.core.proposals.idea_review_realization import (
+    IdeaProposalRealizationHistoryRecord,
     IdeaProposalRealizationStatus,
     IdeaProposalReviewWorkStatus,
 )
@@ -54,9 +55,13 @@ class IdeaProposalRealizationHistoryResponse(BaseModel):
     source_evidence_fingerprint: str
     current_status: IdeaProposalRealizationStatus
     current_source_event_version: int = Field(ge=1)
+    proposal_id: str | None = Field(
+        default=None,
+        description="Exact Advise proposal identity after an explicit proposal linkage.",
+    )
     proposal_record_created: bool = Field(
         default=False,
-        description="False until a later Advise-owned proposal linkage is certified.",
+        description="True only after Advise links an existing proposal in the same portfolio.",
     )
     suitability_authority_granted: bool = Field(default=False)
     order_created: bool = Field(default=False)
@@ -87,6 +92,14 @@ def load_idea_proposal_realization_history(
     )
     if history is None:
         raise ProposalNotFoundError("IDEA_PROPOSAL_REALIZATION_NOT_FOUND")
+    return build_idea_proposal_realization_history_response(history)
+
+
+def build_idea_proposal_realization_history_response(
+    history: IdeaProposalRealizationHistoryRecord,
+) -> IdeaProposalRealizationHistoryResponse:
+    """Project one repository aggregate without changing source-owned posture."""
+
     realization = history.realization
     return IdeaProposalRealizationHistoryResponse(
         realization_id=realization.realization_id,
@@ -101,6 +114,8 @@ def load_idea_proposal_realization_history(
         source_evidence_fingerprint=realization.source_evidence_fingerprint,
         current_status=realization.current_status,
         current_source_event_version=realization.current_source_event_version,
+        proposal_id=realization.proposal_id,
+        proposal_record_created=realization.proposal_id is not None,
         created_at=realization.created_at_utc,
         updated_at=realization.updated_at_utc,
         outcomes=[

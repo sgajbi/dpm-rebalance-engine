@@ -24,6 +24,10 @@ from src.core.proposals.idea_proposal_intake import (
     IdeaProposalIntakeRequest,
     process_idea_proposal_intake,
 )
+from src.core.proposals.idea_realization_commands import (
+    IdeaProposalReconciliationRequest,
+    reconcile_idea_proposal_realization,
+)
 from src.core.proposals.idea_review_realization import (
     IdeaProposalRealizationOutcomeRecord,
     IdeaProposalRealizationRecord,
@@ -1167,6 +1171,87 @@ def test_live_postgres_update_proposal_contract(
     assert stored is not None
     assert stored.current_state == "CANCELLED"
     assert stored.title == "After update"
+
+
+def test_live_postgres_idea_proposal_reconciliation_is_atomic_and_restart_safe() -> None:
+    if not _DSN:
+        pytest.skip("PROPOSAL_POSTGRES_INTEGRATION_DSN is required for live persistence proof")
+
+    first_repository = PostgresProposalRepository(dsn=_DSN)
+    second_repository = PostgresProposalRepository(dsn=_DSN)
+    _reset_tables(first_repository)
+    principal = IdeaProposalIntakePrincipal(
+        actor_id="advisor-postgres",
+        role="ADVISOR",
+        tenant_id="tenant-private-bank-sg",
+        legal_entity_code="SGPB",
+        correlation_id="corr-idea-postgres-reconciliation",
+        service_identity="lotus-advise",
+        capabilities=frozenset({"advisory.idea_proposal_realization.write"}),
+        authorized_portfolio_id="PB_SG_GLOBAL_BAL_001",
+    )
+    intake_principal = replace(
+        principal,
+        actor_id="svc-lotus-idea",
+        role="SERVICE",
+        service_identity="lotus-idea",
+        capabilities=frozenset({IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY}),
+        authorized_portfolio_id=None,
+    )
+    request_payload = dict(IDEA_PROPOSAL_INTAKE_REQUEST_EXAMPLE)
+    request_payload["source_refs"] = [dict(IDEA_PROPOSAL_INTAKE_REQUEST_EXAMPLE["source_refs"][0])]
+    intake = process_idea_proposal_intake(
+        IdeaProposalIntakeRequest.model_validate(request_payload),
+        correlation_id="corr-idea-postgres-intake",
+        idempotency_key="idea-postgres-reconciliation",
+        principal=intake_principal,
+        repository=first_repository,
+        received_at=datetime(2026, 9, 2, 8, 0, tzinfo=timezone.utc),
+    )
+    proposal = ProposalRecord(
+        proposal_id=f"pp_{uuid.uuid4().hex}",
+        portfolio_id="PB_SG_GLOBAL_BAL_001",
+        created_by="advisor-postgres",
+        created_at=datetime(2026, 9, 2, 8, 1, tzinfo=timezone.utc),
+        last_event_at=datetime(2026, 9, 2, 8, 1, tzinfo=timezone.utc),
+        current_state="REJECTED",
+        current_version_no=1,
+    )
+    first_repository.create_proposal(proposal)
+
+    reconciled = reconcile_idea_proposal_realization(
+        repository=first_repository,
+        intake_id=intake.intake_id,
+        portfolio_id=proposal.portfolio_id,
+        payload=IdeaProposalReconciliationRequest(
+            proposal_id=proposal.proposal_id,
+            expected_source_event_version=1,
+        ),
+        principal=principal,
+        occurred_at=datetime(2026, 9, 2, 8, 5, tzinfo=timezone.utc),
+    )
+    restarted = second_repository.get_idea_proposal_realization(
+        intake_id=intake.intake_id,
+        tenant_id=principal.tenant_id,
+        legal_entity_code=principal.legal_entity_code,
+        portfolio_id=proposal.portfolio_id,
+    )
+    recovery_sql = Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(encoding="utf-8")
+    with closing(second_repository._connect()) as connection:  # noqa: SLF001
+        recovery = connection.execute(recovery_sql).fetchone()
+        connection.rollback()
+
+    assert reconciled.current_status == "ADVISORY_REJECTED"
+    assert reconciled.current_source_event_version == 3
+    assert restarted is not None
+    assert restarted.realization.proposal_id == proposal.proposal_id
+    assert restarted.realization.current_status == "ADVISORY_REJECTED"
+    assert [outcome.source_event_version for outcome in restarted.outcomes] == [1, 2, 3]
+    assert [outcome.reason_code for outcome in restarted.outcomes[1:]] == [
+        "advise_proposal_linked",
+        "advise_proposal_rejected",
+    ]
+    assert next(iter(recovery.values())) is True
 
 
 def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting() -> None:

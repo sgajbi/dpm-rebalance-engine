@@ -6,9 +6,18 @@ from typing import Literal
 
 IdeaProposalRealizationStatus = Literal[
     "ACCEPTED_FOR_REVIEW",
+    "PROPOSAL_LINKED",
+    "ADVISORY_REJECTED",
+    "ADVISORY_CANCELLED",
+    "ADVISORY_EXPIRED",
+    "ADVISORY_COMPLETED",
     "REJECTED_BEFORE_WORK",
 ]
-IdeaProposalReviewWorkStatus = Literal["PENDING_ADVISER_REVIEW"]
+IdeaProposalReviewWorkStatus = Literal[
+    "PENDING_ADVISER_REVIEW",
+    "PROPOSAL_LINKED",
+    "CLOSED",
+]
 
 
 @dataclass(frozen=True)
@@ -29,6 +38,7 @@ class IdeaProposalRealizationRecord:
     current_source_event_version: int
     created_at_utc: datetime
     updated_at_utc: datetime
+    proposal_id: str | None = None
 
 
 @dataclass(frozen=True)

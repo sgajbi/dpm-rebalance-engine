@@ -24,6 +24,7 @@ from src.core.proposals.idea_intake_authority import (
     IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
     IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
     IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY,
+    IDEA_PROPOSAL_REALIZATION_WRITE_CAPABILITY,
     IdeaProposalIntakePrincipal,
 )
 
@@ -100,32 +101,45 @@ require_idea_proposal_intake_principal = _IdeaProposalPrincipalDependency(
 )
 
 
-def require_idea_proposal_realization_reader(
-    x_actor_id: IdeaProposalActorHeader = None,
-    x_role: IdeaProposalRoleHeader = None,
-    x_tenant_id: IdeaProposalTenantHeader = None,
-    x_legal_entity_code: IdeaProposalLegalEntityHeader = None,
-    x_correlation_id: IdeaProposalPrincipalCorrelationHeader = None,
-    x_service_identity: IdeaProposalServiceIdentityHeader = None,
-    authorization: IdeaProposalAuthorizationHeader = None,
-    x_capabilities: IdeaProposalCapabilitiesHeader = None,
-    x_principal_status: IdeaProposalPrincipalStatusHeader = None,
-    x_authorized_portfolio_id: IdeaProposalAuthorizedPortfolioHeader = None,
-) -> IdeaProposalIntakePrincipal:
-    return _resolve_idea_proposal_principal(
-        required_capability=IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY,
-        errors=_REALIZATION_READER_ERRORS,
-        x_actor_id=x_actor_id,
-        x_role=x_role,
-        x_tenant_id=x_tenant_id,
-        x_legal_entity_code=x_legal_entity_code,
-        x_correlation_id=x_correlation_id,
-        x_service_identity=x_service_identity,
-        authorization=authorization,
-        x_capabilities=x_capabilities,
-        x_principal_status=x_principal_status,
-        x_authorized_portfolio_id=x_authorized_portfolio_id,
-    )
+class _IdeaProposalScopedPrincipalDependency:
+    def __init__(self, *, required_capability: str) -> None:
+        self._required_capability = required_capability
+
+    def __call__(
+        self,
+        x_actor_id: IdeaProposalActorHeader = None,
+        x_role: IdeaProposalRoleHeader = None,
+        x_tenant_id: IdeaProposalTenantHeader = None,
+        x_legal_entity_code: IdeaProposalLegalEntityHeader = None,
+        x_correlation_id: IdeaProposalPrincipalCorrelationHeader = None,
+        x_service_identity: IdeaProposalServiceIdentityHeader = None,
+        authorization: IdeaProposalAuthorizationHeader = None,
+        x_capabilities: IdeaProposalCapabilitiesHeader = None,
+        x_principal_status: IdeaProposalPrincipalStatusHeader = None,
+        x_authorized_portfolio_id: IdeaProposalAuthorizedPortfolioHeader = None,
+    ) -> IdeaProposalIntakePrincipal:
+        return _resolve_idea_proposal_principal(
+            required_capability=self._required_capability,
+            errors=_REALIZATION_READER_ERRORS,
+            x_actor_id=x_actor_id,
+            x_role=x_role,
+            x_tenant_id=x_tenant_id,
+            x_legal_entity_code=x_legal_entity_code,
+            x_correlation_id=x_correlation_id,
+            x_service_identity=x_service_identity,
+            authorization=authorization,
+            x_capabilities=x_capabilities,
+            x_principal_status=x_principal_status,
+            x_authorized_portfolio_id=x_authorized_portfolio_id,
+        )
+
+
+require_idea_proposal_realization_reader = _IdeaProposalScopedPrincipalDependency(
+    required_capability=IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY
+)
+require_idea_proposal_realization_writer = _IdeaProposalScopedPrincipalDependency(
+    required_capability=IDEA_PROPOSAL_REALIZATION_WRITE_CAPABILITY
+)
 
 
 def _resolve_idea_proposal_principal(
@@ -175,4 +189,5 @@ __all__ = [
     "IDEA_PROPOSAL_REALIZATION_CAPABILITY_REQUIRED",
     "require_idea_proposal_intake_principal",
     "require_idea_proposal_realization_reader",
+    "require_idea_proposal_realization_writer",
 ]

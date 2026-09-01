@@ -95,21 +95,42 @@ WITH recovered_claims AS (
                         AND response_json::jsonb -> 'review_work_status' = 'null'::jsonb
                     )
                 )
-                AND response_json::jsonb -> 'certification_blockers' = '[
-                    "suitability_policy_authority_remains_lotus_advise",
-                    "advisory_proposal_creation_not_certified",
-                    "proposal_linkage_outcome_not_certified",
-                    "terminal_realization_outcomes_not_certified",
-                    "client_publication_authority_blocked"
-                ]'::jsonb
-                AND response_json::jsonb -> 'evidence_refs' = '[
-                    "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
-                    "src/api/proposals/routes_idea_intake.py",
-                    "src/core/proposals/idea_proposal_intake.py",
-                    "src/core/proposals/idea_review_realization.py",
-                    "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
-                    "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql"
-                ]'::jsonb
+                AND response_json::jsonb -> 'certification_blockers' IN (
+                    '[
+                        "suitability_policy_authority_remains_lotus_advise",
+                        "advisory_proposal_creation_not_certified",
+                        "proposal_linkage_outcome_not_certified",
+                        "terminal_realization_outcomes_not_certified",
+                        "client_publication_authority_blocked"
+                    ]'::jsonb,
+                    '[
+                        "suitability_policy_authority_remains_lotus_advise",
+                        "proposal_requires_explicit_advise_lifecycle_creation",
+                        "idea_outcome_consumer_reconciliation_not_certified",
+                        "production_identity_binding_not_certified",
+                        "client_publication_authority_blocked"
+                    ]'::jsonb
+                )
+                AND response_json::jsonb -> 'evidence_refs' IN (
+                    '[
+                        "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
+                        "src/api/proposals/routes_idea_intake.py",
+                        "src/core/proposals/idea_proposal_intake.py",
+                        "src/core/proposals/idea_review_realization.py",
+                        "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
+                        "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql"
+                    ]'::jsonb,
+                    '[
+                        "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
+                        "src/api/proposals/routes_idea_intake.py",
+                        "src/core/proposals/idea_proposal_intake.py",
+                        "src/core/proposals/idea_review_realization.py",
+                        "src/core/proposals/idea_realization_commands.py",
+                        "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
+                        "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql",
+                        "src/infrastructure/postgres_migrations/proposals/0013_idea_proposal_outcomes.sql"
+                    ]'::jsonb
+                )
                 AND EXISTS (
                     SELECT 1
                     FROM proposal_idea_review_realizations realization
@@ -124,15 +145,22 @@ WITH recovered_claims AS (
                           = response_json::jsonb ->> 'portfolio_id'
                       AND realization.review_work_id IS NOT DISTINCT FROM
                           response_json::jsonb ->> 'review_work_id'
-                      AND realization.review_work_status IS NOT DISTINCT FROM
-                          response_json::jsonb ->> 'review_work_status'
-                      AND realization.current_status
-                          = response_json::jsonb ->> 'realization_status'
                       AND realization.current_source_event_version
-                          = (response_json::jsonb ->> 'source_event_version')::integer
+                          >= (response_json::jsonb ->> 'source_event_version')::integer
                       AND realization.source_evidence_fingerprint
                           = response_json::jsonb ->> 'source_evidence_fingerprint'
-                      AND realization.updated_at_utc = realization.created_at_utc
+                      AND EXISTS (
+                          SELECT 1
+                          FROM proposal_idea_realization_outcomes initial_outcome
+                          WHERE initial_outcome.realization_id = realization.realization_id
+                            AND initial_outcome.source_event_version
+                                = (response_json::jsonb ->> 'source_event_version')::integer
+                            AND initial_outcome.status
+                                = response_json::jsonb ->> 'realization_status'
+                            AND initial_outcome.review_work_id IS NOT DISTINCT FROM
+                                response_json::jsonb ->> 'review_work_id'
+                            AND initial_outcome.proposal_id IS NULL
+                      )
                 )
             )
         )
@@ -168,16 +196,16 @@ WITH recovered_claims AS (
         AND tenant_id = btrim(tenant_id) AND tenant_id <> ''
         AND legal_entity_code = btrim(legal_entity_code) AND legal_entity_code <> ''
         AND portfolio_id = btrim(portfolio_id) AND portfolio_id <> ''
-        AND current_source_event_version = 1
+        AND current_source_event_version >= 1
         AND intake_id = 'ipi_' || left(
             encode(
                 sha256(
                     convert_to(
                         idea_candidate_id || '|' || conversion_intent_id || '|'
                             || CASE current_status
-                                WHEN 'ACCEPTED_FOR_REVIEW'
-                                    THEN 'REVIEW_FOR_ADVISORY_PROPOSAL'
-                                ELSE 'CREATE_ADVISORY_PROPOSAL_DRAFT'
+                                WHEN 'REJECTED_BEFORE_WORK'
+                                    THEN 'CREATE_ADVISORY_PROPOSAL_DRAFT'
+                                ELSE 'REVIEW_FOR_ADVISORY_PROPOSAL'
                             END
                             || '|' || portfolio_id || '|'
                             || split_part(source_evidence_fingerprint, ':', 2),
@@ -201,7 +229,7 @@ WITH recovered_claims AS (
             ),
             12
         )
-        AND updated_at_utc = created_at_utc
+        AND updated_at_utc >= created_at_utc
         AND (
             EXISTS (
                 SELECT 1
@@ -229,10 +257,37 @@ WITH recovered_claims AS (
                     12
                 )
                 AND review_work_status = 'PENDING_ADVISER_REVIEW'
+                AND proposal_id IS NULL
+            ) OR (
+                current_status = 'PROPOSAL_LINKED'
+                AND review_work_id ~ '^iarw_[0-9a-f]{12}$'
+                AND review_work_status = 'PROPOSAL_LINKED'
+                AND proposal_id IS NOT NULL
+                AND current_source_event_version = 2
+            ) OR (
+                current_status IN (
+                    'ADVISORY_REJECTED', 'ADVISORY_CANCELLED',
+                    'ADVISORY_EXPIRED', 'ADVISORY_COMPLETED'
+                )
+                AND review_work_id ~ '^iarw_[0-9a-f]{12}$'
+                AND review_work_status = 'CLOSED'
+                AND proposal_id IS NOT NULL
+                AND current_source_event_version = 3
             ) OR (
                 current_status = 'REJECTED_BEFORE_WORK'
                 AND review_work_id IS NULL
                 AND review_work_status IS NULL
+                AND proposal_id IS NULL
+            )
+        )
+        AND (
+            proposal_id IS NULL
+            OR EXISTS (
+                SELECT 1
+                FROM proposal_records proposal
+                WHERE proposal.proposal_id = realization.proposal_id
+                  AND proposal.portfolio_id = realization.portfolio_id
+                  AND proposal.created_at::timestamptz >= realization.created_at_utc
             )
         )
         AND (
@@ -249,6 +304,8 @@ WITH recovered_claims AS (
               AND current_outcome.status = realization.current_status
               AND current_outcome.review_work_id
                   IS NOT DISTINCT FROM realization.review_work_id
+              AND current_outcome.proposal_id
+                  IS NOT DISTINCT FROM realization.proposal_id
         ),
         FALSE
     ) AS is_valid
@@ -256,23 +313,42 @@ WITH recovered_claims AS (
 ), recovered_outcomes AS (
     SELECT COALESCE(
         outcome_id ~ '^ipro_[0-9a-f]{12}$'
-        AND outcome_id = 'ipro_' || left(
-            encode(
-                sha256(
-                    convert_to(realization_id || '|' || source_event_version::text, 'UTF8')
-                ),
-                'hex'
-            ),
-            12
+        AND (
+            (
+                source_event_version = 1
+                AND outcome_id = 'ipro_' || left(
+                    encode(
+                        sha256(
+                            convert_to(realization_id || '|1', 'UTF8')
+                        ),
+                        'hex'
+                    ),
+                    12
+                )
+            ) OR (
+                source_event_version > 1
+                AND proposal_id IS NOT NULL
+                AND outcome_id = 'ipro_' || left(
+                    encode(
+                        sha256(
+                            convert_to(
+                                realization_id || '|' || source_event_version::text || '|'
+                                    || status || '|' || proposal_id,
+                                'UTF8'
+                            )
+                        ),
+                        'hex'
+                    ),
+                    12
+                )
+            )
         )
-        AND source_event_version = 1
-        AND proposal_id IS NULL
         AND EXISTS (
             SELECT 1
             FROM proposal_idea_review_realizations realization
             WHERE realization.realization_id = outcome.realization_id
-              AND outcome.occurred_at_utc = realization.created_at_utc
-              AND outcome.occurred_at_utc = realization.updated_at_utc
+              AND outcome.occurred_at_utc >= realization.created_at_utc
+              AND outcome.occurred_at_utc <= realization.updated_at_utc
         )
         AND (
             (
@@ -284,6 +360,41 @@ WITH recovered_claims AS (
                 status = 'REJECTED_BEFORE_WORK'
                 AND reason_code = 'idea_conversion_rejected_before_advisory_work'
                 AND review_work_id IS NULL
+                AND terminal IS TRUE
+            ) OR (
+                status = 'PROPOSAL_LINKED'
+                AND reason_code = 'advise_proposal_linked'
+                AND source_event_version = 2
+                AND review_work_id ~ '^iarw_[0-9a-f]{12}$'
+                AND proposal_id IS NOT NULL
+                AND terminal IS FALSE
+            ) OR (
+                status = 'ADVISORY_REJECTED'
+                AND reason_code = 'advise_proposal_rejected'
+                AND source_event_version = 3
+                AND review_work_id ~ '^iarw_[0-9a-f]{12}$'
+                AND proposal_id IS NOT NULL
+                AND terminal IS TRUE
+            ) OR (
+                status = 'ADVISORY_CANCELLED'
+                AND reason_code = 'advise_proposal_cancelled'
+                AND source_event_version = 3
+                AND review_work_id ~ '^iarw_[0-9a-f]{12}$'
+                AND proposal_id IS NOT NULL
+                AND terminal IS TRUE
+            ) OR (
+                status = 'ADVISORY_EXPIRED'
+                AND reason_code = 'advise_proposal_expired'
+                AND source_event_version = 3
+                AND review_work_id ~ '^iarw_[0-9a-f]{12}$'
+                AND proposal_id IS NOT NULL
+                AND terminal IS TRUE
+            ) OR (
+                status = 'ADVISORY_COMPLETED'
+                AND reason_code = 'advise_proposal_workflow_completed'
+                AND source_event_version = 3
+                AND review_work_id ~ '^iarw_[0-9a-f]{12}$'
+                AND proposal_id IS NOT NULL
                 AND terminal IS TRUE
             )
         ),

@@ -77,6 +77,7 @@ def _same_idea_realization_identity(
         existing.idea_candidate_id,
         existing.conversion_intent_id,
         existing.source_evidence_fingerprint,
+        existing.proposal_id,
         existing.current_status,
         existing.current_source_event_version,
     ) == (
@@ -90,6 +91,7 @@ def _same_idea_realization_identity(
         requested.idea_candidate_id,
         requested.conversion_intent_id,
         requested.source_evidence_fingerprint,
+        requested.proposal_id,
         requested.current_status,
         requested.current_source_event_version,
     )
@@ -118,6 +120,29 @@ def _same_idea_realization_outcome(
         requested.proposal_id,
         requested.terminal,
     )
+
+
+def _validate_idea_realization_progression(
+    *,
+    current: IdeaProposalRealizationRecord | None,
+    expected_source_event_version: int,
+    realization: IdeaProposalRealizationRecord,
+    outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...],
+    proposal: ProposalRecord | None,
+) -> None:
+    if current is None or current.current_source_event_version != expected_source_event_version:
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_VERSION_CONFLICT")
+    if realization.current_source_event_version != expected_source_event_version + len(outcomes):
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
+    if proposal is None or proposal.portfolio_id != realization.portfolio_id:
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROPOSAL_INVALID")
+    if proposal.created_at < realization.created_at_utc:
+        raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROPOSAL_INVALID")
+    for offset, outcome in enumerate(outcomes, start=1):
+        if outcome.source_event_version != expected_source_event_version + offset:
+            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
+        if outcome.realization_id != realization.realization_id:
+            raise ProposalStateConflictError("IDEA_PROPOSAL_REALIZATION_PROGRESSION_INVALID")
 
 
 class InMemoryProposalRepository(ProposalRepository):
@@ -231,6 +256,38 @@ class InMemoryProposalRepository(ProposalRepository):
             return IdeaProposalRealizationHistoryRecord(
                 realization=copy_record(realization),
                 outcomes=tuple(copy_records(outcomes)),
+            )
+
+    def advance_idea_proposal_realization(
+        self,
+        *,
+        expected_source_event_version: int,
+        realization: IdeaProposalRealizationRecord,
+        outcomes: tuple[IdeaProposalRealizationOutcomeRecord, ...],
+    ) -> IdeaProposalRealizationHistoryRecord:
+        with self._lock:
+            current = self._idea_proposal_realizations.get(realization.realization_id)
+            proposal = (
+                self._proposals.get(realization.proposal_id)
+                if realization.proposal_id is not None
+                else None
+            )
+            _validate_idea_realization_progression(
+                current=current,
+                expected_source_event_version=expected_source_event_version,
+                realization=realization,
+                outcomes=outcomes,
+                proposal=proposal,
+            )
+            stored_outcomes = self._idea_proposal_realization_outcomes.setdefault(
+                realization.realization_id, []
+            )
+            for outcome in outcomes:
+                stored_outcomes.append(copy_record(outcome))
+            self._idea_proposal_realizations[realization.realization_id] = copy_record(realization)
+            return IdeaProposalRealizationHistoryRecord(
+                realization=copy_record(realization),
+                outcomes=tuple(copy_records(stored_outcomes)),
             )
 
     def get_idempotency(self, *, idempotency_key: str) -> Optional[ProposalIdempotencyRecord]:

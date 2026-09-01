@@ -456,6 +456,41 @@
       }
     },
     {
+      "namespace_key": "proposals",
+      "version": "0013",
+      "path": "src/infrastructure/postgres_migrations/proposals/0013_idea_proposal_outcomes.sql",
+      "phase": "expand",
+      "operation_class": "add_nullable_column_constraints_and_foreign_keys",
+      "compatibility_window": {
+        "old_and_new_application_versions_supported": true,
+        "minimum_rollout_window": "one_full_deploy_wave",
+        "consumer_contract": "adds explicit Advise proposal linkage and monotonic terminal realization outcomes without changing the existing Idea intake request"
+      },
+      "lock_behavior": {
+        "transaction_scope": "single_namespace_transaction",
+        "lock_profile": "short_metadata_locks_for_nullable_column_constraint_replacement_and_foreign_keys",
+        "online_behavior": "existing rows satisfy the expanded constraints because proposal_id remains null for version-1 initial outcomes",
+        "required_operator_control": "apply before enabling proposal reconciliation writes; monitor lock wait and abort rather than bypassing constraints"
+      },
+      "backfill": {
+        "required": false,
+        "checkpoint_strategy": "not_applicable",
+        "resume_strategy": "forward-fix a failed migration before enabling reconciliation writes",
+        "quarantine_strategy": "keep proposal reconciliation disabled; never infer proposal linkage from candidate, review-work, or transport identifiers"
+      },
+      "rollback": {
+        "forward_fix_required": true,
+        "previous_app_version_compatible": true,
+        "limitations": "older application versions ignore proposal_id and later outcomes; never delete linked proposal identity or append-only outcome history"
+      },
+      "rehearsal": {
+        "profile_key": "local_postgres_migration_smoke",
+        "command": "make migration-rollout-contract-gate && make migration-smoke",
+        "output_path": "output/postgres-migration-rollout-rehearsal.json",
+        "evidence_kind": "static_contract_plus_postgres_smoke_and_live_restart_reconciliation"
+      }
+    },
+    {
       "namespace_key": "advisory_copilot",
       "version": "0001",
       "path": "src/infrastructure/postgres_migrations/advisory_copilot/0001_copilot_run_persistence.sql",

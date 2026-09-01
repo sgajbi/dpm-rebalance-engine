@@ -28,6 +28,9 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["realization_read_route"] == (
         "GET /advisory/proposals/idea-intake/{intake_id}/realization"
     )
+    assert contract["proposal_reconciliation_route"] == (
+        "POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation"
+    )
     assert contract["lifecycle_status"] == "implemented"
     assert contract["supportability_status"] == "not_certified"
     assert contract["route_existence_proven"] is True
@@ -35,8 +38,8 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["durable_intake_idempotency_proven"] is True
     assert contract["durable_adviser_review_work_proven"] is True
     assert contract["initial_source_owned_outcome_proven"] is True
-    assert contract["proposal_linkage_outcomes_proven"] is False
-    assert contract["terminal_lifecycle_outcomes_proven"] is False
+    assert contract["proposal_linkage_outcomes_proven"] is True
+    assert contract["terminal_lifecycle_outcomes_proven"] is True
     assert contract["required_request_fields"] == [
         "source_system",
         "source_product",
@@ -75,6 +78,7 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["downstream_execution_proven"] is False
     assert contract["supported_feature_promoted"] is False
     assert contract["realization_read_capability"] == "advisory.idea_proposal_realization.read"
+    assert contract["realization_write_capability"] == "advisory.idea_proposal_realization.write"
     assert contract["initial_realization_outcomes"] == {
         "REVIEW_FOR_ADVISORY_PROPOSAL": {
             "status": "ACCEPTED_FOR_REVIEW",
@@ -89,6 +93,30 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
             "terminal": True,
         },
     }
+    assert contract["proposal_reconciliation_outcomes"] == {
+        "nonterminal_proposal_states": {
+            "states": [
+                "DRAFT",
+                "RISK_REVIEW",
+                "COMPLIANCE_REVIEW",
+                "AWAITING_CLIENT_CONSENT",
+                "EXECUTION_READY",
+            ],
+            "status": "PROPOSAL_LINKED",
+            "terminal": False,
+        },
+        "terminal_proposal_states": {
+            "REJECTED": "ADVISORY_REJECTED",
+            "CANCELLED": "ADVISORY_CANCELLED",
+            "EXPIRED": "ADVISORY_EXPIRED",
+            "EXECUTED": "ADVISORY_COMPLETED",
+        },
+        "business_identity": "one_proposal_per_realization_and_one_realization_per_proposal",
+        "concurrency_control": "expected_source_event_version_compare_and_set",
+        "scope_rule": ("trusted_tenant_legal_entity_and_portfolio_plus_same_portfolio_proposal"),
+        "chronology_rule": "linked_proposal_created_at_or_after_review_work_creation",
+        "transport_success_is_business_outcome": False,
+    }
 
 
 def test_idea_proposal_intake_contract_keeps_non_proof_boundaries_and_blockers() -> None:
@@ -97,8 +125,10 @@ def test_idea_proposal_intake_contract_keeps_non_proof_boundaries_and_blockers()
 
     assert "durable Advise adviser-review work item" in boundaries
     assert "rejected before work" in boundaries
+    assert "explicit linkage" in boundaries
+    assert "does not independently prove an order" in boundaries
     assert "Does not grant suitability" in boundaries
-    assert "Does not create orders" in boundaries
+    assert "does not create orders" in boundaries
     assert "Does not promote a supported feature" in boundaries
     assert contract["certification_blockers"] == IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS
     assert "advise_live_contract_proof_missing" not in contract["certification_blockers"]
@@ -109,16 +139,18 @@ def test_idea_proposal_intake_contract_keeps_non_proof_boundaries_and_blockers()
         "src/core/proposals/idea_proposal_intake.py",
         "src/core/proposals/idea_intake_persistence.py",
         "src/core/proposals/idea_review_realization.py",
+        "src/core/proposals/idea_realization_commands.py",
         "src/core/proposals/idea_realization_read_model.py",
         "src/infrastructure/proposals/postgres_idea_intakes.py",
         "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
         "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql",
+        "src/infrastructure/postgres_migrations/proposals/0013_idea_proposal_outcomes.sql",
         "scripts/sql/verify_idea_intake_recovery.sql",
         "tests/unit/advisory/api/test_idea_proposal_intake_api.py",
     }.issubset(set(contract["evidence_refs"]))
 
 
-def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape() -> None:
+def test_recovery_contract_accepts_legacy_and_current_monotonic_realization_shapes() -> None:
     recovery_sql = Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(encoding="utf-8")
 
     assert "NOT response_json::jsonb ?| ARRAY[" in recovery_sql
@@ -127,6 +159,11 @@ def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape(
     assert "response_json::jsonb ?& ARRAY[" in recovery_sql
     assert '"proposal_linkage_outcome_not_certified"' in recovery_sql
     assert '"terminal_realization_outcomes_not_certified"' in recovery_sql
+    assert '"idea_outcome_consumer_reconciliation_not_certified"' in recovery_sql
+    assert "current_status = 'PROPOSAL_LINKED'" in recovery_sql
+    assert "current_status IN (" in recovery_sql
+    assert "proposal.proposal_id = realization.proposal_id" in recovery_sql
+    assert "proposal.created_at::timestamptz >= realization.created_at_utc" in recovery_sql
     assert "realization.review_work_id IS NOT DISTINCT FROM" in recovery_sql
     assert "realization.current_status" in recovery_sql
     assert "realization.current_source_event_version" in recovery_sql
@@ -138,9 +175,9 @@ def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape(
     assert "conversion_intent_id = btrim(conversion_intent_id)" in recovery_sql
     assert "tenant_id || '|' || legal_entity_code || '|' || portfolio_id || '|'" in recovery_sql
     assert "idea_candidate_id || '|' || conversion_intent_id || '|'" in recovery_sql
-    assert "THEN 'REVIEW_FOR_ADVISORY_PROPOSAL'" in recovery_sql
+    assert "ELSE 'REVIEW_FOR_ADVISORY_PROPOSAL'" in recovery_sql
     assert "split_part(source_evidence_fingerprint, ':', 2)" in recovery_sql
     assert "realization_id || '|review-work'" in recovery_sql
     assert "realization_id || '|' || source_event_version::text" in recovery_sql
-    assert "outcome.occurred_at_utc = realization.created_at_utc" in recovery_sql
-    assert "outcome.occurred_at_utc = realization.updated_at_utc" in recovery_sql
+    assert "outcome.occurred_at_utc >= realization.created_at_utc" in recovery_sql
+    assert "outcome.occurred_at_utc <= realization.updated_at_utc" in recovery_sql
