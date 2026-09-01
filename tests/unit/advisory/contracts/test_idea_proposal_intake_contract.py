@@ -32,6 +32,7 @@ def test_idea_proposal_intake_contract_preserves_advise_authority_boundary() -> 
     assert contract["supportability_status"] == "not_certified"
     assert contract["route_existence_proven"] is True
     assert contract["runtime_intake_receipt_proven"] is True
+    assert contract["durable_intake_idempotency_proven"] is True
     assert contract["downstream_execution_proven"] is False
     assert contract["supported_feature_promoted"] is False
 
@@ -51,5 +52,8 @@ def test_idea_proposal_intake_contract_keeps_non_proof_boundaries_and_blockers()
         "src/api/proposals/idea_intake_principal.py",
         "src/core/proposals/idea_intake_authority.py",
         "src/core/proposals/idea_proposal_intake.py",
+        "src/core/proposals/idea_intake_persistence.py",
+        "src/infrastructure/proposals/postgres_idea_intakes.py",
+        "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
         "tests/unit/advisory/api/test_idea_proposal_intake_api.py",
     }.issubset(set(contract["evidence_refs"]))

@@ -8,7 +8,11 @@ from threading import Barrier
 import pytest
 
 from src.core.proposals.create_command import _is_matching_legacy_replay
-from src.core.proposals.exceptions import ProposalStateConflictError
+from src.core.proposals.exceptions import (
+    ProposalIdempotencyConflictError,
+    ProposalStateConflictError,
+)
+from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
 from src.core.proposals.input_request_models import ProposalCreateRequest
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
@@ -1150,12 +1154,54 @@ def test_live_postgres_update_proposal_contract(
     assert stored.title == "After update"
 
 
+def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting() -> None:
+    if not _DSN:
+        pytest.skip("PROPOSAL_POSTGRES_INTEGRATION_DSN is required for live persistence proof")
+
+    first_repository = PostgresProposalRepository(dsn=_DSN)
+    second_repository = PostgresProposalRepository(dsn=_DSN)
+    _reset_tables(first_repository)
+    now = datetime.now(timezone.utc)
+    registry_key = f"sha256:{uuid.uuid4().hex}:sha256:{uuid.uuid4().hex}"
+    record = IdeaProposalIntakeRecord(
+        registry_key=registry_key,
+        request_fingerprint=f"sha256:{uuid.uuid4().hex}",
+        response_json='{"intake_status":"ACCEPTED"}',
+        created_at_utc=now,
+    )
+
+    barrier = Barrier(2)
+
+    def _claim(local_repository: PostgresProposalRepository):
+        barrier.wait(timeout=10)
+        return local_repository.claim_idea_proposal_intake(record)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        claims = list(executor.map(_claim, (first_repository, second_repository)))
+
+    assert [claim.replayed for claim in claims].count(False) == 1
+    assert [claim.replayed for claim in claims].count(True) == 1
+    assert claims[0].record == claims[1].record
+
+    conflicting_record = IdeaProposalIntakeRecord(
+        registry_key=registry_key,
+        request_fingerprint=f"sha256:{uuid.uuid4().hex}",
+        response_json='{"intake_status":"REJECTED"}',
+        created_at_utc=now + timedelta(seconds=1),
+    )
+    with pytest.raises(
+        ProposalIdempotencyConflictError,
+        match="IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT",
+    ):
+        second_repository.claim_idea_proposal_intake(conflicting_record)
+
+
 def _reset_tables(repository: PostgresProposalRepository) -> None:
     with closing(repository._connect()) as connection:  # noqa: SLF001
         connection.execute(
             "TRUNCATE TABLE proposal_memo_events, proposal_memo_idempotency, proposal_memos, "
             "proposal_approvals, proposal_workflow_events, proposal_versions, proposal_records, "
-            "proposal_async_operations, proposal_idempotency CASCADE"
+            "proposal_async_operations, proposal_idempotency, proposal_idea_intakes CASCADE"
         )
         connection.commit()
 

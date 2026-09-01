@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from hashlib import sha256
-from threading import Lock
 from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, field_validator
 
 from src.core.common.idempotency import normalize_required_idempotency_key
-from src.core.proposals.exceptions import ProposalIdempotencyConflictError, ProposalValidationError
+from src.core.proposals.exceptions import ProposalValidationError
 from src.core.proposals.idea_intake_authority import (
     IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
     IdeaProposalIntakePrincipal,
 )
+from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
+from src.core.proposals.repository import ProposalRepository
 
 IdeaProposalIntakeStatus = Literal["ACCEPTED", "ACCEPTED_REPLAYED", "REJECTED"]
 IdeaProposalIntakeSupportabilityStatus = Literal["not_certified"]
@@ -26,12 +26,10 @@ IdeaProposalIntentType = Literal[
 IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS = [
     "suitability_policy_authority_remains_lotus_advise",
     "advisory_proposal_creation_not_certified",
-    "proposal_lifecycle_persistence_not_certified",
+    "advisory_review_work_realization_not_certified",
+    "source_owned_outcome_stream_not_certified",
     "client_publication_authority_blocked",
 ]
-
-IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_REPLAY_TTL_SECONDS = 24 * 60 * 60
-IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_MAX_RECORDS = 4096
 
 IDEA_PROPOSAL_INTAKE_REQUEST_EXAMPLE: dict[str, Any] = {
     "source_system": "lotus-idea",
@@ -80,6 +78,7 @@ IDEA_PROPOSAL_INTAKE_RESPONSE_EXAMPLE: dict[str, Any] = {
         "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
         "src/api/proposals/routes_idea_intake.py",
         "src/core/proposals/idea_proposal_intake.py",
+        "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
     ],
     "received_at": "2026-06-21T10:10:00+00:00",
     "correlation_id": "corr-idea-proposal-001",
@@ -316,6 +315,7 @@ def acknowledge_idea_proposal_intake(
             "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
             "src/api/proposals/routes_idea_intake.py",
             "src/core/proposals/idea_proposal_intake.py",
+            "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
         ],
         received_at=timestamp.isoformat(),
         correlation_id=correlation_id,
@@ -328,6 +328,7 @@ def process_idea_proposal_intake(
     correlation_id: str,
     idempotency_key: str,
     principal: IdeaProposalIntakePrincipal,
+    repository: ProposalRepository,
     received_at: datetime | None = None,
 ) -> IdeaProposalIntakeResponse:
     try:
@@ -342,93 +343,35 @@ def process_idea_proposal_intake(
         principal=principal,
         received_at=received_at,
     )
-    return _IDEMPOTENCY_REGISTRY.record(
-        idempotency_key=normalized_idempotency_key,
-        request_fingerprint=response.request_fingerprint,
-        response=response,
-    )
-
-
-def reset_idea_proposal_intake_idempotency_for_tests() -> None:
-    _IDEMPOTENCY_REGISTRY.reset()
-
-
-@dataclass(frozen=True)
-class _IdeaProposalIntakeIdempotencyRecord:
-    request_fingerprint: str
-    response: IdeaProposalIntakeResponse
-    expires_at: datetime
-
-
-class _IdeaProposalIntakeIdempotencyRegistry:
-    def __init__(
-        self,
-        *,
-        replay_ttl_seconds: int = IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_REPLAY_TTL_SECONDS,
-        max_records: int = IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_MAX_RECORDS,
-    ) -> None:
-        self._lock = Lock()
-        self._records: dict[str, _IdeaProposalIntakeIdempotencyRecord] = {}
-        self._replay_ttl_seconds = replay_ttl_seconds
-        self._max_records = max_records
-
-    def record(
-        self,
-        *,
-        idempotency_key: str,
-        request_fingerprint: str,
-        response: IdeaProposalIntakeResponse,
-    ) -> IdeaProposalIntakeResponse:
-        now = _parse_received_at(response.received_at)
-        registry_key = _registry_key(
-            idempotency_key=idempotency_key,
-            trusted_scope=response.trusted_scope,
+    claim = repository.claim_idea_proposal_intake(
+        IdeaProposalIntakeRecord(
+            registry_key=_registry_key(
+                idempotency_key=normalized_idempotency_key,
+                trusted_scope=response.trusted_scope,
+            ),
+            request_fingerprint=response.request_fingerprint,
+            response_json=response.model_dump_json(),
+            created_at_utc=_parse_received_at(response.received_at),
         )
-        with self._lock:
-            self._purge_expired(now=now)
-            existing = self._records.get(registry_key)
-            if existing is None:
-                self._records[registry_key] = _IdeaProposalIntakeIdempotencyRecord(
-                    request_fingerprint=request_fingerprint,
-                    response=response,
-                    expires_at=now + timedelta(seconds=self._replay_ttl_seconds),
-                )
-                self._enforce_record_cap()
-                return response
-            if existing.request_fingerprint != request_fingerprint:
-                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT")
-            return cast(
-                IdeaProposalIntakeResponse,
-                existing.response.model_copy(
-                    update={
-                        "intake_status": "ACCEPTED_REPLAYED"
-                        if existing.response.intake_receipt_accepted
-                        else "REJECTED",
-                        "idempotency_replay": True,
-                        "correlation_id": response.correlation_id,
-                        "trusted_scope": response.trusted_scope,
-                        "received_at": response.received_at,
-                        "outcome_reason_codes": _replay_reason_codes(existing.response),
-                    }
+    )
+    if not claim.replayed:
+        return response
+    stored = IdeaProposalIntakeResponse.model_validate_json(claim.record.response_json)
+    return cast(
+        IdeaProposalIntakeResponse,
+        stored.model_copy(
+            update={
+                "intake_status": (
+                    "ACCEPTED_REPLAYED" if stored.intake_receipt_accepted else "REJECTED"
                 ),
-            )
-
-    def _purge_expired(self, *, now: datetime) -> None:
-        expired_keys = [key for key, record in self._records.items() if record.expires_at <= now]
-        for key in expired_keys:
-            del self._records[key]
-
-    def _enforce_record_cap(self) -> None:
-        while len(self._records) > self._max_records:
-            oldest_key = next(iter(self._records))
-            del self._records[oldest_key]
-
-    def reset(self) -> None:
-        with self._lock:
-            self._records.clear()
-
-
-_IDEMPOTENCY_REGISTRY = _IdeaProposalIntakeIdempotencyRegistry()
+                "idempotency_replay": True,
+                "correlation_id": response.correlation_id,
+                "trusted_scope": response.trusted_scope,
+                "received_at": response.received_at,
+                "outcome_reason_codes": _replay_reason_codes(stored),
+            }
+        ),
+    )
 
 
 def _source_refs_fingerprint(source_refs: list[IdeaProposalSourceRef]) -> str:

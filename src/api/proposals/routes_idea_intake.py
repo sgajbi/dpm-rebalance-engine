@@ -21,6 +21,7 @@ from src.core.proposals.idea_proposal_intake import (
     IdeaProposalIntakeResponse,
     process_idea_proposal_intake,
 )
+from src.core.proposals.repository import ProposalRepository
 
 _IDEA_PROPOSAL_INTAKE_DESCRIPTION = (
     "Accepts a source-safe lotus-idea conversion-intent handoff for advisory-side review. "
@@ -51,6 +52,7 @@ def accept_idea_proposal_intake(
     idempotency_key: IdeaProposalIntakeIdempotencyKeyHeader,
     correlation_id: IdeaProposalIntakeCorrelationIdHeader = None,
     principal: IdeaProposalIntakePrincipal = Depends(require_idea_proposal_intake_principal),
+    repository: ProposalRepository = Depends(shared.get_proposal_repository),
 ) -> IdeaProposalIntakeResponse:
     shared._assert_lifecycle_enabled()
     reject_unexpected_query_params(request, allowed_params=set())
@@ -63,6 +65,7 @@ def accept_idea_proposal_intake(
                 correlation_id=resolved_correlation_id,
                 idempotency_key=idempotency_key,
                 principal=principal,
+                repository=repository,
             )
         ),
     )

@@ -60,3 +60,20 @@ def test_durable_state_recovery_drill_evidence_lists_restore_checks() -> None:
         "workspace",
     }
     assert all(namespace["restore_check_keys"] for namespace in evidence["durable_namespaces"])
+
+
+def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
+    contract = load_contract()
+    proposal_namespace = next(
+        namespace
+        for namespace in contract["durable_namespaces"]
+        if namespace["namespace_key"] == "proposals"
+    )
+
+    assert "proposal_idea_intakes" in proposal_namespace["durable_records"]
+    restore_checks = {check["check_key"]: check for check in proposal_namespace["restore_checks"]}
+    assert "idea_intake_restart_replay" in restore_checks
+    assert (
+        "test_engine_proposal_repository_postgres_integration.py"
+        in restore_checks["idea_intake_restart_replay"]["command"]
+    )
