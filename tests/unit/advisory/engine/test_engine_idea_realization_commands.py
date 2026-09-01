@@ -305,6 +305,15 @@ def test_realization_progression_requires_one_ordered_outcome_per_new_version() 
         portfolio_id=PORTFOLIO_ID,
     )
     assert history is not None
+    with pytest.raises(
+        ProposalStateConflictError,
+        match="IDEA_PROPOSAL_REALIZATION_PROPOSAL_INVALID",
+    ):
+        repository.advance_idea_proposal_realization(
+            expected_source_event_version=1,
+            realization=history.realization,
+            outcomes=(),
+        )
     realization = replace(history.realization, current_source_event_version=2)
     outcome = replace(
         history.outcomes[0],
