@@ -677,6 +677,35 @@ def test_postgres_repository_claims_replays_and_conflicts_idea_intake(monkeypatc
         repository.claim_idea_proposal_intake(replace(record, registry_key="scope:unreadable"))
 
 
+def test_postgres_repository_reads_realization_only_in_exact_trusted_scope(monkeypatch):
+    repository, _ = _build_repository(monkeypatch)
+    record = _idea_intake_record(
+        datetime.now(timezone.utc),
+        registry_key="scope:realization-read",
+    )
+    repository.claim_idea_proposal_intake(record)
+
+    history = repository.get_idea_proposal_realization(
+        intake_id=record.realization.intake_id,
+        tenant_id=record.realization.tenant_id,
+        legal_entity_code=record.realization.legal_entity_code,
+        portfolio_id=record.realization.portfolio_id,
+    )
+
+    assert history is not None
+    assert history.realization == record.realization
+    assert history.outcomes == (record.initial_outcome,)
+    assert (
+        repository.get_idea_proposal_realization(
+            intake_id=record.realization.intake_id,
+            tenant_id=record.realization.tenant_id,
+            legal_entity_code=record.realization.legal_entity_code,
+            portfolio_id="PB_SG_OTHER_002",
+        )
+        is None
+    )
+
+
 def test_postgres_repository_reuses_expired_intake_key_but_preserves_legal_hold(monkeypatch):
     repository, connection = _build_repository(monkeypatch)
     created_at = datetime.now(timezone.utc)
