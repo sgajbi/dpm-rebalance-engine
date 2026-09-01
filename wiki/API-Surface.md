@@ -64,7 +64,11 @@ narrative posture. Client-ready publication remains gated.
 
 `POST /advisory/proposals/idea-intake` is a source-safe executable intake receipt for `lotus-idea`
 conversion-intent handoff. It returns HTTP 202 with accepted, replayed, or rejected receipt posture,
-requires `Idempotency-Key`, and derives bounded trusted scope from local/dev caller headers. It
+requires `Idempotency-Key` plus the canonical producer-authorized `portfolio_id`, and derives
+bounded trusted scope from local/dev caller headers. Portfolio identity participates in the
+deterministic intake identity and request fingerprint and is persisted in the first receipt; exact
+restart replay retains it, while changed-portfolio key reuse returns HTTP 409. Advise never infers
+portfolio scope from candidate or conversion identifiers. It
 persists the scoped intake idempotency decision through the proposal repository so replay and
 conflict behavior survive restart, and detects changed-payload replay with HTTP 409. The replay
 window is 24 hours: expired unheld claims are purged in target-prioritized batches of at most 128

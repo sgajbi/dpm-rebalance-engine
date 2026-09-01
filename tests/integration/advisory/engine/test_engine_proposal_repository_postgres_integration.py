@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from threading import Barrier
 
 import pytest
@@ -13,7 +14,16 @@ from src.core.proposals.exceptions import (
     ProposalIdempotencyConflictError,
     ProposalStateConflictError,
 )
+from src.core.proposals.idea_intake_authority import (
+    IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
+    IdeaProposalIntakePrincipal,
+)
 from src.core.proposals.idea_intake_persistence import IdeaProposalIntakeRecord
+from src.core.proposals.idea_proposal_intake import (
+    IDEA_PROPOSAL_INTAKE_REQUEST_EXAMPLE,
+    IdeaProposalIntakeRequest,
+    process_idea_proposal_intake,
+)
 from src.core.proposals.input_request_models import ProposalCreateRequest
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
@@ -1222,6 +1232,68 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
                 expires_at_utc=replacement.expires_at_utc + timedelta(hours=24),
             )
         )
+
+
+def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> None:
+    if not _DSN:
+        pytest.skip("PROPOSAL_POSTGRES_INTEGRATION_DSN is required for live persistence proof")
+
+    first_repository = PostgresProposalRepository(dsn=_DSN)
+    _reset_tables(first_repository)
+    second_repository = PostgresProposalRepository(dsn=_DSN)
+    request = IdeaProposalIntakeRequest.model_validate(IDEA_PROPOSAL_INTAKE_REQUEST_EXAMPLE)
+    principal = IdeaProposalIntakePrincipal(
+        actor_id="svc-lotus-idea",
+        role="SERVICE",
+        tenant_id="tenant-private-bank-sg",
+        legal_entity_code="SGPB",
+        correlation_id="corr-portfolio-first",
+        service_identity="lotus-idea",
+        capabilities=frozenset({IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY}),
+    )
+    created_at = datetime.now(timezone.utc)
+
+    first = process_idea_proposal_intake(
+        request,
+        correlation_id="corr-portfolio-first",
+        idempotency_key="idea-intake-portfolio-recovery",
+        principal=principal,
+        repository=first_repository,
+        received_at=created_at,
+    )
+    replay = process_idea_proposal_intake(
+        request,
+        correlation_id="corr-portfolio-replay",
+        idempotency_key="idea-intake-portfolio-recovery",
+        principal=principal,
+        repository=second_repository,
+        received_at=created_at + timedelta(seconds=1),
+    )
+
+    assert first.portfolio_id == "PB_SG_GLOBAL_BAL_001"
+    assert replay.portfolio_id == first.portfolio_id
+    assert replay.idempotency_replay is True
+    with pytest.raises(ProposalIdempotencyConflictError):
+        process_idea_proposal_intake(
+            request.model_copy(update={"portfolio_id": "PB_SG_INCOME_002"}),
+            correlation_id="corr-portfolio-conflict",
+            idempotency_key="idea-intake-portfolio-recovery",
+            principal=principal,
+            repository=second_repository,
+            received_at=created_at + timedelta(seconds=2),
+        )
+
+    with closing(first_repository._connect()) as connection:  # noqa: SLF001
+        stored = connection.execute(
+            "SELECT response_json::jsonb ->> 'portfolio_id' AS portfolio_id "
+            "FROM proposal_idea_intakes"
+        ).fetchone()
+        recovery = connection.execute(
+            Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(encoding="utf-8")
+        ).fetchone()
+        connection.rollback()
+    assert stored["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
+    assert next(iter(recovery.values())) is True
 
 
 def _reset_tables(repository: PostgresProposalRepository) -> None:

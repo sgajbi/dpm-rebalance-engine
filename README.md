@@ -186,8 +186,12 @@ Boundary rules that matter:
 9. The `lotus-idea` advisory proposal intake receipt is implemented at
    `POST /advisory/proposals/idea-intake` with contract evidence under
    `contracts/idea-proposal-intake/`. It proves an executable handoff receipt with trusted
-   local/dev caller headers, durable restart-safe idempotency conflict detection, safe replay, and
-   bounded accepted/rejected outcomes. Intake replay claims retain a 24-hour reuse window; expired
+   local/dev caller headers, durable restart-safe v1.6 idempotency conflict detection, exact-payload replay, and
+   bounded accepted/rejected outcomes. The request requires the producer-authorized canonical
+   `portfolio_id`; Advise includes it in deterministic identity and request fingerprinting and
+   persists it in the receipt, so changed-portfolio key reuse fails closed without inferring scope
+   from opaque identifiers. A pre-v1.6 claim has no trustworthy portfolio scope: reconcile its
+   receipt before submitting the scoped request with a new idempotency key. Intake replay claims retain a 24-hour reuse window; expired
    claims are purged in target-prioritized batches of at most 128 before a new claim unless an
    authorized records process has placed them on legal hold. Each deletion writes sanitized,
    append-only purge evidence in the same database transaction. It does not create advisory

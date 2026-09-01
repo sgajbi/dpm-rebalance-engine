@@ -4,6 +4,7 @@ WITH recovered_claims AS (
         AND response_json::jsonb ?& ARRAY[
             'intake_id', 'intake_status', 'supportability_status', 'source_authority',
             'proposal_authority', 'target_product', 'route_existence_proven',
+            'portfolio_id',
             'intake_receipt_accepted', 'idempotency_replay', 'idempotency_key_hash',
             'request_fingerprint', 'trusted_scope', 'outcome_reason_codes',
             'proposal_record_created', 'suitability_authority_granted', 'order_created',
@@ -20,6 +21,10 @@ WITH recovered_claims AS (
         AND response_json::jsonb ->> 'proposal_authority' = 'lotus-advise'
         AND response_json::jsonb ->> 'target_product'
             = 'lotus-advise:AdvisoryProposalLifecycleRecord:v1'
+        AND length(btrim(response_json::jsonb ->> 'portfolio_id')) BETWEEN 1 AND 160
+        AND response_json::jsonb ->> 'portfolio_id'
+            = btrim(response_json::jsonb ->> 'portfolio_id')
+        AND response_json::jsonb ->> 'portfolio_id' !~ '[[:cntrl:]]'
         AND (response_json::jsonb ->> 'route_existence_proven')::boolean IS TRUE
         AND (response_json::jsonb ->> 'proposal_record_created')::boolean IS FALSE
         AND (response_json::jsonb ->> 'suitability_authority_granted')::boolean IS FALSE

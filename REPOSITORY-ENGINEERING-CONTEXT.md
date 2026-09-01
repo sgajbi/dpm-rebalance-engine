@@ -217,7 +217,11 @@ Current repository posture:
 17. `POST /advisory/proposals/idea-intake` is implemented as a source-safe `lotus-idea`
    conversion-intent intake receipt. It proves trusted local/dev caller scope, durable
    PostgreSQL-backed idempotency conflict detection, restart-safe replay, and bounded
-   accepted/rejected outcomes. Claims have a 24-hour replay window, are automatically purged on
+   accepted/rejected outcomes. The required canonical portfolio identity comes from the
+   producer-authorized Idea candidate scope, participates in intake identity and fingerprinting,
+   and is retained in the durable receipt; Advise never infers it from candidate or conversion
+   identifiers. Pre-v1.6 same-key replay conflicts until an operator reconciles the unscoped
+   receipt and the producer submits the scoped request with a new key. Claims have a 24-hour replay window, are automatically purged on
    subsequent intake after expiry in target-prioritized batches of at most 128, write sanitized
    purge evidence in the same transaction, and remain protected while under legal hold. It is
    not certified as proposal realization, does not persist
@@ -362,9 +366,12 @@ Boundary rules:
 18. runtime smoke should honor injected CI DSNs and canonical service identities rather than stale local assumptions,
 19. `lotus-idea` proposal-intake receipt must remain source-safe: Advise acknowledges only the
    handoff envelope through trusted local/dev caller headers and durably retains its intake
-   idempotency decision. Advise retains proposal, suitability, approval, publication, and execution
-   authority until a later certified realization slice creates advisory review work and publishes
-   source-owned outcome evidence. Production IdP binding remains deferred,
+   idempotency decision plus its explicit producer-authorized portfolio identity. A changed
+   portfolio under the same scoped key must conflict; Advise must not infer scope or claim that
+   local/dev headers prove production portfolio entitlement. Advise retains proposal, suitability,
+   approval, publication, and execution authority until a later certified realization slice creates
+   advisory review work and publishes source-owned outcome evidence. Production IdP binding remains
+   deferred,
 20. outbound `lotus-report` and `lotus-ai` calls must fail closed when tenant or actor identity is
    missing, malformed, over-length, or control-character-bearing; do not reintroduce synthetic
    production defaults such as a hardcoded tenant or service actor,

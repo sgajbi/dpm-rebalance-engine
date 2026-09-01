@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-08-25T09:40:11.484319+00:00",
+  "generatedAt": "2026-09-01T09:36:31.661811+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -52143,6 +52143,14 @@
             "attributeRef": "#/attributeCatalog/lotus.intent_type"
           },
           {
+            "name": "portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
+          },
+          {
             "name": "source_refs",
             "location": "body",
             "required": true,
@@ -52233,6 +52241,14 @@
             "type": "string",
             "semanticId": "lotus.target_product",
             "attributeRef": "#/attributeCatalog/lotus.target_product"
+          },
+          {
+            "name": "portfolio_id",
+            "location": "body",
+            "required": true,
+            "type": "string",
+            "semanticId": "lotus.portfolio_id",
+            "attributeRef": "#/attributeCatalog/lotus.portfolio_id"
           },
           {
             "name": "route_existence_proven",

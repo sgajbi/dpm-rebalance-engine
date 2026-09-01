@@ -40,6 +40,7 @@ IDEA_PROPOSAL_INTAKE_REQUEST_EXAMPLE: dict[str, Any] = {
     "idea_candidate_id": "idea_candidate_001",
     "conversion_intent_id": "conversion_intent_001",
     "intent_type": "REVIEW_FOR_ADVISORY_PROPOSAL",
+    "portfolio_id": "PB_SG_GLOBAL_BAL_001",
     "source_refs": [
         {
             "source_system": "lotus-idea",
@@ -57,6 +58,7 @@ IDEA_PROPOSAL_INTAKE_RESPONSE_EXAMPLE: dict[str, Any] = {
     "source_authority": "lotus-idea",
     "proposal_authority": "lotus-advise",
     "target_product": "lotus-advise:AdvisoryProposalLifecycleRecord:v1",
+    "portfolio_id": "PB_SG_GLOBAL_BAL_001",
     "route_existence_proven": True,
     "intake_receipt_accepted": True,
     "idempotency_replay": False,
@@ -90,6 +92,13 @@ IDEA_PROPOSAL_INTAKE_RESPONSE_EXAMPLE: dict[str, Any] = {
 IDEA_PROPOSAL_INTAKE_ERROR_EXAMPLE: dict[str, Any] = {
     "detail": "UNSUPPORTED_QUERY_PARAMETER: dry_run not supported for this endpoint"
 }
+
+
+def _normalize_required_identifier(value: str) -> str:
+    normalized = value.strip()
+    if not normalized or not normalized.isprintable():
+        raise ValueError("IDEA_PROPOSAL_IDENTIFIER_REQUIRED")
+    return normalized
 
 
 class IdeaProposalSourceRef(BaseModel):
@@ -163,19 +172,25 @@ class IdeaProposalIntakeRequest(BaseModel):
         ),
         examples=["REVIEW_FOR_ADVISORY_PROPOSAL"],
     )
+    portfolio_id: str = Field(
+        min_length=1,
+        max_length=160,
+        description=(
+            "Canonical portfolio identity from the producer-authorized Idea candidate scope. "
+            "Advise persists this value and never infers it from opaque candidate identifiers."
+        ),
+        examples=["PB_SG_GLOBAL_BAL_001"],
+    )
     source_refs: list[IdeaProposalSourceRef] = Field(
         min_length=1,
         max_length=16,
         description="Source-safe idea evidence references supplied by lotus-idea.",
     )
 
-    @field_validator("idea_candidate_id", "conversion_intent_id")
+    @field_validator("idea_candidate_id", "conversion_intent_id", "portfolio_id")
     @classmethod
     def _trim_required_identifier(cls, value: str) -> str:
-        trimmed = value.strip()
-        if not trimmed:
-            raise ValueError("IDEA_PROPOSAL_IDENTIFIER_REQUIRED")
-        return trimmed
+        return _normalize_required_identifier(value)
 
 
 class IdeaProposalIntakeResponse(BaseModel):
@@ -208,6 +223,18 @@ class IdeaProposalIntakeResponse(BaseModel):
         description="Advise-owned product that future certified realization may update.",
         examples=["lotus-advise:AdvisoryProposalLifecycleRecord:v1"],
     )
+    portfolio_id: str = Field(
+        min_length=1,
+        max_length=160,
+        description="Canonical portfolio scope retained in this durable intake receipt.",
+        examples=["PB_SG_GLOBAL_BAL_001"],
+    )
+
+    @field_validator("portfolio_id")
+    @classmethod
+    def _validate_portfolio_id(cls, value: str) -> str:
+        return _normalize_required_identifier(value)
+
     route_existence_proven: bool = Field(
         description="True because this route exists and is covered by contract tests.",
         examples=[True],
@@ -292,6 +319,7 @@ def acknowledge_idea_proposal_intake(
         idea_candidate_id=request.idea_candidate_id,
         conversion_intent_id=request.conversion_intent_id,
         intent_type=request.intent_type,
+        portfolio_id=request.portfolio_id,
         source_refs_fingerprint=source_refs_fingerprint,
     )
     accepted = request.intent_type == "REVIEW_FOR_ADVISORY_PROPOSAL"
@@ -302,6 +330,7 @@ def acknowledge_idea_proposal_intake(
         source_authority="lotus-idea",
         proposal_authority="lotus-advise",
         target_product="lotus-advise:AdvisoryProposalLifecycleRecord:v1",
+        portfolio_id=request.portfolio_id,
         route_existence_proven=True,
         intake_receipt_accepted=accepted,
         idempotency_replay=False,
@@ -405,6 +434,7 @@ def _request_fingerprint(
             "idea_candidate_id": request.idea_candidate_id,
             "conversion_intent_id": request.conversion_intent_id,
             "intent_type": request.intent_type,
+            "portfolio_id": request.portfolio_id,
             "source_refs_fingerprint": source_refs_fingerprint,
         },
         sort_keys=True,
@@ -488,11 +518,13 @@ def _intake_id(
     idea_candidate_id: str,
     conversion_intent_id: str,
     intent_type: str,
+    portfolio_id: str,
     source_refs_fingerprint: str,
 ) -> str:
     digest = sha256(
         (
-            f"{idea_candidate_id}|{conversion_intent_id}|{intent_type}|{source_refs_fingerprint}"
+            f"{idea_candidate_id}|{conversion_intent_id}|{intent_type}|{portfolio_id}|"
+            f"{source_refs_fingerprint}"
         ).encode()
     ).hexdigest()
     return f"ipi_{digest[:12]}"
