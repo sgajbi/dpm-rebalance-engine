@@ -53,9 +53,15 @@ def _headers(
     return headers
 
 
-def _realization_headers(*, portfolio_id: str = "PB_SG_GLOBAL_BAL_001") -> dict[str, str]:
+def _realization_headers(
+    *,
+    portfolio_id: str = "PB_SG_GLOBAL_BAL_001",
+    authorized_portfolio_id: str | None = "PB_SG_GLOBAL_BAL_001",
+) -> dict[str, str]:
     headers = _headers(capabilities="advisory.idea_proposal_realization.read")
     headers["X-Portfolio-Id"] = portfolio_id
+    if authorized_portfolio_id is not None:
+        headers["X-Authorized-Portfolio-Id"] = authorized_portfolio_id
     return headers
 
 
@@ -81,6 +87,14 @@ def test_idea_proposal_intake_route_returns_source_safe_non_proposal_posture() -
     assert body["review_work_status"] == "PENDING_ADVISER_REVIEW"
     assert body["realization_status"] == "ACCEPTED_FOR_REVIEW"
     assert body["source_event_version"] == 1
+    assert body["certification_blockers"] == IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS
+    assert "advisory_review_work_realization_not_certified" not in body["certification_blockers"]
+    assert "source_owned_outcome_stream_not_certified" not in body["certification_blockers"]
+    assert "src/core/proposals/idea_review_realization.py" in body["evidence_refs"]
+    assert (
+        "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql"
+        in body["evidence_refs"]
+    )
     assert body["source_evidence_fingerprint"].startswith("sha256:")
     assert body["route_existence_proven"] is True
     assert body["intake_receipt_accepted"] is True
@@ -498,6 +512,15 @@ def test_idea_proposal_intake_route_is_documented_in_openapi() -> None:
     assert realization_operation["summary"] == "Read Advise-owned Idea realization outcomes"
     assert "proposal creation" in realization_operation["description"]
     assert "404" in realization_operation["responses"]
+    realization_headers = {
+        parameter["name"]
+        for parameter in realization_operation["parameters"]
+        if parameter["in"] == "header"
+    }
+    assert "X-Authorized-Portfolio-Id" in realization_headers
+    assert "X-Authorized-Portfolio-Id" not in {
+        parameter["name"] for parameter in operation["parameters"] if parameter["in"] == "header"
+    }
 
 
 def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -> None:
@@ -529,7 +552,9 @@ def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -
     assert body["outcomes"][0]["terminal"] is False
 
 
-def test_idea_proposal_realization_route_fails_closed_on_scope_mismatch() -> None:
+def test_idea_proposal_realization_route_fails_closed_before_scope_mismatch_lookup(
+    monkeypatch,
+) -> None:
     with TestClient(app) as client:
         accepted = client.post(
             "/advisory/proposals/idea-intake",
@@ -537,10 +562,29 @@ def test_idea_proposal_realization_route_fails_closed_on_scope_mismatch() -> Non
             headers=_headers(idempotency_key="idea-realization-scope"),
         )
         intake_id = accepted.json()["intake_id"]
+        repository = proposals_router.get_proposal_repository()
+
+        def fail_if_queried(**_kwargs):
+            raise AssertionError("repository lookup must not occur for unauthorized scope")
+
+        monkeypatch.setattr(repository, "get_idea_proposal_realization", fail_if_queried)
         wrong_portfolio = client.get(
             f"/advisory/proposals/idea-intake/{intake_id}/realization",
             headers=_realization_headers(portfolio_id="PB_OTHER"),
         )
+
+    assert wrong_portfolio.status_code == 404
+    assert wrong_portfolio.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_NOT_FOUND"
+
+
+def test_idea_proposal_realization_route_fails_closed_on_tenant_scope_mismatch() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-tenant-scope"),
+        )
+        intake_id = accepted.json()["intake_id"]
         wrong_tenant_headers = _realization_headers()
         wrong_tenant_headers["X-Tenant-Id"] = "tenant-private-bank-hk"
         wrong_tenant = client.get(
@@ -548,10 +592,24 @@ def test_idea_proposal_realization_route_fails_closed_on_scope_mismatch() -> Non
             headers=wrong_tenant_headers,
         )
 
-    assert wrong_portfolio.status_code == 404
-    assert wrong_portfolio.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_NOT_FOUND"
     assert wrong_tenant.status_code == 404
     assert wrong_tenant.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_NOT_FOUND"
+
+
+def test_idea_proposal_realization_route_requires_authorized_portfolio_scope() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-portfolio-entitlement"),
+        )
+        response = client.get(
+            f"/advisory/proposals/idea-intake/{accepted.json()['intake_id']}/realization",
+            headers=_realization_headers(authorized_portfolio_id=None),
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_NOT_FOUND"
 
 
 def test_idea_proposal_realization_route_requires_read_capability() -> None:

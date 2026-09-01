@@ -119,5 +119,6 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
             "proposal_idea_review_realizations",
             "proposal_idea_realization_outcomes",
             "source_event_version",
+            "IS NOT DISTINCT FROM",
         )
     )

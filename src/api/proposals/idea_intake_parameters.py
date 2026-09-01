@@ -45,6 +45,19 @@ IdeaProposalRealizationPortfolioHeader = Annotated[
     ),
 ]
 
+IdeaProposalAuthorizedPortfolioHeader = Annotated[
+    str | None,
+    Header(
+        alias="X-Authorized-Portfolio-Id",
+        description=(
+            "Trusted caller portfolio entitlement for realization reads. The read fails closed "
+            "unless this scope exactly matches X-Portfolio-Id."
+        ),
+        max_length=160,
+        examples=["PB_SG_GLOBAL_BAL_001"],
+    ),
+]
+
 IdeaProposalIntakeIdPath = Annotated[
     str,
     Path(min_length=1, max_length=160, examples=["ipi_7a1d2b3c4d5e"]),

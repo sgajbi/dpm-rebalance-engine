@@ -19,9 +19,10 @@ class IdeaProposalIntakePrincipal:
     correlation_id: str
     service_identity: str
     capabilities: frozenset[str]
+    authorized_portfolio_id: str | None = None
 
     def audit_metadata(self, *, capability: str) -> dict[str, Any]:
-        return {
+        metadata = {
             "subject": self.actor_id,
             "role": self.role,
             "tenant_id": self.tenant_id,
@@ -30,6 +31,9 @@ class IdeaProposalIntakePrincipal:
             "service_identity": self.service_identity,
             "capability": capability,
         }
+        if self.authorized_portfolio_id is not None:
+            metadata["authorized_portfolio_id"] = self.authorized_portfolio_id
+        return metadata
 
 
 __all__ = [

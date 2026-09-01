@@ -168,7 +168,17 @@ WITH recovered_claims AS (
             SELECT count(*)
             FROM proposal_idea_realization_outcomes outcome
             WHERE outcome.realization_id = realization.realization_id
-        ) = current_source_event_version,
+        ) = current_source_event_version
+        AND EXISTS (
+            SELECT 1
+            FROM proposal_idea_realization_outcomes current_outcome
+            WHERE current_outcome.realization_id = realization.realization_id
+              AND current_outcome.source_event_version
+                  = realization.current_source_event_version
+              AND current_outcome.status = realization.current_status
+              AND current_outcome.review_work_id
+                  IS NOT DISTINCT FROM realization.review_work_id
+        ),
         FALSE
     ) AS is_valid
     FROM proposal_idea_review_realizations realization
