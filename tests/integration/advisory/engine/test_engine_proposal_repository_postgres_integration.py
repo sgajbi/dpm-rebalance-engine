@@ -1238,6 +1238,43 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
     assert realization_count["count"] == 1
     assert outcome_count["count"] == 1
 
+    with closing(first_repository._connect()) as connection:  # noqa: SLF001
+        connection.execute(
+            "DELETE FROM proposal_idea_realization_outcomes WHERE realization_id = %s",
+            (realization.realization_id,),
+        )
+        connection.execute(
+            "DELETE FROM proposal_idea_review_realizations WHERE realization_id = %s",
+            (realization.realization_id,),
+        )
+        connection.commit()
+    replay_timestamp = created_at + timedelta(hours=1)
+    upgraded = second_repository.claim_idea_proposal_intake(
+        replace(
+            record,
+            realization=replace(
+                record.realization,
+                created_at_utc=replay_timestamp,
+                updated_at_utc=replay_timestamp,
+            ),
+            initial_outcome=replace(
+                record.initial_outcome,
+                occurred_at_utc=replay_timestamp,
+            ),
+        )
+    )
+    assert upgraded.replayed is True
+    upgraded_history = first_repository.get_idea_proposal_realization(
+        intake_id=realization.intake_id,
+        tenant_id=realization.tenant_id,
+        legal_entity_code=realization.legal_entity_code,
+        portfolio_id=realization.portfolio_id,
+    )
+    assert upgraded_history is not None
+    assert upgraded_history.realization.created_at_utc == record.created_at_utc
+    assert upgraded_history.realization.updated_at_utc == record.created_at_utc
+    assert upgraded_history.outcomes[0].occurred_at_utc == record.created_at_utc
+
     other_realization = replace(
         realization,
         realization_id=f"ipr_{uuid.uuid4().hex[:12]}",

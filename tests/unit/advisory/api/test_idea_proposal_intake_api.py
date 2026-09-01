@@ -217,6 +217,12 @@ def test_idea_proposal_intake_route_upgrades_pre_realization_replay_receipt() ->
             json=_payload(),
             headers=_headers(idempotency_key="idea-intake-idem-legacy-replay"),
         )
+        history = repository.get_idea_proposal_realization(
+            intake_id=stored.realization.intake_id,
+            tenant_id=stored.realization.tenant_id,
+            legal_entity_code=stored.realization.legal_entity_code,
+            portfolio_id=stored.realization.portfolio_id,
+        )
 
     assert first.status_code == 202
     assert replay.status_code == 202
@@ -227,6 +233,10 @@ def test_idea_proposal_intake_route_upgrades_pre_realization_replay_receipt() ->
     assert body["review_work_status"] == "PENDING_ADVISER_REVIEW"
     assert body["realization_status"] == "ACCEPTED_FOR_REVIEW"
     assert body["source_event_version"] == 1
+    assert history is not None
+    assert history.realization.created_at_utc == stored.created_at_utc
+    assert history.realization.updated_at_utc == stored.created_at_utc
+    assert history.outcomes[0].occurred_at_utc == stored.created_at_utc
 
 
 def test_idea_proposal_intake_route_normalizes_idempotency_key() -> None:
