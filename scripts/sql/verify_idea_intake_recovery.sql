@@ -11,5 +11,5 @@ WITH recovered_claims AS (
         AS is_valid
     FROM proposal_idea_intakes
 )
-SELECT COUNT(*) > 0 AND COALESCE(bool_and(is_valid), false)
+SELECT COALESCE(bool_and(is_valid), true)
 FROM recovered_claims;

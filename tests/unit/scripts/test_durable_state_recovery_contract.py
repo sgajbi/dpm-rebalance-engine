@@ -79,3 +79,11 @@ def test_proposal_recovery_scope_covers_durable_idea_intake_replay() -> None:
     command = makefile.split("idea-intake-recovery-check:", 1)[1].split("\n\n", 1)[0]
     assert "SET TRANSACTION READ ONLY" in command
     assert "PROPOSAL_POSTGRES_DSN" in command and "pytest" not in command
+
+
+def test_idea_intake_recovery_check_accepts_a_valid_empty_restored_table() -> None:
+    recovery_query = Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(encoding="utf-8")
+
+    assert "FROM proposal_idea_intakes" in recovery_query
+    assert "COALESCE(bool_and(is_valid), true)" in recovery_query
+    assert "COUNT(*) > 0" not in recovery_query
