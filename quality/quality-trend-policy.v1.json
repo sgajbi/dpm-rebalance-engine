@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+4132d40445ac",
+  "policy_version": "lotus-advise-quality-trend.v1+9f6cc76cf70d",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -52,9 +52,9 @@
       {
         "metric": "total_python_lines",
         "base_sha": "4337fb939bc9d675a49e640678b01fbc40f9fd9d",
-        "head_python_content_fingerprint": "a391f1348ed63be64b58ced92a7d4056b6c6000b2e9e1e6b58b074a57774d0d7",
-        "allowed_delta": 1296,
-        "reason": "Reviewed #607 bounded realization slice: +857 net production lines implement deterministic Idea conversion realization identity, durable adviser-review work, append-only Advise-owned initial outcomes, fail-closed scoped read, PostgreSQL migration/recovery controls, repository adapters, one capability-configured principal dependency, and a separated PostgreSQL connection owner that keeps the repository facade below its architecture limit; +439 net test lines prove API authority, economic-identity conflict handling, accepted/rejected work posture, concurrent claims, restart replay, live PostgreSQL recovery, and exact exception binding. Complexity was refactored back to the mainline B-ranked inventory and a newly resolved duplicate fingerprint was removed before this content-bound exception.",
+        "head_python_content_fingerprint": "e4b5895b4db71700015494c3705650090e1c3ceb6e7e42ac408d81b85359fc64",
+        "allowed_delta": 1499,
+        "reason": "Reviewed #607 bounded realization slice: +885 net production lines implement deterministic Idea conversion realization identity, durable adviser-review work, append-only Advise-owned initial outcomes, fail-closed scoped read, PostgreSQL migration/recovery controls, repository adapters, one capability-configured principal dependency, scoped in-memory parity, and a narrowly bounded upgrade for still-valid receipts written by the immediately preceding release; +614 net test lines prove API authority, economic-identity conflict handling, accepted/rejected work posture, concurrent claims, restart replay, cross-tenant isolation, legacy-receipt replay, live PostgreSQL recovery, and exact exception binding. Complexity remains at the mainline B-ranked inventory and a newly resolved duplicate fingerprint remains removed.",
         "approver": "sgajbi",
         "expires_on": "2026-09-15"
       }
