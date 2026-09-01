@@ -1384,6 +1384,9 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
     assert rejected.review_work_status is None
 
     with closing(first_repository._connect()) as connection:  # noqa: SLF001
+        recovery_sql = Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(
+            encoding="utf-8"
+        )
         stored = connection.execute(
             "SELECT response_json::jsonb ->> 'portfolio_id' AS portfolio_id "
             "FROM proposal_idea_intakes"
@@ -1395,9 +1398,49 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
             "(SELECT COUNT(*) FROM proposal_idea_review_realizations "
             " WHERE review_work_id IS NOT NULL) AS review_work_items"
         ).fetchone()
-        recovery = connection.execute(
-            Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(encoding="utf-8")
-        ).fetchone()
+        recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_intakes
+            SET response_json = (
+                response_json::jsonb
+                    - 'realization_id'
+                    - 'review_work_id'
+                    - 'review_work_status'
+                    - 'realization_status'
+                    - 'source_event_version'
+                    - 'source_evidence_fingerprint'
+                || jsonb_build_object(
+                    'certification_blockers', '[
+                        "suitability_policy_authority_remains_lotus_advise",
+                        "advisory_proposal_creation_not_certified",
+                        "advisory_review_work_realization_not_certified",
+                        "source_owned_outcome_stream_not_certified",
+                        "client_publication_authority_blocked"
+                    ]'::jsonb,
+                    'evidence_refs', '[
+                        "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
+                        "src/api/proposals/routes_idea_intake.py",
+                        "src/core/proposals/idea_proposal_intake.py",
+                        "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql"
+                    ]'::jsonb
+                )
+            )::text
+            """
+        )
+        legacy_recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_intakes
+            SET response_json = jsonb_set(
+                response_json::jsonb,
+                '{portfolio_id}',
+                '" tampered-portfolio "'::jsonb
+            )::text
+            WHERE registry_key = (SELECT min(registry_key) FROM proposal_idea_intakes)
+            """
+        )
+        corrupted_legacy_recovery = connection.execute(recovery_sql).fetchone()
         connection.rollback()
     assert stored["portfolio_id"] == "PB_SG_GLOBAL_BAL_001"
     assert durable_counts == {
@@ -1406,6 +1449,8 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
         "review_work_items": 1,
     }
     assert next(iter(recovery.values())) is True
+    assert next(iter(legacy_recovery.values())) is True
+    assert next(iter(corrupted_legacy_recovery.values())) is False
 
 
 def _reset_tables(repository: PostgresProposalRepository) -> None:
