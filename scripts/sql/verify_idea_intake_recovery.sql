@@ -250,6 +250,13 @@ WITH recovered_claims AS (
         )
         AND source_event_version = 1
         AND proposal_id IS NULL
+        AND EXISTS (
+            SELECT 1
+            FROM proposal_idea_review_realizations realization
+            WHERE realization.realization_id = outcome.realization_id
+              AND outcome.occurred_at_utc = realization.created_at_utc
+              AND outcome.occurred_at_utc = realization.updated_at_utc
+        )
         AND (
             (
                 status = 'ACCEPTED_FOR_REVIEW'
@@ -265,7 +272,7 @@ WITH recovered_claims AS (
         ),
         FALSE
     ) AS is_valid
-    FROM proposal_idea_realization_outcomes
+    FROM proposal_idea_realization_outcomes outcome
 ), recovered_purge_events AS (
     SELECT COALESCE(
         registry_key_digest ~ '^[0-9a-f]{64}:sha256:[0-9a-f]{64}$'
