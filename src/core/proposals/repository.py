@@ -2,6 +2,10 @@ from datetime import datetime
 from typing import Optional, Protocol
 
 from src.core.proposals.contract_types import ProposalWorkflowState
+from src.core.proposals.idea_intake_persistence import (
+    IdeaProposalIntakeClaim,
+    IdeaProposalIntakeRecord,
+)
 from src.core.proposals.memo_persistence_models import (
     ProposalMemoEventRecord,
     ProposalMemoIdempotencyRecord,
@@ -20,6 +24,10 @@ from src.core.proposals.models import (
 
 
 class ProposalRepository(Protocol):
+    def claim_idea_proposal_intake(
+        self, record: IdeaProposalIntakeRecord
+    ) -> IdeaProposalIntakeClaim: ...
+
     def get_idempotency(self, *, idempotency_key: str) -> Optional[ProposalIdempotencyRecord]: ...
 
     def save_idempotency(self, record: ProposalIdempotencyRecord) -> None: ...

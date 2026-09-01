@@ -186,8 +186,9 @@ Boundary rules that matter:
 9. The `lotus-idea` advisory proposal intake receipt is implemented at
    `POST /advisory/proposals/idea-intake` with contract evidence under
    `contracts/idea-proposal-intake/`. It proves an executable handoff receipt with trusted
-   local/dev caller headers, idempotency conflict detection, safe replay, and bounded
-   accepted/rejected outcomes. It does not create advisory proposal records, grant suitability
+   local/dev caller headers, durable restart-safe idempotency conflict detection, safe replay, and
+   bounded accepted/rejected outcomes. It does not create advisory proposal records, durable
+   advisory review work, or a source-owned business-outcome stream; grant suitability
    authority, authorize client publication, create orders, certify a data product, or promote a
    supported feature.
 

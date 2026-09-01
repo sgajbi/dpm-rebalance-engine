@@ -65,8 +65,10 @@ narrative posture. Client-ready publication remains gated.
 `POST /advisory/proposals/idea-intake` is a source-safe executable intake receipt for `lotus-idea`
 conversion-intent handoff. It returns HTTP 202 with accepted, replayed, or rejected receipt posture,
 requires `Idempotency-Key`, and derives bounded trusted scope from local/dev caller headers. It
-detects conflicting idempotency replays with HTTP 409. It does not create proposal lifecycle
-records, run suitability, grant advisory approval, create orders, authorize client publication, bind
+persists the scoped intake idempotency decision through the proposal repository so replay and
+conflict behavior survive restart, and detects changed-payload replay with HTTP 409. It does not
+create advisory review work or proposal lifecycle records, publish a source-owned business outcome,
+run suitability, grant advisory approval, create orders, authorize client publication, bind
 production IdP claims, certify a data product, or promote a supported feature.
 
 ## Advisory Operations And Support

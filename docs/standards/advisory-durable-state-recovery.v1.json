@@ -44,6 +44,7 @@
         "proposal_memos",
         "proposal_memo_events",
         "proposal_memo_idempotency",
+        "proposal_idea_intakes",
         "cockpit_acknowledgements",
         "cockpit_acknowledgement_idempotency"
       ],
@@ -62,11 +63,16 @@
           "check_key": "proposal_replay_and_async_quarantine",
           "command": "python -m pytest tests/unit/advisory/engine/test_engine_proposal_workflow_service.py tests/unit/advisory/engine/test_proposal_async_operation_control_plane.py -q",
           "evidence_path": "output/durable-state-recovery/proposal-replay-async-quarantine.txt"
+        },
+        {
+          "check_key": "idea_intake_restart_replay",
+          "command": "python -m pytest tests/unit/advisory/api/test_idea_proposal_intake_api.py tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py -k idea_intake -q",
+          "evidence_path": "output/durable-state-recovery/idea-intake-restart-replay.txt"
         }
       ],
       "replay_quarantine": {
-        "safe_resume_condition": "migration checks, lifecycle integrity checks, idempotency conflict checks, async recovery, and replay evidence reads pass without hash drift",
-        "quarantine_condition": "orphan lifecycle rows, idempotency conflict, async retry exhaustion, replay hash drift, or missing downstream report/archive refs"
+        "safe_resume_condition": "migration checks, lifecycle integrity checks, Idea intake and proposal idempotency conflict checks, async recovery, and replay evidence reads pass without hash drift",
+        "quarantine_condition": "orphan lifecycle rows, Idea intake or proposal idempotency conflict, async retry exhaustion, replay hash drift, or missing downstream report/archive refs"
       },
       "escalation_owner": "advisory-proposal-lifecycle-oncall"
     },

@@ -11,6 +11,7 @@
   "target_route": "POST /advisory/proposals/idea-intake",
   "route_existence_proven": true,
   "runtime_intake_receipt_proven": true,
+  "durable_intake_idempotency_proven": true,
   "downstream_execution_proven": false,
   "supported_feature_promoted": false,
   "receipt_outcomes": [
@@ -23,7 +24,8 @@
   "certification_blockers": [
     "suitability_policy_authority_remains_lotus_advise",
     "advisory_proposal_creation_not_certified",
-    "proposal_lifecycle_persistence_not_certified",
+    "advisory_review_work_realization_not_certified",
+    "source_owned_outcome_stream_not_certified",
     "client_publication_authority_blocked"
   ],
   "non_proof_boundaries": [
@@ -37,6 +39,9 @@
     "src/api/proposals/idea_intake_principal.py",
     "src/core/proposals/idea_intake_authority.py",
     "src/core/proposals/idea_proposal_intake.py",
+    "src/core/proposals/idea_intake_persistence.py",
+    "src/infrastructure/proposals/postgres_idea_intakes.py",
+    "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
     "tests/unit/advisory/api/test_idea_proposal_intake_api.py"
   ]
 }

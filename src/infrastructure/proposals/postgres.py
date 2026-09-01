@@ -1,5 +1,4 @@
 from contextlib import closing
-from copy import deepcopy
 from datetime import datetime
 from importlib.util import find_spec
 from typing import Any, Optional, cast
@@ -9,7 +8,10 @@ from src.core.advisor_cockpit.persistence import (
     CockpitAcknowledgementRecord,
 )
 from src.core.proposals.contract_types import ProposalWorkflowState
-from src.core.proposals.exceptions import ProposalStateConflictError
+from src.core.proposals.idea_intake_persistence import (
+    IdeaProposalIntakeClaim,
+    IdeaProposalIntakeRecord,
+)
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -31,6 +33,7 @@ from src.infrastructure.proposals import (
 from src.infrastructure.proposals import (
     postgres_cockpit_acknowledgements as _cockpit_acknowledgements,
 )
+from src.infrastructure.proposals import postgres_idea_intakes as _idea_intakes
 from src.infrastructure.proposals import (
     postgres_idempotency as _idempotency,
 )
@@ -40,6 +43,7 @@ from src.infrastructure.proposals import (
 from src.infrastructure.proposals import (
     postgres_records as _records,
 )
+from src.infrastructure.proposals import postgres_transitions as _transitions
 from src.infrastructure.proposals import (
     postgres_versions as _versions,
 )
@@ -62,6 +66,11 @@ class PostgresProposalRepository:
             connect=self._connect,
             idempotency_key=idempotency_key,
         )
+
+    def claim_idea_proposal_intake(
+        self, record: IdeaProposalIntakeRecord
+    ) -> IdeaProposalIntakeClaim:
+        return _idea_intakes.claim_idea_proposal_intake(connect=self._connect, record=record)
 
     def save_idempotency(self, record: ProposalIdempotencyRecord) -> None:
         _idempotency.save_proposal_idempotency(connect=self._connect, record=record)
@@ -358,28 +367,13 @@ class PostgresProposalRepository:
         expected_current_state: Optional[ProposalWorkflowState] = None,
         expected_current_version_no: Optional[int] = None,
     ) -> ProposalTransitionResult:
-        with closing(self._connect()) as connection:
-            if expected_current_state is None or expected_current_version_no is None:
-                _records.upsert_proposal(connection=connection, proposal=proposal)
-            elif not _records.update_proposal_if_current(
-                connection=connection,
-                proposal=proposal,
-                expected_current_state=expected_current_state,
-                expected_current_version_no=expected_current_version_no,
-            ):
-                connection.rollback()
-                raise ProposalStateConflictError(
-                    "STATE_CONFLICT: proposal aggregate changed during transition"
-                )
-            _workflow_events.insert_event(connection=connection, event=event)
-            if approval is not None:
-                _approvals.insert_approval(connection=connection, approval=approval)
-            connection.commit()
-
-        return ProposalTransitionResult(
-            proposal=deepcopy(proposal),
-            event=deepcopy(event),
-            approval=deepcopy(approval) if approval is not None else None,
+        return _transitions.transition_proposal(
+            connect=self._connect,
+            proposal=proposal,
+            event=event,
+            approval=approval,
+            expected_current_state=expected_current_state,
+            expected_current_version_no=expected_current_version_no,
         )
 
     def _connect(self) -> Any:

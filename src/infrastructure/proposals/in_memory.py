@@ -7,7 +7,14 @@ from src.core.advisor_cockpit.persistence import (
     CockpitAcknowledgementRecord,
 )
 from src.core.proposals.contract_types import ProposalWorkflowState
-from src.core.proposals.exceptions import ProposalStateConflictError
+from src.core.proposals.exceptions import (
+    ProposalIdempotencyConflictError,
+    ProposalStateConflictError,
+)
+from src.core.proposals.idea_intake_persistence import (
+    IdeaProposalIntakeClaim,
+    IdeaProposalIntakeRecord,
+)
 from src.core.proposals.models import (
     ProposalApprovalRecordData,
     ProposalAsyncOperationRecord,
@@ -59,6 +66,20 @@ class InMemoryProposalRepository(ProposalRepository):
         self._cockpit_acknowledgement_idempotency: dict[
             str, CockpitAcknowledgementIdempotencyRecord
         ] = {}
+        self._idea_proposal_intakes: dict[str, IdeaProposalIntakeRecord] = {}
+
+    def claim_idea_proposal_intake(
+        self, record: IdeaProposalIntakeRecord
+    ) -> IdeaProposalIntakeClaim:
+        with self._lock:
+            existing = self._idea_proposal_intakes.get(record.registry_key)
+            if existing is None:
+                stored = copy_record(record)
+                self._idea_proposal_intakes[record.registry_key] = stored
+                return IdeaProposalIntakeClaim(record=copy_record(stored), replayed=False)
+            if existing.request_fingerprint != record.request_fingerprint:
+                raise ProposalIdempotencyConflictError("IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT")
+            return IdeaProposalIntakeClaim(record=copy_record(existing), replayed=True)
 
     def get_idempotency(self, *, idempotency_key: str) -> Optional[ProposalIdempotencyRecord]:
         with self._lock:
