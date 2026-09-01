@@ -3,14 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.core.proposals.idea_proposal_intake import (
-    IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS,
-)
+from src.core.proposals.idea_proposal_intake import IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS
 
 ROOT = Path(__file__).resolve().parents[4]
-CONTRACT_PATH = (
-    ROOT / "contracts" / "idea-proposal-intake" / "lotus-advise-idea-proposal-intake.v1.json"
-)
+CONTRACT_PATH = ROOT / "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json"
 
 
 def _contract() -> dict:

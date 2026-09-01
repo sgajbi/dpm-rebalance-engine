@@ -19,17 +19,10 @@ from src.infrastructure.proposals.postgres_mappers import json_dump, to_event
 ConnectionFactory = Callable[[], Any]
 
 
-EVENT_COLUMNS = """
-    event_id,
-    proposal_id,
-    event_type,
-    from_state,
-    to_state,
-    actor_id,
-    occurred_at,
-    reason_json,
-    related_version_no
-"""
+EVENT_COLUMNS = (
+    "event_id, proposal_id, event_type, from_state, to_state, actor_id, occurred_at, "
+    "reason_json, related_version_no"
+)
 
 
 def append_event(*, connect: ConnectionFactory, event: ProposalWorkflowEventRecord) -> None:

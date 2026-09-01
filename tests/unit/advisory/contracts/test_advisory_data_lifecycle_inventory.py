@@ -56,17 +56,10 @@ def test_advisory_data_lifecycle_inventory_requires_raw_payload_masking() -> Non
 
 
 def test_idea_intake_durable_fields_are_governed_as_non_metric_audit_evidence() -> None:
-    inventory = load_inventory()
-    fields = {item["field_path"]: item for item in inventory["fields"]}
+    prefix = "proposal_idea_intakes."
+    fields = [item for item in load_inventory()["fields"] if item["field_path"].startswith(prefix)]
 
-    for field_path in (
-        "proposal_idea_intakes.registry_key",
-        "proposal_idea_intakes.request_fingerprint",
-        "proposal_idea_intakes.response_json",
-        "proposal_idea_intakes.created_at_utc",
-        "proposal_idea_intakes.expires_at_utc",
-        "proposal_idea_intakes.legal_hold",
-    ):
-        assert fields[field_path]["retention_policy"] == "OPERATIONAL_AUDIT_RECORD"
-        assert fields[field_path]["telemetry_label_allowed"] is False
-        assert "postgres" in fields[field_path]["stores"]
+    assert len(fields) == 6
+    assert {item["retention_policy"] for item in fields} == {"OPERATIONAL_AUDIT_RECORD"}
+    assert all(not item["telemetry_label_allowed"] for item in fields)
+    assert all("postgres" in item["stores"] for item in fields)
