@@ -167,6 +167,25 @@ WITH recovered_claims AS (
         AND legal_entity_code = btrim(legal_entity_code) AND legal_entity_code <> ''
         AND portfolio_id = btrim(portfolio_id) AND portfolio_id <> ''
         AND current_source_event_version = 1
+        AND intake_id = 'ipi_' || left(
+            encode(
+                sha256(
+                    convert_to(
+                        idea_candidate_id || '|' || conversion_intent_id || '|'
+                            || CASE current_status
+                                WHEN 'ACCEPTED_FOR_REVIEW'
+                                    THEN 'REVIEW_FOR_ADVISORY_PROPOSAL'
+                                ELSE 'CREATE_ADVISORY_PROPOSAL_DRAFT'
+                            END
+                            || '|' || portfolio_id || '|'
+                            || split_part(source_evidence_fingerprint, ':', 2),
+                        'UTF8'
+                    )
+                ),
+                'hex'
+            ),
+            12
+        )
         AND realization_id = 'ipr_' || left(
             encode(
                 sha256(
@@ -220,6 +239,15 @@ WITH recovered_claims AS (
 ), recovered_outcomes AS (
     SELECT COALESCE(
         outcome_id ~ '^ipro_[0-9a-f]{12}$'
+        AND outcome_id = 'ipro_' || left(
+            encode(
+                sha256(
+                    convert_to(realization_id || '|' || source_event_version::text, 'UTF8')
+                ),
+                'hex'
+            ),
+            12
+        )
         AND source_event_version = 1
         AND proposal_id IS NULL
         AND (

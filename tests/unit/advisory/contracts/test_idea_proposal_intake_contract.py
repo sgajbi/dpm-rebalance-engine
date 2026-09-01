@@ -131,4 +131,8 @@ def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape(
     assert "idea_candidate_id = btrim(idea_candidate_id)" in recovery_sql
     assert "conversion_intent_id = btrim(conversion_intent_id)" in recovery_sql
     assert "tenant_id || '|' || legal_entity_code || '|' || portfolio_id || '|'" in recovery_sql
+    assert "idea_candidate_id || '|' || conversion_intent_id || '|'" in recovery_sql
+    assert "THEN 'REVIEW_FOR_ADVISORY_PROPOSAL'" in recovery_sql
+    assert "split_part(source_evidence_fingerprint, ':', 2)" in recovery_sql
     assert "realization_id || '|review-work'" in recovery_sql
+    assert "realization_id || '|' || source_event_version::text" in recovery_sql
