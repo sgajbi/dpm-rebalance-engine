@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+c47662cca0a8",
+  "policy_version": "lotus-advise-quality-trend.v1+3bc6434bc589",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -63,7 +63,7 @@
         "base_sha": "8b4bb56e2657d0dfe26168e141e3632a66dc1f26",
         "head_python_content_fingerprint": "badb2bca87d7ff20a0799df6e671c548b8649020fdcd6ff677bf751d2db60e19",
         "allowed_delta": 1732,
-        "reason": "Reviewed #602 proposal-outcome realization slice: the measured growth implements the source-authoritative Idea-to-Advise proposal linkage and terminal reconciliation contract, append-only versioned outcomes, compare-and-set/idempotent concurrency behavior, PostgreSQL migration and restart recovery proof, entitlement-first API handling, OpenAPI and data-product contract truth, plus behavioral unit, HTTP, recovery, migration, and live PostgreSQL tests. Review follow-up centralizes the shared progression invariant, preserves original-intake replay after mutable proposal progression, projects current proposal linkage on replay, enforces one-realization-per-proposal parity in memory, translates the named PostgreSQL uniqueness race to a rollback-safe domain conflict, gates writes across the reader-incompatible deployment wave, proves PostgreSQL missing-state, invalid-link, chronology and lost-compare-and-set failures, and retains the exact mainline B-ranked complexity count of 132; this exception permits only the measured Python content for this issue-backed lifecycle closure and does not relax coverage, complexity, typing, or test assertions.",
+        "reason": "Reviewed #602 proposal-outcome realization slice: the measured growth implements the source-authoritative Idea-to-Advise proposal linkage and terminal reconciliation contract, append-only versioned outcomes, compare-and-set/idempotent concurrency behavior, PostgreSQL migration and restart recovery proof, entitlement-first API handling, OpenAPI and data-product contract truth, plus behavioral unit, HTTP, recovery, migration, and live PostgreSQL tests. Review follow-up centralizes the shared progression invariant, preserves original-intake replay after mutable proposal progression, projects current proposal linkage on replay, enforces one-realization-per-proposal parity in memory, translates the named PostgreSQL uniqueness race to a rollback-safe domain conflict, gates writes across the reader-incompatible deployment wave, proves PostgreSQL missing-state, invalid-link, chronology and lost-compare-and-set failures, and restores the B-ranked complexity inventory to the exact mainline count of 132; this exception permits only the measured Python content for this issue-backed lifecycle closure and does not relax coverage, complexity, typing, or test assertions.",
         "approver": "sgajbi",
         "expires_on": "2026-09-16"
       }
