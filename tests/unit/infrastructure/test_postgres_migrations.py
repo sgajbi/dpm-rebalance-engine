@@ -246,3 +246,19 @@ def test_proposal_lifecycle_integrity_migration_adds_relational_guards() -> None
     assert "current_state IN (" in sql
     assert "event_type IN (" in sql
     assert "approval_type IN ('RISK', 'COMPLIANCE', 'CLIENT_CONSENT')" in sql
+
+
+def test_idea_realization_migration_scopes_intake_identity() -> None:
+    migration_path = (
+        Path("src")
+        / "infrastructure"
+        / "postgres_migrations"
+        / "proposals"
+        / "0012_idea_review_realizations.sql"
+    )
+    sql = " ".join(migration_path.read_text(encoding="utf-8").split())
+
+    assert "intake_id TEXT NOT NULL," in sql
+    assert "intake_id TEXT NOT NULL UNIQUE" not in sql
+    assert "CONSTRAINT uq_proposal_idea_realization_intake_scope" in sql
+    assert "UNIQUE (tenant_id, legal_entity_code, portfolio_id, intake_id)" in sql

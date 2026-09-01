@@ -142,7 +142,7 @@ class InMemoryProposalRepository(ProposalRepository):
         ] = {}
         self._idea_proposal_intakes: dict[str, IdeaProposalIntakeRecord] = {}
         self._idea_proposal_realizations: dict[str, IdeaProposalRealizationRecord] = {}
-        self._idea_realization_by_intake: dict[str, str] = {}
+        self._idea_realization_by_intake: dict[tuple[str, str, str, str], str] = {}
         self._idea_proposal_realization_outcomes: dict[
             str, list[IdeaProposalRealizationOutcomeRecord]
         ] = {}
@@ -180,7 +180,14 @@ class InMemoryProposalRepository(ProposalRepository):
             return
         stored = copy_record(requested)
         self._idea_proposal_realizations[requested.realization_id] = stored
-        self._idea_realization_by_intake[requested.intake_id] = requested.realization_id
+        self._idea_realization_by_intake[
+            (
+                requested.tenant_id,
+                requested.legal_entity_code,
+                requested.portfolio_id,
+                requested.intake_id,
+            )
+        ] = requested.realization_id
 
     def _claim_initial_idea_outcome_under_lock(
         self, requested: IdeaProposalRealizationOutcomeRecord
@@ -209,16 +216,12 @@ class InMemoryProposalRepository(ProposalRepository):
         portfolio_id: str,
     ) -> Optional[IdeaProposalRealizationHistoryRecord]:
         with self._lock:
-            realization_id = self._idea_realization_by_intake.get(intake_id)
+            realization_id = self._idea_realization_by_intake.get(
+                (tenant_id, legal_entity_code, portfolio_id, intake_id)
+            )
             if realization_id is None:
                 return None
             realization = self._idea_proposal_realizations[realization_id]
-            if (
-                realization.tenant_id != tenant_id
-                or realization.legal_entity_code != legal_entity_code
-                or realization.portfolio_id != portfolio_id
-            ):
-                return None
             outcomes = tuple(
                 sorted(
                     self._idea_proposal_realization_outcomes.get(realization_id, []),

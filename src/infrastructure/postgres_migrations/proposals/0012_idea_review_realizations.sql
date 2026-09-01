@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS proposal_idea_review_realizations (
     realization_id TEXT PRIMARY KEY,
-    intake_id TEXT NOT NULL UNIQUE,
+    intake_id TEXT NOT NULL,
     review_work_id TEXT UNIQUE,
     review_work_status TEXT,
     tenant_id TEXT NOT NULL,
@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS proposal_idea_review_realizations (
     updated_at_utc TIMESTAMPTZ NOT NULL,
     CONSTRAINT uq_proposal_idea_realization_conversion_scope
         UNIQUE (tenant_id, legal_entity_code, portfolio_id, conversion_intent_id),
+    CONSTRAINT uq_proposal_idea_realization_intake_scope
+        UNIQUE (tenant_id, legal_entity_code, portfolio_id, intake_id),
     CONSTRAINT ck_proposal_idea_realization_id
         CHECK (realization_id ~ '^ipr_[0-9a-f]{12}$'),
     CONSTRAINT ck_proposal_idea_review_work_id

@@ -15,6 +15,7 @@ from src.core.proposals.idea_intake_authority import (
 )
 from src.core.proposals.idea_intake_persistence import (
     IDEA_PROPOSAL_INTAKE_REPLAY_RETENTION,
+    IdeaProposalIntakeClaim,
     IdeaProposalIntakeRecord,
 )
 from src.core.proposals.idea_review_realization import (
@@ -459,7 +460,31 @@ def process_idea_proposal_intake(
     )
     if not claim.replayed:
         return response
-    stored = IdeaProposalIntakeResponse.model_validate_json(claim.record.response_json)
+    return _replayed_intake_response(claim=claim, current_response=response)
+
+
+def _replayed_intake_response(
+    *,
+    claim: IdeaProposalIntakeClaim,
+    current_response: IdeaProposalIntakeResponse,
+) -> IdeaProposalIntakeResponse:
+    stored_payload = json.loads(claim.record.response_json)
+    if not isinstance(stored_payload, dict):
+        raise ProposalValidationError("IDEA_PROPOSAL_INTAKE_STORED_RESPONSE_INVALID")
+    realization = claim.record.realization
+    stored_payload.update(
+        {
+            "intake_id": realization.intake_id,
+            "portfolio_id": realization.portfolio_id,
+            "realization_id": realization.realization_id,
+            "review_work_id": realization.review_work_id,
+            "review_work_status": realization.review_work_status,
+            "realization_status": realization.current_status,
+            "source_event_version": realization.current_source_event_version,
+            "source_evidence_fingerprint": realization.source_evidence_fingerprint,
+        }
+    )
+    stored = IdeaProposalIntakeResponse.model_validate(stored_payload)
     return cast(
         IdeaProposalIntakeResponse,
         stored.model_copy(
@@ -468,9 +493,9 @@ def process_idea_proposal_intake(
                     "ACCEPTED_REPLAYED" if stored.intake_receipt_accepted else "REJECTED"
                 ),
                 "idempotency_replay": True,
-                "correlation_id": response.correlation_id,
-                "trusted_scope": response.trusted_scope,
-                "received_at": response.received_at,
+                "correlation_id": current_response.correlation_id,
+                "trusted_scope": current_response.trusted_scope,
+                "received_at": current_response.received_at,
                 "outcome_reason_codes": _replay_reason_codes(stored),
             }
         ),

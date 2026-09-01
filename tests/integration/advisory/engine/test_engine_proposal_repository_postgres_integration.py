@@ -1238,6 +1238,42 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
     assert realization_count["count"] == 1
     assert outcome_count["count"] == 1
 
+    other_realization = replace(
+        realization,
+        realization_id=f"ipr_{uuid.uuid4().hex[:12]}",
+        review_work_id=f"iarw_{uuid.uuid4().hex[:12]}",
+        tenant_id="tenant-private-bank-hk",
+        legal_entity_code="HKPB",
+    )
+    other_tenant_record = replace(
+        record,
+        registry_key=f"{uuid.uuid4().hex * 2}:sha256:{uuid.uuid4().hex * 2}",
+        realization=other_realization,
+        initial_outcome=replace(
+            record.initial_outcome,
+            outcome_id=f"ipro_{uuid.uuid4().hex[:12]}",
+            realization_id=other_realization.realization_id,
+            review_work_id=other_realization.review_work_id,
+        ),
+    )
+    assert second_repository.claim_idea_proposal_intake(other_tenant_record).replayed is False
+    first_history = first_repository.get_idea_proposal_realization(
+        intake_id=realization.intake_id,
+        tenant_id=realization.tenant_id,
+        legal_entity_code=realization.legal_entity_code,
+        portfolio_id=realization.portfolio_id,
+    )
+    other_history = first_repository.get_idea_proposal_realization(
+        intake_id=other_realization.intake_id,
+        tenant_id=other_realization.tenant_id,
+        legal_entity_code=other_realization.legal_entity_code,
+        portfolio_id=other_realization.portfolio_id,
+    )
+    assert first_history is not None
+    assert other_history is not None
+    assert first_history.realization.realization_id == realization.realization_id
+    assert other_history.realization.realization_id == other_realization.realization_id
+
     with pytest.raises(
         ProposalIdempotencyConflictError,
         match="IDEA_PROPOSAL_INTAKE_IDEMPOTENCY_CONFLICT",
