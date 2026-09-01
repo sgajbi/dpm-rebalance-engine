@@ -1499,6 +1499,25 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
         connection.execute(
             """
             UPDATE proposal_idea_realization_outcomes
+            SET occurred_at_utc = occurred_at_utc + INTERVAL '1 day'
+            WHERE realization_id = %s
+              AND source_event_version = 1
+            """,
+            (first.realization_id,),
+        )
+        contradictory_outcome_chronology_recovery = connection.execute(recovery_sql).fetchone()
+        connection.execute(
+            """
+            UPDATE proposal_idea_realization_outcomes
+            SET occurred_at_utc = %s
+            WHERE realization_id = %s
+              AND source_event_version = 1
+            """,
+            (created_at, first.realization_id),
+        )
+        connection.execute(
+            """
+            UPDATE proposal_idea_realization_outcomes
             SET status = 'REJECTED_BEFORE_WORK',
                 reason_code = 'idea_conversion_rejected_before_advisory_work',
                 review_work_id = NULL,
@@ -1576,6 +1595,7 @@ def test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery() -> No
     assert next(iter(blank_candidate_recovery.values())) is False
     assert next(iter(contradictory_candidate_recovery.values())) is False
     assert next(iter(contradictory_outcome_id_recovery.values())) is False
+    assert next(iter(contradictory_outcome_chronology_recovery.values())) is False
     assert next(iter(contradictory_outcome_recovery.values())) is False
     assert next(iter(legacy_recovery.values())) is True
     assert next(iter(corrupted_legacy_recovery.values())) is False

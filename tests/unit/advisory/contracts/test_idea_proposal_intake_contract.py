@@ -136,3 +136,5 @@ def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape(
     assert "split_part(source_evidence_fingerprint, ':', 2)" in recovery_sql
     assert "realization_id || '|review-work'" in recovery_sql
     assert "realization_id || '|' || source_event_version::text" in recovery_sql
+    assert "outcome.occurred_at_utc = realization.created_at_utc" in recovery_sql
+    assert "outcome.occurred_at_utc = realization.updated_at_utc" in recovery_sql
