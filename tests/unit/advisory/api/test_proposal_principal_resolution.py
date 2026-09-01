@@ -84,6 +84,8 @@ def test_shared_principal_resolution_preserves_typed_surface_contracts(
             x_authorized_proposal_id=" proposal-001 ",
             x_authorized_portfolio_id=" portfolio-001 ",
         )
+    elif dependency is require_idea_proposal_realization_reader:
+        principal_kwargs.update(x_authorized_portfolio_id=" portfolio-001 ")
 
     principal = dependency(**principal_kwargs)
 
@@ -98,11 +100,12 @@ def test_shared_principal_resolution_preserves_typed_surface_contracts(
 
     if dependency is require_advisor_cockpit_read_principal:
         assert principal.authorized_advisor_id == "advisor-001"
-    elif dependency in {
-        require_idea_proposal_intake_principal,
-        require_idea_proposal_realization_reader,
-    }:
+    elif dependency is require_idea_proposal_intake_principal:
         assert not hasattr(principal, "authorized_proposal_id")
+        assert principal.authorized_portfolio_id is None
+    elif dependency is require_idea_proposal_realization_reader:
+        assert not hasattr(principal, "authorized_proposal_id")
+        assert principal.authorized_portfolio_id == "portfolio-001"
     elif dependency is require_advisory_copilot_review_principal:
         assert principal.authorized_proposal_id == "proposal-001"
         assert principal.authorized_portfolio_id == "portfolio-001"
