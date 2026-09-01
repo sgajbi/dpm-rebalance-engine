@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import cast
-
-from fastapi import Depends
 
 from src.api.proposals.idea_intake_parameters import (
     IdeaProposalActorHeader,
@@ -67,26 +64,18 @@ class _IdeaProposalPrincipalDependency:
         x_capabilities: IdeaProposalCapabilitiesHeader = None,
         x_principal_status: IdeaProposalPrincipalStatusHeader = None,
     ) -> IdeaProposalIntakePrincipal:
-        return cast(
-            IdeaProposalIntakePrincipal,
-            resolve_proposal_principal(
-                required_capability=self._required_capability,
-                authorized_roles=IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
-                errors=self._errors,
-                principal_factory=_build_idea_proposal_intake_principal,
-                headers=ProposalPrincipalHeaders(
-                    actor_id=x_actor_id,
-                    role=x_role,
-                    tenant_id=x_tenant_id,
-                    legal_entity_code=x_legal_entity_code,
-                    correlation_id=x_correlation_id,
-                    service_identity=x_service_identity,
-                    authorization=authorization,
-                    capabilities=x_capabilities,
-                    principal_status=x_principal_status,
-                ),
-                correlation_id_fallback="route-correlation-pending",
-            ),
+        return _resolve_idea_proposal_principal(
+            required_capability=self._required_capability,
+            errors=self._errors,
+            x_actor_id=x_actor_id,
+            x_role=x_role,
+            x_tenant_id=x_tenant_id,
+            x_legal_entity_code=x_legal_entity_code,
+            x_correlation_id=x_correlation_id,
+            x_service_identity=x_service_identity,
+            authorization=authorization,
+            x_capabilities=x_capabilities,
+            x_principal_status=x_principal_status,
         )
 
 
@@ -101,6 +90,7 @@ def _build_idea_proposal_intake_principal(
         correlation_id=context.correlation_id,
         service_identity=context.service_identity,
         capabilities=context.capabilities,
+        authorized_portfolio_id=context.authorized_portfolio_id,
     )
 
 
@@ -108,24 +98,72 @@ require_idea_proposal_intake_principal = _IdeaProposalPrincipalDependency(
     required_capability=IDEA_PROPOSAL_INTAKE_ACCEPT_CAPABILITY,
     errors=_PRINCIPAL_ERRORS,
 )
-_require_idea_proposal_realization_reader_principal = _IdeaProposalPrincipalDependency(
-    required_capability=IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY,
-    errors=_REALIZATION_READER_ERRORS,
-)
 
 
 def require_idea_proposal_realization_reader(
-    authorized_portfolio_id: IdeaProposalAuthorizedPortfolioHeader = None,
-    principal: IdeaProposalIntakePrincipal = Depends(
-        _require_idea_proposal_realization_reader_principal
-    ),
+    x_actor_id: IdeaProposalActorHeader = None,
+    x_role: IdeaProposalRoleHeader = None,
+    x_tenant_id: IdeaProposalTenantHeader = None,
+    x_legal_entity_code: IdeaProposalLegalEntityHeader = None,
+    x_correlation_id: IdeaProposalPrincipalCorrelationHeader = None,
+    x_service_identity: IdeaProposalServiceIdentityHeader = None,
+    authorization: IdeaProposalAuthorizationHeader = None,
+    x_capabilities: IdeaProposalCapabilitiesHeader = None,
+    x_principal_status: IdeaProposalPrincipalStatusHeader = None,
+    x_authorized_portfolio_id: IdeaProposalAuthorizedPortfolioHeader = None,
 ) -> IdeaProposalIntakePrincipal:
-    normalized_portfolio_id = (
-        authorized_portfolio_id.strip() if authorized_portfolio_id is not None else None
+    return _resolve_idea_proposal_principal(
+        required_capability=IDEA_PROPOSAL_REALIZATION_READ_CAPABILITY,
+        errors=_REALIZATION_READER_ERRORS,
+        x_actor_id=x_actor_id,
+        x_role=x_role,
+        x_tenant_id=x_tenant_id,
+        x_legal_entity_code=x_legal_entity_code,
+        x_correlation_id=x_correlation_id,
+        x_service_identity=x_service_identity,
+        authorization=authorization,
+        x_capabilities=x_capabilities,
+        x_principal_status=x_principal_status,
+        x_authorized_portfolio_id=x_authorized_portfolio_id,
     )
-    return replace(
-        principal,
-        authorized_portfolio_id=normalized_portfolio_id or None,
+
+
+def _resolve_idea_proposal_principal(
+    *,
+    required_capability: str,
+    errors: ProposalPrincipalErrors,
+    x_actor_id: str | None,
+    x_role: str | None,
+    x_tenant_id: str | None,
+    x_legal_entity_code: str | None,
+    x_correlation_id: str | None,
+    x_service_identity: str | None,
+    authorization: str | None,
+    x_capabilities: str | None,
+    x_principal_status: str | None,
+    x_authorized_portfolio_id: str | None = None,
+) -> IdeaProposalIntakePrincipal:
+    return cast(
+        IdeaProposalIntakePrincipal,
+        resolve_proposal_principal(
+            required_capability=required_capability,
+            authorized_roles=IDEA_PROPOSAL_INTAKE_AUTHORIZED_ROLES,
+            errors=errors,
+            principal_factory=_build_idea_proposal_intake_principal,
+            headers=ProposalPrincipalHeaders(
+                actor_id=x_actor_id,
+                role=x_role,
+                tenant_id=x_tenant_id,
+                legal_entity_code=x_legal_entity_code,
+                correlation_id=x_correlation_id,
+                service_identity=x_service_identity,
+                authorization=authorization,
+                capabilities=x_capabilities,
+                principal_status=x_principal_status,
+                authorized_portfolio_id=x_authorized_portfolio_id,
+            ),
+            correlation_id_fallback="route-correlation-pending",
+        ),
     )
 
 
