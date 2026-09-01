@@ -132,6 +132,8 @@ WITH recovered_claims AS (
                           = (response_json::jsonb ->> 'source_event_version')::integer
                       AND realization.source_evidence_fingerprint
                           = response_json::jsonb ->> 'source_evidence_fingerprint'
+                      AND realization.created_at_utc = intake.created_at_utc
+                      AND realization.updated_at_utc = intake.created_at_utc
                 )
             )
         )
@@ -152,7 +154,7 @@ WITH recovered_claims AS (
         AND pg_typeof(legal_hold) = 'boolean'::regtype,
         FALSE
     ) AS is_valid
-    FROM proposal_idea_intakes
+    FROM proposal_idea_intakes intake
 ), recovered_realizations AS (
     SELECT COALESCE(
         realization_id ~ '^ipr_[0-9a-f]{12}$'
@@ -199,7 +201,7 @@ WITH recovered_claims AS (
             ),
             12
         )
-        AND updated_at_utc >= created_at_utc
+        AND updated_at_utc = created_at_utc
         AND (
             (
                 current_status = 'ACCEPTED_FOR_REVIEW'
