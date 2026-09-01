@@ -151,7 +151,9 @@ Boundary rule:
 Current governed usage includes:
 
 - downstream consumption of Advise data-product posture as opportunity-intelligence evidence
-- source-safe proposal-intake receipt through `POST /advisory/proposals/idea-intake`
+- source-safe conversion intake and scoped realization read through
+  `POST /advisory/proposals/idea-intake` and
+  `GET /advisory/proposals/idea-intake/{intake_id}/realization`
 - downstream reconciliation of policy-evaluation workflow receipts with Advise-produced
   source-owned as-of identity, trusted legal-entity/booking-center/proposal/version/portfolio scope,
   and source-safe tenant/service/correlation/trace hashes
@@ -163,10 +165,22 @@ Boundary rule:
   authority
 - policy-evaluation receipt identity lets `lotus-idea` verify producer evidence without substituting
   consumer request dates, caller-generated lineage, or raw tenant/correlation/trace identifiers
-- the current route proves executable intake receipt behavior and remains `not_certified`; it uses
-  trusted local/dev caller headers for bounded scope and idempotency, but it does not persist
-  proposal records, create orders, certify data-product realization, bind production IdP claims, or
+- accepted review intent creates one deterministic Advise-owned adviser-review work item and initial
+  source-owned outcome; rejected-before-work intent creates no work item
+- transport acceptance never means proposal acceptance, suitability, mandate action, report
+  completion, execution success, or client publication
+- this boundary remains `not_certified`; it uses trusted local/dev caller headers and does not link
+  proposal records, publish later review outcomes, create orders, bind production IdP claims, or
   promote a supported feature
+
+```mermaid
+flowchart LR
+    I[Idea candidate and conversion intent] -->|scoped POST| A[Advise intake claim]
+    A -->|accepted review intent| W[Durable adviser-review work]
+    A -->|unsupported intent| R[Rejected-before-work outcome]
+    W --> O[Accepted-for-review outcome]
+    O -. future source-owned transition .-> P[Proposal linkage and terminal outcome]
+```
 
 ## `lotus-report`
 

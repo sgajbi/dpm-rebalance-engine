@@ -214,8 +214,10 @@ Current repository posture:
    lineage truth,
 16. execution handoff, status, and delivery projections carry explicit ownership-boundary evidence
    so advisory posture cannot be confused with downstream execution system-of-record truth,
-17. `POST /advisory/proposals/idea-intake` is implemented as a source-safe `lotus-idea`
-   conversion-intent intake receipt. It proves trusted local/dev caller scope, durable
+17. `POST /advisory/proposals/idea-intake` and
+   `GET /advisory/proposals/idea-intake/{intake_id}/realization` implement a source-safe
+   `lotus-idea` conversion-intent intake and Advise-owned initial realization boundary. It proves
+   trusted local/dev caller scope, durable
    PostgreSQL-backed idempotency conflict detection, restart-safe replay, and bounded
    accepted/rejected outcomes. The required canonical portfolio identity comes from the
    producer-authorized Idea candidate scope, participates in intake identity and fingerprinting,
@@ -223,10 +225,13 @@ Current repository posture:
    identifiers. Pre-v1.6 same-key replay conflicts until an operator reconciles the unscoped
    receipt and the producer submits the scoped request with a new key. Claims have a 24-hour replay window, are automatically purged on
    subsequent intake after expiry in target-prioritized batches of at most 128, write sanitized
-   purge evidence in the same transaction, and remain protected while under legal hold. It is
-   not certified as proposal realization, does not persist
-   advisory review work or proposal lifecycle records, does not publish a source-owned business
-   outcome stream, does not run suitability,
+   purge evidence in the same transaction, and remain protected while under legal hold. Accepted
+   review intent creates exactly one deterministic durable `PENDING_ADVISER_REVIEW` work item and
+   an append-only `ACCEPTED_FOR_REVIEW` outcome. Unsupported intent creates a terminal
+   `REJECTED_BEFORE_WORK` outcome and no work item. The scoped read fails closed across tenant,
+   legal-entity, portfolio, or capability mismatch. Replay claims may expire without deleting the
+   durable realization or outcome history. This slice does not create proposal lifecycle records,
+   link a proposal, publish later/terminal outcome transitions, run suitability,
    does not authorize client publication, and must not be listed as a supported feature until the
    downstream realization blockers are closed with runtime evidence,
 18. completed advisory copilot output must pass the Advise-owned approved provider/model inventory
