@@ -113,3 +113,14 @@ def test_idea_proposal_intake_contract_keeps_non_proof_boundaries_and_blockers()
         "scripts/sql/verify_idea_intake_recovery.sql",
         "tests/unit/advisory/api/test_idea_proposal_intake_api.py",
     }.issubset(set(contract["evidence_refs"]))
+
+
+def test_recovery_contract_accepts_only_the_exact_pre_realization_receipt_shape() -> None:
+    recovery_sql = Path("scripts/sql/verify_idea_intake_recovery.sql").read_text(encoding="utf-8")
+
+    assert "NOT response_json::jsonb ?| ARRAY[" in recovery_sql
+    assert '"advisory_review_work_realization_not_certified"' in recovery_sql
+    assert '"source_owned_outcome_stream_not_certified"' in recovery_sql
+    assert "response_json::jsonb ?& ARRAY[" in recovery_sql
+    assert '"proposal_linkage_outcome_not_certified"' in recovery_sql
+    assert '"terminal_realization_outcomes_not_certified"' in recovery_sql

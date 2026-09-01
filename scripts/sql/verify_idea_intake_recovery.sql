@@ -4,8 +4,7 @@ WITH recovered_claims AS (
         AND response_json::jsonb ?& ARRAY[
             'intake_id', 'intake_status', 'supportability_status', 'source_authority',
             'proposal_authority', 'target_product', 'route_existence_proven',
-            'portfolio_id', 'realization_id', 'review_work_id', 'review_work_status',
-            'realization_status', 'source_event_version', 'source_evidence_fingerprint',
+            'portfolio_id',
             'intake_receipt_accepted', 'idempotency_replay', 'idempotency_key_hash',
             'request_fingerprint', 'trusted_scope', 'outcome_reason_codes',
             'proposal_record_created', 'suitability_authority_granted', 'order_created',
@@ -26,10 +25,6 @@ WITH recovered_claims AS (
         AND response_json::jsonb ->> 'portfolio_id'
             = btrim(response_json::jsonb ->> 'portfolio_id')
         AND response_json::jsonb ->> 'portfolio_id' !~ '[[:cntrl:]]'
-        AND response_json::jsonb ->> 'realization_id' ~ '^ipr_[0-9a-f]{12}$'
-        AND (response_json::jsonb ->> 'source_event_version')::integer = 1
-        AND response_json::jsonb ->> 'source_evidence_fingerprint'
-            ~ '^sha256:[0-9a-f]{64}$'
         AND (response_json::jsonb ->> 'route_existence_proven')::boolean IS TRUE
         AND (response_json::jsonb ->> 'proposal_record_created')::boolean IS FALSE
         AND (response_json::jsonb ->> 'suitability_authority_granted')::boolean IS FALSE
@@ -43,36 +38,93 @@ WITH recovered_claims AS (
                 AND (response_json::jsonb ->> 'intake_receipt_accepted')::boolean IS TRUE
                 AND response_json::jsonb -> 'outcome_reason_codes'
                     = '["idea_intake_receipt_accepted"]'::jsonb
-                AND response_json::jsonb ->> 'realization_status' = 'ACCEPTED_FOR_REVIEW'
-                AND response_json::jsonb ->> 'review_work_id' ~ '^iarw_[0-9a-f]{12}$'
-                AND response_json::jsonb ->> 'review_work_status'
-                    = 'PENDING_ADVISER_REVIEW'
             )
             OR (
                 response_json::jsonb ->> 'intake_status' = 'REJECTED'
                 AND (response_json::jsonb ->> 'intake_receipt_accepted')::boolean IS FALSE
                 AND response_json::jsonb -> 'outcome_reason_codes'
                     = '["advisory_proposal_creation_not_certified", "idea_intake_receipt_rejected_no_proposal_created"]'::jsonb
-                AND response_json::jsonb ->> 'realization_status' = 'REJECTED_BEFORE_WORK'
-                AND response_json::jsonb -> 'review_work_id' = 'null'::jsonb
-                AND response_json::jsonb -> 'review_work_status' = 'null'::jsonb
             )
         )
-        AND response_json::jsonb -> 'certification_blockers' = '[
-            "suitability_policy_authority_remains_lotus_advise",
-            "advisory_proposal_creation_not_certified",
-            "proposal_linkage_outcome_not_certified",
-            "terminal_realization_outcomes_not_certified",
-            "client_publication_authority_blocked"
-        ]'::jsonb
-        AND response_json::jsonb -> 'evidence_refs' = '[
-            "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
-            "src/api/proposals/routes_idea_intake.py",
-            "src/core/proposals/idea_proposal_intake.py",
-            "src/core/proposals/idea_review_realization.py",
-            "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
-            "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql"
-        ]'::jsonb
+        AND (
+            (
+                NOT response_json::jsonb ?| ARRAY[
+                    'realization_id', 'review_work_id', 'review_work_status',
+                    'realization_status', 'source_event_version',
+                    'source_evidence_fingerprint'
+                ]
+                AND response_json::jsonb -> 'certification_blockers' = '[
+                    "suitability_policy_authority_remains_lotus_advise",
+                    "advisory_proposal_creation_not_certified",
+                    "advisory_review_work_realization_not_certified",
+                    "source_owned_outcome_stream_not_certified",
+                    "client_publication_authority_blocked"
+                ]'::jsonb
+                AND response_json::jsonb -> 'evidence_refs' = '[
+                    "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
+                    "src/api/proposals/routes_idea_intake.py",
+                    "src/core/proposals/idea_proposal_intake.py",
+                    "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql"
+                ]'::jsonb
+            )
+            OR (
+                response_json::jsonb ?& ARRAY[
+                    'realization_id', 'review_work_id', 'review_work_status',
+                    'realization_status', 'source_event_version',
+                    'source_evidence_fingerprint'
+                ]
+                AND response_json::jsonb ->> 'realization_id' ~ '^ipr_[0-9a-f]{12}$'
+                AND (response_json::jsonb ->> 'source_event_version')::integer = 1
+                AND response_json::jsonb ->> 'source_evidence_fingerprint'
+                    ~ '^sha256:[0-9a-f]{64}$'
+                AND (
+                    (
+                        response_json::jsonb ->> 'intake_status' = 'ACCEPTED'
+                        AND response_json::jsonb ->> 'realization_status'
+                            = 'ACCEPTED_FOR_REVIEW'
+                        AND response_json::jsonb ->> 'review_work_id'
+                            ~ '^iarw_[0-9a-f]{12}$'
+                        AND response_json::jsonb ->> 'review_work_status'
+                            = 'PENDING_ADVISER_REVIEW'
+                    )
+                    OR (
+                        response_json::jsonb ->> 'intake_status' = 'REJECTED'
+                        AND response_json::jsonb ->> 'realization_status'
+                            = 'REJECTED_BEFORE_WORK'
+                        AND response_json::jsonb -> 'review_work_id' = 'null'::jsonb
+                        AND response_json::jsonb -> 'review_work_status' = 'null'::jsonb
+                    )
+                )
+                AND response_json::jsonb -> 'certification_blockers' = '[
+                    "suitability_policy_authority_remains_lotus_advise",
+                    "advisory_proposal_creation_not_certified",
+                    "proposal_linkage_outcome_not_certified",
+                    "terminal_realization_outcomes_not_certified",
+                    "client_publication_authority_blocked"
+                ]'::jsonb
+                AND response_json::jsonb -> 'evidence_refs' = '[
+                    "contracts/idea-proposal-intake/lotus-advise-idea-proposal-intake.v1.json",
+                    "src/api/proposals/routes_idea_intake.py",
+                    "src/core/proposals/idea_proposal_intake.py",
+                    "src/core/proposals/idea_review_realization.py",
+                    "src/infrastructure/postgres_migrations/proposals/0011_idea_proposal_intakes.sql",
+                    "src/infrastructure/postgres_migrations/proposals/0012_idea_review_realizations.sql"
+                ]'::jsonb
+                AND EXISTS (
+                    SELECT 1
+                    FROM proposal_idea_review_realizations realization
+                    WHERE realization.intake_id = response_json::jsonb ->> 'intake_id'
+                      AND realization.realization_id
+                          = response_json::jsonb ->> 'realization_id'
+                      AND realization.tenant_id
+                          = response_json::jsonb -> 'trusted_scope' ->> 'tenant_id'
+                      AND realization.legal_entity_code
+                          = response_json::jsonb -> 'trusted_scope' ->> 'legal_entity_code'
+                      AND realization.portfolio_id
+                          = response_json::jsonb ->> 'portfolio_id'
+                )
+            )
+        )
         AND (response_json::jsonb ->> 'received_at')::timestamptz = created_at_utc
         AND length(response_json::jsonb ->> 'correlation_id') > 0
         AND jsonb_typeof(response_json::jsonb -> 'trusted_scope') = 'object'
@@ -87,17 +139,6 @@ WITH recovered_claims AS (
         AND response_json::jsonb -> 'trusted_scope' ->> 'correlation_id'
             = response_json::jsonb ->> 'correlation_id'
         AND expires_at_utc = created_at_utc + INTERVAL '24 hours'
-        AND EXISTS (
-            SELECT 1
-            FROM proposal_idea_review_realizations realization
-            WHERE realization.intake_id = response_json::jsonb ->> 'intake_id'
-              AND realization.realization_id = response_json::jsonb ->> 'realization_id'
-              AND realization.tenant_id
-                  = response_json::jsonb -> 'trusted_scope' ->> 'tenant_id'
-              AND realization.legal_entity_code
-                  = response_json::jsonb -> 'trusted_scope' ->> 'legal_entity_code'
-              AND realization.portfolio_id = response_json::jsonb ->> 'portfolio_id'
-        )
         AND pg_typeof(legal_hold) = 'boolean'::regtype,
         FALSE
     ) AS is_valid
