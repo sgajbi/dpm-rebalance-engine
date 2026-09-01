@@ -34,6 +34,7 @@ These endpoints accept normalized advisory input contracts and require `Idempote
 
 - `POST /advisory/proposals`
 - `POST /advisory/proposals/idea-intake`
+- `GET /advisory/proposals/idea-intake/{intake_id}/realization`
 - `GET /advisory/proposals`
 - `GET /advisory/proposals/{proposal_id}`
 - `GET /advisory/proposals/{proposal_id}/versions/{version_no}`
@@ -62,7 +63,7 @@ hash lineage. `lotus-gateway` exposes product-facing reviewed-narrative posture 
 canonical advisory routes, and `lotus-workbench` renders the Gateway-backed advisor-use proposal
 narrative posture. Client-ready publication remains gated.
 
-`POST /advisory/proposals/idea-intake` is a source-safe executable intake receipt for `lotus-idea`
+`POST /advisory/proposals/idea-intake` is a source-safe executable intake for `lotus-idea`
 conversion-intent handoff. It returns HTTP 202 with accepted, replayed, or rejected receipt posture,
 requires `Idempotency-Key` plus the canonical producer-authorized `portfolio_id`, and derives
 bounded trusted scope from local/dev caller headers. Portfolio identity participates in the
@@ -73,10 +74,15 @@ persists the scoped intake idempotency decision through the proposal repository 
 conflict behavior survive restart, and detects changed-payload replay with HTTP 409. The replay
 window is 24 hours: expired unheld claims are purged in target-prioritized batches of at most 128
 before a new claim, with sanitized append-only purge evidence written in the same transaction.
-Legal hold prevents purge and preserves replay/conflict protection. It does not
-create advisory review work or proposal lifecycle records, publish a source-owned business outcome,
-run suitability, grant advisory approval, create orders, authorize client publication, bind
-production IdP claims, certify a data product, or promote a supported feature.
+Legal hold prevents purge and preserves replay/conflict protection. Accepted review intent creates
+one deterministic durable work item in `PENDING_ADVISER_REVIEW` plus an append-only
+`ACCEPTED_FOR_REVIEW` outcome. Unsupported intent creates `REJECTED_BEFORE_WORK` and no work item.
+`GET /advisory/proposals/idea-intake/{intake_id}/realization` returns this Advise-owned state only
+when the trusted reader capability and tenant, legal-entity, and producer-authorized portfolio scope
+all match; mismatched scope is not disclosed. The realization survives expiry or purge of the
+24-hour transport replay claim. It does not create or link a proposal, run suitability, grant
+advisory approval, create orders, authorize client publication, bind production IdP claims, certify
+a data product, or infer terminal downstream success.
 
 ## Advisory Operations And Support
 

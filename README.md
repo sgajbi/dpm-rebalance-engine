@@ -58,9 +58,10 @@ It is responsible for:
   review-ready without raw provider payload retention
 - source-owned tactical house-view affected cohorts from bank-authored house-view instructions and
   caller-supplied source-backed candidate portfolios
-- source-safe `lotus-idea` proposal-intake receipt for future opportunity-to-advisory realization,
-  with trusted local/dev caller scope and idempotent accepted/replayed/rejected outcomes, without
-  proposal creation, suitability authority, client publication, or supported feature promotion
+- source-safe `lotus-idea` proposal intake that turns accepted conversion intent into one durable,
+  portfolio-scoped adviser-review work item and an append-only Advise-owned initial outcome, with
+  trusted local/dev caller scope and exact replay, without inferring proposal creation, suitability,
+  client publication, or execution success
 
 It does not own discretionary management workflows, portfolio source data, risk methodology,
 performance methodology, reporting ownership, or downstream execution ownership.
@@ -183,21 +184,25 @@ Boundary rules that matter:
    `lotus-platform/thought-leadership/linkedin/drafts/LI-2026-05-28-043-demo-proof-should-show-the-boundary.md`.
    Current proof capture also validates ready `/platform/capabilities` runtime evidence and blocks
    stale proof reuse when `advisory.bank_demo_proof` or `advisory_bank_demo_proof` is missing.
-9. The `lotus-idea` advisory proposal intake receipt is implemented at
+9. The `lotus-idea` advisory proposal intake and initial realization boundary is implemented at
    `POST /advisory/proposals/idea-intake` with contract evidence under
-   `contracts/idea-proposal-intake/`. It proves an executable handoff receipt with trusted
+   `contracts/idea-proposal-intake/`. It proves an executable handoff with trusted
    local/dev caller headers, durable restart-safe v1.6 idempotency conflict detection, exact-payload replay, and
-   bounded accepted/rejected outcomes. The request requires the producer-authorized canonical
+   bounded accepted/rejected outcomes. An accepted review intent creates one deterministic durable
+   work item in `PENDING_ADVISER_REVIEW` and an `ACCEPTED_FOR_REVIEW` outcome; unsupported intent is
+   recorded as `REJECTED_BEFORE_WORK` without creating work. `GET
+   /advisory/proposals/idea-intake/{intake_id}/realization` exposes that Advise-owned truth only to
+   an exactly scoped reader. The request requires the producer-authorized canonical
    `portfolio_id`; Advise includes it in deterministic identity and request fingerprinting and
    persists it in the receipt, so changed-portfolio key reuse fails closed without inferring scope
    from opaque identifiers. A pre-v1.6 claim has no trustworthy portfolio scope: reconcile its
    receipt before submitting the scoped request with a new idempotency key. Intake replay claims retain a 24-hour reuse window; expired
    claims are purged in target-prioritized batches of at most 128 before a new claim unless an
    authorized records process has placed them on legal hold. Each deletion writes sanitized,
-   append-only purge evidence in the same database transaction. It does not create advisory
-   proposal records, durable advisory review work, or a source-owned business-outcome stream;
-   grant suitability authority, authorize client publication, create orders, certify a data
-   product, or promote a supported feature.
+   append-only purge evidence in the same database transaction. Purging a replay claim never
+   deletes the durable review work or outcome history. This boundary does not create an advisory
+   proposal record, grant suitability authority, authorize client publication, create orders,
+   certify a data product, or claim a terminal downstream business outcome.
 
 ## Architecture At A Glance
 
@@ -209,8 +214,9 @@ Main runtime surfaces come from [src/api/main.py](src/api/main.py):
 - advisory proposal lifecycle
   create, version, transition, approval, delivery, execution, async, and support routes under
   `/advisory/proposals/*`
-  plus the source-safe `POST /advisory/proposals/idea-intake` intake receipt for `lotus-idea`
-  conversion-intent handoff
+  plus source-safe `POST /advisory/proposals/idea-intake` and scoped
+  `GET /advisory/proposals/idea-intake/{intake_id}/realization` routes for `lotus-idea`
+  conversion-intent handoff and Advise-owned adviser-review realization
 - advisory workspace
   iterative draft, save, resume, compare, rationale, and lifecycle handoff under
   `/advisory/workspaces/*`

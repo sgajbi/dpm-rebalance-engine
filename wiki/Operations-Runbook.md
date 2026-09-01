@@ -420,7 +420,8 @@ historical evidence. Jurisdiction-specific durations require approved bank polic
 be added as application constants.
 
 The `proposal_idea_intakes` registry is a bounded replay control rather than an advisory business
-record. Each claim has an explicit 24-hour replay expiry, matching the route's established
+record. `proposal_idea_review_realizations` and `proposal_idea_realization_outcomes` are separate
+durable business evidence and must outlive replay-claim expiry. Each claim has an explicit 24-hour replay expiry, matching the route's established
 idempotency window. Before claiming a new intake, the repository deletes expired rows that are not
 on legal hold. Each claim transaction prioritizes the caller's registry key and deletes at most 128
 eligible rows using `FOR UPDATE SKIP LOCKED`; the partial expiry index bounds selection. Each
@@ -433,7 +434,12 @@ The check also requires a nonblank bounded `portfolio_id` in every restored rece
 changed portfolio scope is not repairable by inference: quarantine the affected claim and trace it
 to the producer-owned Idea candidate evidence before any advisory review-work realization.
 For a pre-v1.6 receipt, reconcile that evidence explicitly and then submit the governed scoped
-request with a new idempotency key; same-key cross-version replay intentionally conflicts.
+request with a new idempotency key; same-key cross-version replay intentionally conflicts. After
+restore, `scripts/sql/verify_idea_intake_recovery.sql` also proves every current receipt links to the
+same tenant, legal entity, portfolio, intent, candidate, evidence fingerprint, realization, review
+work, and current append-only outcome version. Quarantine scope mismatches, missing initial
+outcomes, duplicate event versions, or a review work item attached to `REJECTED_BEFORE_WORK`; do not
+reconstruct those facts from transport logs.
 
 ## Proposal Lifecycle Integrity
 

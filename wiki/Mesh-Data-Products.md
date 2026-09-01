@@ -30,10 +30,11 @@ not promoted here.
 - Approved downstream consumers: `lotus-gateway`, `lotus-idea`
 - Lotus Idea boundary: consumes lifecycle posture as opportunity-intelligence input; advisory
   workflow state and proposal-event truth remain source-owned by `lotus-advise`.
-- Lotus Idea intake receipt: `POST /advisory/proposals/idea-intake` accepts source-safe
-  conversion-intent handoff and proves executable receipt behavior, including trusted local/dev
-  caller scope, idempotency conflict detection, replay, and accepted/rejected outcomes.
-  Supportability remains `not_certified`; production IdP binding, proposal persistence,
+- Lotus Idea intake realization: `POST /advisory/proposals/idea-intake` accepts source-safe
+  conversion intent and creates deterministic durable adviser-review work plus an initial
+  Advise-owned outcome when review is supported. Scoped consumers read the realization through
+  `GET /advisory/proposals/idea-intake/{intake_id}/realization`. Supportability remains
+  `not_certified`; production IdP binding, proposal linkage, later/terminal outcome transitions,
   suitability, client publication, and supported-feature promotion remain blocked until certified
   runtime evidence exists.
 
