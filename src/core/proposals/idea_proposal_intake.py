@@ -374,9 +374,7 @@ def acknowledge_idea_proposal_intake(
         portfolio_id=request.portfolio_id,
         trusted_scope=trusted_scope,
     )
-    realization_status: IdeaProposalRealizationStatus = (
-        "ACCEPTED_FOR_REVIEW" if accepted else "REJECTED_BEFORE_WORK"
-    )
+    realization_status = _initial_realization_status(accepted=accepted)
     return IdeaProposalIntakeResponse(
         intake_id=intake_id,
         intake_status="ACCEPTED" if accepted else "REJECTED",
@@ -620,6 +618,10 @@ def _realization_id(
 
 def _review_work_id(realization_id: str) -> str:
     return f"iarw_{sha256(f'{realization_id}|review-work'.encode()).hexdigest()[:12]}"
+
+
+def _initial_realization_status(*, accepted: bool) -> IdeaProposalRealizationStatus:
+    return "ACCEPTED_FOR_REVIEW" if accepted else "REJECTED_BEFORE_WORK"
 
 
 def _realization_record(
