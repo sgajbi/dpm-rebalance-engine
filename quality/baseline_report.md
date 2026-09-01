@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-01T11:10:00.715409+00:00`
+- Generated At: `2026-09-01T11:20:12.741887+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1107`
 - Packages: `42`
 - Modules: `1065`
-- Total Python lines: `202104`
+- Total Python lines: `202106`
 
 ## Largest Files
 
@@ -47,8 +47,8 @@
 - Current baseline uses largest-function and router-hotspot evidence as deterministic
   complexity proxies.
 - Radon config executable: `True`
-- Radon analyzed block inventory: `5081`
-- Radon complexity rank inventory: `A=4949, B=132`
+- Radon analyzed block inventory: `5084`
+- Radon complexity rank inventory: `A=4952, B=132`
 - Radon worst complexity: `rank=B, complexity=10`
 - Radon C/D/E/F-ranked block enforcement is repo-native through
   `make complexity-regression-gate` and the `lint` lane.
