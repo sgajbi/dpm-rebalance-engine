@@ -1659,7 +1659,7 @@ def test_stateful_simulate_and_artifact_share_warm_lotus_core_context(client, mo
     assert simulated.status_code == 200
     assert artifact.status_code == 200
     assert artifact.json()["summary"]["title"] == "Proposal for pf_stateful_artifact_cache"
-    assert query_client.request_count == 5
+    assert query_client.request_count == 6
     fetch_stats = get_stateful_context_fetch_stats_for_tests()
     assert_core_context_fetch_counts(fetch_stats, portfolio=1, positions=1, cash=1)
 

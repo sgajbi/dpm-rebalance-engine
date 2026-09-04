@@ -342,9 +342,11 @@ Boundary rules:
    timestamps, freshness posture, and contract version as typed provenance. Only current evidence
    with `READY` / `SOURCE_EVIDENCE_READY` valuation supportability and coherent scope/dates is
    usable. Portfolio, positions, and cash query reads may supply simulation input rows but must not
-   synthesize or override provenance. Missing, stale, malformed, or conflicting source evidence
-   fails closed before advisory snapshot construction, caching, persistence, or replay; raw source
-   payloads are not stored,
+   synthesize or override provenance. The effective date cannot be later than the normalized
+   requested business date, and identical authoritative provenance must fence those component
+   reads before and after to prevent a mixed-revision proposal. Missing, stale, malformed, drifting,
+   or conflicting source evidence fails closed before advisory snapshot construction, caching,
+   persistence, or replay; raw source payloads are not stored,
 8. Lotus Core source-derived FX rates must be finite, strictly positive, and as-of eligible before
    advisory valuation. Invalid explicit rates or source ratios fail closed with
    `LOTUS_CORE_STATEFUL_FX_INVALID`; missing eligible rates remain data-quality evidence rather

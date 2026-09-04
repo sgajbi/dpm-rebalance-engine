@@ -123,6 +123,7 @@ def resolve_authoritative_portfolio_state(
         or snapshot.as_of_date != requested_date
         or snapshot.source_provenance.portfolio.source_kind != "PORTFOLIO"
         or snapshot.source_provenance.market_data.source_kind != "MARKET_DATA"
+        or effective_date > requested_date
         or snapshot.source_provenance.portfolio.as_of != effective_date
         or snapshot.source_provenance.market_data.as_of != effective_date
     ):

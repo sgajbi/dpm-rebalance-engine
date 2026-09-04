@@ -147,3 +147,13 @@ def test_authoritative_snapshot_rejects_scope_mismatch(field: str, value: str) -
 
     with pytest.raises(AuthoritativePortfolioStateError):
         _resolve(payload)
+
+
+def test_authoritative_snapshot_rejects_future_effective_evidence() -> None:
+    payload = _snapshot_payload()
+    payload["valuation_context"]["effective_as_of_date"] = "2026-04-11"  # type: ignore[index]
+    payload["source_provenance"]["portfolio"]["as_of"] = "2026-04-11"  # type: ignore[index]
+    payload["source_provenance"]["market_data"]["as_of"] = "2026-04-11"  # type: ignore[index]
+
+    with pytest.raises(AuthoritativePortfolioStateError):
+        _resolve(payload)
