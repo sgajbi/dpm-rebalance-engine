@@ -321,7 +321,7 @@ def _fetch_stateful_context_source_payloads(
             base_url=base_url,
             path=_positions_path(
                 portfolio_id=stateful_input.portfolio_id,
-                as_of=stateful_input.as_of,
+                as_of=resolved_as_of,
             ),
             error_code="LOTUS_CORE_STATEFUL_POSITIONS_UNAVAILABLE",
         )
@@ -331,7 +331,7 @@ def _fetch_stateful_context_source_payloads(
             base_url=base_url,
             path=_cash_balances_path(
                 portfolio_id=stateful_input.portfolio_id,
-                as_of=stateful_input.as_of,
+                as_of=resolved_as_of,
             ),
             error_code="LOTUS_CORE_STATEFUL_CASH_UNAVAILABLE",
         )
@@ -340,14 +340,14 @@ def _fetch_stateful_context_source_payloads(
             base_url=control_plane_base_url,
             security_ids=_held_position_instrument_ids(positions_payload),
             portfolio_id=stateful_input.portfolio_id,
-            as_of=stateful_input.as_of,
+            as_of=resolved_as_of,
         )
         classification_taxonomy_unavailable = False
         try:
             classification_taxonomy = _fetch_classification_taxonomy(
                 client,
                 base_url=control_plane_base_url,
-                as_of=stateful_input.as_of,
+                as_of=resolved_as_of,
             )
         except (LotusCoreStatefulContextUnavailableError, AssertionError):
             classification_taxonomy = None
@@ -357,6 +357,7 @@ def _fetch_stateful_context_source_payloads(
         positions_payload=positions_payload,
         cash_payload=cash_payload,
         stateful_input=stateful_input,
+        resolved_as_of=resolved_as_of,
     )
     return _StatefulContextSourcePayloads(
         resolved_as_of=resolved_as_of,
@@ -407,6 +408,7 @@ def _validate_stateful_payload_identity(
     positions_payload: dict[str, Any],
     cash_payload: dict[str, Any],
     stateful_input: WorkspaceStatefulInput,
+    resolved_as_of: str,
 ) -> None:
     _require_matching_payload_value(
         portfolio_payload,
@@ -426,7 +428,7 @@ def _validate_stateful_payload_identity(
     _require_matching_payload_value(
         cash_payload,
         "resolved_as_of_date",
-        expected=stateful_input.as_of,
+        expected=resolved_as_of,
     )
 
 

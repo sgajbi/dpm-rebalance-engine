@@ -71,24 +71,30 @@ class _FakeResponse:
         return self._payload
 
 
-def _authoritative_snapshot_response(url: str, request: dict[str, Any]) -> _FakeResponse:
+def _authoritative_snapshot_response(
+    url: str,
+    request: dict[str, Any],
+    *,
+    effective_as_of: str | None = None,
+) -> _FakeResponse:
     portfolio_id = url.rsplit("/", 2)[-2]
-    as_of = str(request["as_of_date"])
+    requested_as_of = str(request["as_of_date"])
+    effective_as_of = effective_as_of or requested_as_of
     tenant_id = str(request["tenant_id"])
     return _FakeResponse(
         {
             "product_name": "PortfolioStateSnapshot",
             "product_version": "v1",
             "portfolio_id": portfolio_id,
-            "as_of_date": as_of,
+            "as_of_date": requested_as_of,
             "snapshot_mode": "BASELINE",
-            "generated_at": f"{as_of}T10:02:00Z",
+            "generated_at": f"{effective_as_of}T10:02:00Z",
             "contract_version": "rfc_081_v1",
             "tenant_id": tenant_id,
             "source_evidence_current": True,
             "freshness_status": "CURRENT",
             "valuation_context": {
-                "effective_as_of_date": as_of,
+                "effective_as_of_date": effective_as_of,
                 "supportability": "READY",
                 "reason_code": "SOURCE_EVIDENCE_READY",
             },
@@ -98,8 +104,8 @@ def _authoritative_snapshot_response(url: str, request: dict[str, Any]) -> _Fake
                 "portfolio": {
                     "source_system": "LOTUS_CORE",
                     "source_kind": "PORTFOLIO",
-                    "source_id": f"core-portfolio-{portfolio_id}-{as_of}",
-                    "as_of": as_of,
+                    "source_id": f"core-portfolio-{portfolio_id}-{effective_as_of}",
+                    "as_of": effective_as_of,
                     "contract_version": "PortfolioStateSnapshot:v1",
                     "source_hash": "a" * 64,
                     "freshness_status": "CURRENT",
@@ -107,8 +113,8 @@ def _authoritative_snapshot_response(url: str, request: dict[str, Any]) -> _Fake
                 "market_data": {
                     "source_system": "LOTUS_CORE",
                     "source_kind": "MARKET_DATA",
-                    "source_id": f"core-market-{portfolio_id}-{as_of}",
-                    "as_of": as_of,
+                    "source_id": f"core-market-{portfolio_id}-{effective_as_of}",
+                    "as_of": effective_as_of,
                     "contract_version": "PortfolioStateSnapshot:v1",
                     "source_hash": "b" * 64,
                     "freshness_status": "CURRENT",
@@ -1642,11 +1648,23 @@ def test_resolve_stateful_context_rejects_invalid_source_derived_fx_rate(
     assert str(exc_info.value) == "LOTUS_CORE_STATEFUL_FX_INVALID"
 
 
-def test_resolve_stateful_context_with_lotus_core_propagates_as_of_to_positions_and_cash(
-    monkeypatch, stateful_input
+def test_resolve_stateful_context_uses_authoritative_effective_date_for_component_reads(
+    monkeypatch,
 ) -> None:
+    from src.core.workspace.models import WorkspaceStatefulInput
+    from src.integrations.lotus_core.stateful_context_source_reads import (
+        InstrumentEnrichmentFetchResult,
+    )
+
     base_url = "http://host.docker.internal:8201"
     control_plane_base_url = "http://host.docker.internal:8202"
+    requested_as_of = "2026-03-29"
+    effective_as_of = "2026-03-27"
+    stateful_input = WorkspaceStatefulInput(
+        portfolio_id="DEMO_ADV_USD_001",
+        as_of=requested_as_of,
+        mandate_id="mandate_growth_01",
+    )
     monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
     monkeypatch.setenv("LOTUS_CORE_BASE_URL", control_plane_base_url)
     responses = {
@@ -1655,43 +1673,69 @@ def test_resolve_stateful_context_with_lotus_core_propagates_as_of_to_positions_
         ),
         (
             "GET",
-            f"{base_url}{_positions_path(portfolio_id='DEMO_ADV_USD_001', as_of='2026-03-27')}",
+            f"{base_url}{_positions_path(portfolio_id='DEMO_ADV_USD_001', as_of=effective_as_of)}",
         ): _FakeResponse({"portfolio_id": "DEMO_ADV_USD_001", "positions": []}),
         ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/cash-balances"): _FakeResponse(
             {
                 "portfolio_id": "DEMO_ADV_USD_001",
-                "resolved_as_of_date": "2026-03-27",
+                "resolved_as_of_date": effective_as_of,
                 "cash_accounts": [],
             }
         ),
-        (
-            "POST",
-            f"{control_plane_base_url}/integration/instruments/enrichment-bulk",
-        ): _FakeResponse({"records": []}),
     }
-    client = _FakeClient(responses)
+
+    class _EffectiveDateFakeClient(_FakeClient):
+        def request(
+            self,
+            method: str,
+            url: str,
+            json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
+        ) -> _FakeResponse:
+            if method.upper() == "POST" and url.endswith("/core-snapshot") and json is not None:
+                self.requests.append((method.upper(), url, json))
+                return _authoritative_snapshot_response(
+                    url,
+                    json,
+                    effective_as_of=effective_as_of,
+                )
+            return super().request(method, url, json=json, headers=headers)
+
+    enrichment_as_of: list[str] = []
+
+    def _capture_enrichment_as_of(*args, as_of: str, **kwargs):
+        enrichment_as_of.append(as_of)
+        return InstrumentEnrichmentFetchResult({})
+
+    client = _EffectiveDateFakeClient(responses)
     monkeypatch.setattr(
         "src.integrations.lotus_core.stateful_context.httpx.Client",
         lambda timeout: client,
     )
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.stateful_context._fetch_instrument_enrichment_bulk_with_diagnostics",
+        _capture_enrichment_as_of,
+    )
 
-    resolve_stateful_context_with_lotus_core(stateful_input)
+    resolved = resolve_stateful_context_with_lotus_core(stateful_input)
 
+    assert resolved.resolved_context.as_of == effective_as_of
     assert (
         "GET",
-        f"{base_url}{_positions_path(portfolio_id='DEMO_ADV_USD_001', as_of='2026-03-27')}",
+        f"{base_url}{_positions_path(portfolio_id='DEMO_ADV_USD_001', as_of=effective_as_of)}",
         None,
     ) in client.requests
     assert (
         "GET",
-        f"{base_url}{_cash_balances_path(portfolio_id='DEMO_ADV_USD_001', as_of='2026-03-27')}",
+        f"{base_url}{_cash_balances_path(portfolio_id='DEMO_ADV_USD_001', as_of=effective_as_of)}",
         None,
     ) in client.requests
     assert (
         "POST",
         f"{control_plane_base_url}/integration/reference/classification-taxonomy",
-        {"as_of_date": "2026-03-27", "taxonomy_scope": "instrument"},
+        {"as_of_date": effective_as_of, "taxonomy_scope": "instrument"},
     ) in client.requests
+    assert enrichment_as_of == [effective_as_of]
 
 
 def test_trust_snapshot_before_state_uses_upstream_market_value_over_local_fx_revaluation() -> None:
