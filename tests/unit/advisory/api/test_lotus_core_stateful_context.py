@@ -159,19 +159,15 @@ def _empty_stateful_responses(
     base_url: str,
     *,
     portfolio_id: str = "DEMO_ADV_USD_001",
-    as_of: str = "2026-03-27",
     base_currency: str = "USD",
 ) -> dict[tuple[str, str], _FakeResponse]:
     portfolio_url = f"{base_url}/portfolios/{portfolio_id}"
+    identity = {"portfolio_id": portfolio_id}
     return {
-        ("GET", portfolio_url): _FakeResponse(
-            {"portfolio_id": portfolio_id, "base_currency": base_currency}
-        ),
-        ("GET", f"{portfolio_url}/positions"): _FakeResponse(
-            {"portfolio_id": portfolio_id, "positions": []}
-        ),
+        ("GET", portfolio_url): _FakeResponse({**identity, "base_currency": base_currency}),
+        ("GET", f"{portfolio_url}/positions"): _FakeResponse({**identity, "positions": []}),
         ("GET", f"{portfolio_url}/cash-balances"): _FakeResponse(
-            {"portfolio_id": portfolio_id, "resolved_as_of_date": as_of, "cash_accounts": []}
+            {**identity, "resolved_as_of_date": "2026-03-27", "cash_accounts": []}
         ),
     }
 
