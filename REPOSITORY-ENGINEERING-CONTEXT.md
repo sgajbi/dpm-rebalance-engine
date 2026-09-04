@@ -216,7 +216,7 @@ Current repository posture:
    so advisory posture cannot be confused with downstream execution system-of-record truth,
 17. `POST /advisory/proposals/idea-intake`,
    `GET /advisory/proposals/idea-intake/{intake_id}/realization`, and
-   `GET /advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization`
+   `GET /advisory/proposals/idea-intake/realization?conversion_intent_id={conversion_intent_id}`
    for scoped read-only recovery after a lost intake response, and
    `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` implement
    a source-safe `lotus-idea` conversion-intent intake and Advise-owned realization boundary. It proves

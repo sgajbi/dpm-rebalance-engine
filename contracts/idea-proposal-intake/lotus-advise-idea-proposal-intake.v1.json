@@ -11,7 +11,7 @@
   "supportability_status": "not_certified",
   "target_route": "POST /advisory/proposals/idea-intake",
   "realization_read_route": "GET /advisory/proposals/idea-intake/{intake_id}/realization",
-  "lost_response_recovery_route": "GET /advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization",
+  "lost_response_recovery_route": "GET /advisory/proposals/idea-intake/realization?conversion_intent_id={conversion_intent_id}",
   "proposal_reconciliation_route": "POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation",
   "route_existence_proven": true,
   "runtime_intake_receipt_proven": true,
@@ -31,10 +31,9 @@
     "source_refs"
   ],
   "conversion_intent_identity": {
-    "addressability": "url_safe_path_segment",
-    "allowed_pattern": "^[A-Za-z0-9][A-Za-z0-9._~-]*$",
+    "addressability": "opaque_query_parameter",
     "maximum_length": 160,
-    "reason": "Every accepted identity must remain addressable by the lost-response recovery route."
+    "reason": "Query transport keeps every previously accepted printable identity addressable without rewriting durable records."
   },
   "portfolio_scope": {
     "required": true,
