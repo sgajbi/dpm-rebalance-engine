@@ -1738,6 +1738,53 @@ def test_resolve_stateful_context_uses_authoritative_effective_date_for_componen
     assert enrichment_as_of == [effective_as_of]
 
 
+def test_invalid_authoritative_snapshot_fails_before_weaker_source_reads(
+    monkeypatch, stateful_input
+) -> None:
+    monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", "http://core-query.test")
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://core-control.test")
+
+    class _InvalidSnapshotClient(_FakeClient):
+        def request(self, method, url, json=None, headers=None):
+            self.requests.append((method.upper(), url, json))
+            if method.upper() != "POST" or not url.endswith("/core-snapshot") or json is None:
+                pytest.fail(f"weaker source read attempted: {method} {url}")
+            response = _authoritative_snapshot_response(url, json)
+            response._payload["source_evidence_current"] = False
+            return response
+
+    client = _InvalidSnapshotClient({})
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.stateful_context.httpx.Client",
+        lambda timeout: client,
+    )
+
+    with pytest.raises(
+        LotusCoreStatefulContextUnavailableError,
+        match="LOTUS_CORE_STATEFUL_CONTEXT_INVALID",
+    ):
+        resolve_stateful_context_with_lotus_core(stateful_input)
+
+    assert len(client.requests) == 1
+    assert client.requests[0][2]["consumer_system"] == "lotus-advise"
+
+
+def test_stateful_resolver_requires_tenant_before_opening_core_client(
+    monkeypatch, stateful_input
+) -> None:
+    monkeypatch.delenv("LOTUS_ADVISE_TENANT_ID", raising=False)
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.stateful_context.httpx.Client",
+        lambda timeout: pytest.fail("Core client opened without tenant authority"),
+    )
+
+    with pytest.raises(
+        LotusCoreStatefulContextUnavailableError,
+        match="LOTUS_CORE_STATEFUL_CONTEXT_UNAVAILABLE",
+    ):
+        resolve_stateful_context_with_lotus_core(stateful_input)
+
+
 def test_trust_snapshot_before_state_uses_upstream_market_value_over_local_fx_revaluation() -> None:
     request = ProposalSimulateRequest(
         portfolio_snapshot=PortfolioSnapshot(
