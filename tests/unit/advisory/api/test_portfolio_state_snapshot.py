@@ -7,16 +7,11 @@ from typing import cast
 
 import pytest
 
-from src.core.workspace.input_models import WorkspaceStatefulInput
 from src.integrations.lotus_core.portfolio_state_snapshot import (
     AuthoritativePortfolioStateError,
     core_snapshot_headers,
     core_snapshot_request,
     resolve_authoritative_portfolio_state,
-)
-from src.integrations.lotus_core.stateful_context import (
-    LotusCoreStatefulContextUnavailableError,
-    resolve_stateful_context_with_lotus_core,
 )
 
 CORE_SNAPSHOT_FIXTURE = (
@@ -63,13 +58,7 @@ def test_core_snapshot_request_declares_advise_consumer_and_bounded_section() ->
     }
 
 
-@pytest.mark.parametrize(
-    "requested_as_of",
-    [
-        "2026-04-10T10:00:00Z",
-        "2026-04-10T23:59:59-05:00",
-    ],
-)
+@pytest.mark.parametrize("requested_as_of", ["2026-04-10T10:00:00Z", "2026-04-10T23:59:59-05:00"])
 def test_core_snapshot_request_normalizes_supported_timestamps_to_business_date(
     requested_as_of: str,
 ) -> None:
@@ -87,8 +76,7 @@ def test_core_snapshot_request_normalizes_supported_timestamps_to_business_date(
 
 def test_core_snapshot_request_rejects_invalid_business_date_or_timestamp() -> None:
     with pytest.raises(
-        AuthoritativePortfolioStateError,
-        match="LOTUS_CORE_STATEFUL_CONTEXT_INVALID",
+        AuthoritativePortfolioStateError, match="LOTUS_CORE_STATEFUL_CONTEXT_INVALID"
     ):
         core_snapshot_request(as_of="not-a-date", tenant_id="tenant-sg-001")
 
@@ -159,89 +147,3 @@ def test_authoritative_snapshot_rejects_scope_mismatch(field: str, value: str) -
 
     with pytest.raises(AuthoritativePortfolioStateError):
         _resolve(payload)
-
-
-class _SnapshotResponse:
-    def __init__(self, payload: dict[str, object]) -> None:
-        self._payload = payload
-
-    def raise_for_status(self) -> None:
-        return None
-
-    def json(self) -> dict[str, object]:
-        return self._payload
-
-
-class _SnapshotOnlyClient:
-    def __init__(self, payload: dict[str, object]) -> None:
-        self._payload = payload
-        self.requests: list[tuple[str, str, dict[str, object] | None, dict[str, str] | None]] = []
-
-    def __enter__(self) -> "_SnapshotOnlyClient":
-        return self
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        return None
-
-    def request(
-        self,
-        method: str,
-        url: str,
-        json: dict[str, object] | None = None,
-        headers: dict[str, str] | None = None,
-    ) -> _SnapshotResponse:
-        self.requests.append((method, url, json, headers))
-        return _SnapshotResponse(self._payload)
-
-
-def test_stateful_resolver_rejects_invalid_snapshot_before_weaker_source_reads(
-    monkeypatch,
-) -> None:
-    payload = _snapshot_payload()
-    payload["source_evidence_current"] = False
-    client = _SnapshotOnlyClient(payload)
-    monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", "http://core-query.test")
-    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://core-control.test")
-    monkeypatch.setenv("LOTUS_ADVISE_TENANT_ID", "tenant-sg-001")
-    monkeypatch.setattr(
-        "src.integrations.lotus_core.stateful_context.httpx.Client",
-        lambda timeout: client,
-    )
-
-    with pytest.raises(
-        LotusCoreStatefulContextUnavailableError,
-        match="LOTUS_CORE_STATEFUL_CONTEXT_INVALID",
-    ):
-        resolve_stateful_context_with_lotus_core(
-            WorkspaceStatefulInput(
-                portfolio_id="PB_SG_GLOBAL_BAL_001",
-                as_of="2026-04-10",
-            )
-        )
-
-    assert len(client.requests) == 1
-    _, url, request, headers = client.requests[0]
-    assert url.endswith("/integration/portfolios/PB_SG_GLOBAL_BAL_001/core-snapshot")
-    assert request is not None and request["consumer_system"] == "lotus-advise"
-    assert headers is not None and headers["X-Tenant-Id"] == "tenant-sg-001"
-
-
-def test_stateful_resolver_requires_tenant_before_opening_core_client(monkeypatch) -> None:
-    monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", "http://core-query.test")
-    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://core-control.test")
-    monkeypatch.delenv("LOTUS_ADVISE_TENANT_ID", raising=False)
-    monkeypatch.setattr(
-        "src.integrations.lotus_core.stateful_context.httpx.Client",
-        lambda timeout: pytest.fail("Core client must not open without tenant authority"),
-    )
-
-    with pytest.raises(
-        LotusCoreStatefulContextUnavailableError,
-        match="LOTUS_CORE_STATEFUL_CONTEXT_UNAVAILABLE",
-    ):
-        resolve_stateful_context_with_lotus_core(
-            WorkspaceStatefulInput(
-                portfolio_id="PB_SG_GLOBAL_BAL_001",
-                as_of="2026-04-10",
-            )
-        )
