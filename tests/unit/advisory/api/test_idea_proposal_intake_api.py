@@ -579,10 +579,11 @@ def test_idea_proposal_intake_route_is_documented_in_openapi() -> None:
 
 
 def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -> None:
+    conversion_intent_id = "legacy/conversion intent?version=1"
     with TestClient(app) as client:
         accepted = client.post(
             "/advisory/proposals/idea-intake",
-            json=_payload(),
+            json={**_payload(), "conversion_intent_id": conversion_intent_id},
             headers=_headers(idempotency_key="idea-realization-read"),
         )
         intake_id = accepted.json()["intake_id"]
@@ -592,7 +593,7 @@ def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -
         )
         recovered = client.get(
             "/advisory/proposals/idea-intake/realization",
-            params={"conversion_intent_id": "conversion_intent_001"},
+            params={"conversion_intent_id": conversion_intent_id},
             headers=_realization_headers(),
         )
 
@@ -612,28 +613,6 @@ def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -
     assert body["outcomes"][0]["terminal"] is False
     assert recovered.status_code == 200
     assert recovered.json()["intake_id"] == intake_id
-    assert recovered.json()["conversion_intent_id"] == "conversion_intent_001"
-
-
-def test_idea_proposal_recovery_preserves_opaque_historical_conversion_identity() -> None:
-    conversion_intent_id = "legacy/conversion intent?version=1"
-    payload = {**_payload(), "conversion_intent_id": conversion_intent_id}
-
-    with TestClient(app) as client:
-        accepted = client.post(
-            "/advisory/proposals/idea-intake",
-            json=payload,
-            headers=_headers(idempotency_key="idea-realization-opaque-identity"),
-        )
-        recovered = client.get(
-            "/advisory/proposals/idea-intake/realization",
-            params={"conversion_intent_id": conversion_intent_id},
-            headers=_realization_headers(),
-        )
-
-    assert accepted.status_code == 202
-    assert recovered.status_code == 200
-    assert recovered.json()["intake_id"] == accepted.json()["intake_id"]
     assert recovered.json()["conversion_intent_id"] == conversion_intent_id
 
 
