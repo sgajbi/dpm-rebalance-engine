@@ -138,6 +138,7 @@ class InMemoryProposalRepository(ProposalRepository):
         self._idea_proposal_intakes: dict[str, IdeaProposalIntakeRecord] = {}
         self._idea_proposal_realizations: dict[str, IdeaProposalRealizationRecord] = {}
         self._idea_realization_by_intake: dict[tuple[str, str, str, str], str] = {}
+        self._idea_realization_by_conversion_intent: dict[tuple[str, str, str, str], str] = {}
         self._idea_realization_by_proposal: dict[str, str] = {}
         self._idea_proposal_realization_outcomes: dict[
             str, list[IdeaProposalRealizationOutcomeRecord]
@@ -202,6 +203,14 @@ class InMemoryProposalRepository(ProposalRepository):
                     realization.intake_id,
                 )
             ] = realization.realization_id
+            self._idea_realization_by_conversion_intent[
+                (
+                    realization.tenant_id,
+                    realization.legal_entity_code,
+                    realization.portfolio_id,
+                    realization.conversion_intent_id,
+                )
+            ] = realization.realization_id
         outcome = requested.initial_outcome
         outcomes = self._idea_proposal_realization_outcomes.setdefault(outcome.realization_id, [])
         if not any(
@@ -232,19 +241,8 @@ class InMemoryProposalRepository(ProposalRepository):
         portfolio_id: str,
     ) -> Optional[IdeaProposalRealizationHistoryRecord]:
         with self._lock:
-            realization_id = next(
-                (
-                    realization.realization_id
-                    for realization in self._idea_proposal_realizations.values()
-                    if (
-                        realization.conversion_intent_id,
-                        realization.tenant_id,
-                        realization.legal_entity_code,
-                        realization.portfolio_id,
-                    )
-                    == (conversion_intent_id, tenant_id, legal_entity_code, portfolio_id)
-                ),
-                None,
+            realization_id = self._idea_realization_by_conversion_intent.get(
+                (tenant_id, legal_entity_code, portfolio_id, conversion_intent_id)
             )
             return self._idea_realization_history(realization_id)
 

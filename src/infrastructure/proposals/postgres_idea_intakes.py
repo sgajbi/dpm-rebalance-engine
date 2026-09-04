@@ -25,6 +25,14 @@ from src.core.proposals.idea_review_realization import (
     validate_realization_progression,
 )
 
+_REALIZATION_HISTORY_SELECT = """
+    SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
+           tenant_id, legal_entity_code, portfolio_id, idea_candidate_id, conversion_intent_id,
+           source_evidence_fingerprint, current_status, current_source_event_version,
+           created_at_utc, updated_at_utc
+    FROM proposal_idea_review_realizations
+"""
+
 
 def claim_idea_proposal_intake(
     *,
@@ -147,13 +155,8 @@ def get_idea_proposal_realization(
     """Load one realization only when every trusted scope dimension matches."""
     with closing(connect()) as connection:
         row = connection.execute(
-            """
-            SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
-                   tenant_id, legal_entity_code,
-                   portfolio_id, idea_candidate_id, conversion_intent_id,
-                   source_evidence_fingerprint, current_status, current_source_event_version,
-                   created_at_utc, updated_at_utc
-            FROM proposal_idea_review_realizations
+            _REALIZATION_HISTORY_SELECT
+            + """
             WHERE intake_id = %s
               AND tenant_id = %s
               AND legal_entity_code = %s
@@ -174,13 +177,8 @@ def get_idea_proposal_realization_by_conversion_intent(
 ) -> IdeaProposalRealizationHistoryRecord | None:
     with closing(connect()) as connection:
         row = connection.execute(
-            """
-            SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
-                   tenant_id, legal_entity_code,
-                   portfolio_id, idea_candidate_id, conversion_intent_id,
-                   source_evidence_fingerprint, current_status, current_source_event_version,
-                   created_at_utc, updated_at_utc
-            FROM proposal_idea_review_realizations
+            _REALIZATION_HISTORY_SELECT
+            + """
             WHERE conversion_intent_id = %s
               AND tenant_id = %s
               AND legal_entity_code = %s
@@ -260,12 +258,8 @@ def _constraint_name(exc: Exception) -> str | None:
 
 def _load_locked_realization(connection: Any, realization_id: str) -> IdeaProposalRealizationRecord:
     row = connection.execute(
-        """
-        SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
-               tenant_id, legal_entity_code, portfolio_id, idea_candidate_id,
-               conversion_intent_id, source_evidence_fingerprint, current_status,
-               current_source_event_version, created_at_utc, updated_at_utc
-        FROM proposal_idea_review_realizations
+        _REALIZATION_HISTORY_SELECT
+        + """
         WHERE realization_id = %s
         FOR UPDATE
         """,
@@ -399,13 +393,8 @@ def _claim_realization(
         ),
     )
     row = connection.execute(
-        """
-        SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
-               tenant_id, legal_entity_code,
-               portfolio_id, idea_candidate_id, conversion_intent_id,
-               source_evidence_fingerprint, current_status, current_source_event_version,
-               created_at_utc, updated_at_utc
-        FROM proposal_idea_review_realizations
+        _REALIZATION_HISTORY_SELECT
+        + """
         WHERE realization_id = %s
         """,
         (requested.realization_id,),

@@ -30,6 +30,12 @@
     "portfolio_id",
     "source_refs"
   ],
+  "conversion_intent_identity": {
+    "addressability": "url_safe_path_segment",
+    "allowed_pattern": "^[A-Za-z0-9][A-Za-z0-9._~-]*$",
+    "maximum_length": 160,
+    "reason": "Every accepted identity must remain addressable by the lost-response recovery route."
+  },
   "portfolio_scope": {
     "required": true,
     "source": "producer_authorized_governed_candidate_scope",

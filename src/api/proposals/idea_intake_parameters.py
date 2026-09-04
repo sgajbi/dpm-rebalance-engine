@@ -5,6 +5,7 @@ from typing import Annotated
 from fastapi import Header, Path
 
 from src.core.common.idempotency import MAX_IDEMPOTENCY_KEY_LENGTH
+from src.core.proposals.idea_proposal_intake import IDEA_PROPOSAL_CONVERSION_INTENT_ID_PATTERN
 
 IdeaProposalIntakeCorrelationIdHeader = Annotated[
     str | None,
@@ -67,7 +68,12 @@ IdeaProposalIntakeIdPath = Annotated[
 
 IdeaProposalConversionIntentIdPath = Annotated[
     str,
-    Path(min_length=1, max_length=160, examples=["conversion_intent_001"]),
+    Path(
+        min_length=1,
+        max_length=160,
+        pattern=IDEA_PROPOSAL_CONVERSION_INTENT_ID_PATTERN,
+        examples=["conversion_intent_001"],
+    ),
 ]
 
 IdeaProposalActorHeader = Annotated[str | None, Header(alias="X-Actor-Id")]

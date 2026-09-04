@@ -41,6 +41,8 @@ IDEA_PROPOSAL_INTAKE_CERTIFICATION_BLOCKERS = [
     "client_publication_authority_blocked",
 ]
 
+IDEA_PROPOSAL_CONVERSION_INTENT_ID_PATTERN = r"^[A-Za-z0-9][A-Za-z0-9._~-]*$"
+
 IDEA_PROPOSAL_INTAKE_REQUEST_EXAMPLE: dict[str, Any] = {
     "source_system": "lotus-idea",
     "source_product": "lotus-idea:IdeaCandidate:v1",
@@ -177,6 +179,7 @@ class IdeaProposalIntakeRequest(BaseModel):
     conversion_intent_id: str = Field(
         min_length=1,
         max_length=160,
+        pattern=IDEA_PROPOSAL_CONVERSION_INTENT_ID_PATTERN,
         description="lotus-idea conversion-intent identifier used for deterministic intake proof.",
         examples=["conversion_intent_001"],
     )
