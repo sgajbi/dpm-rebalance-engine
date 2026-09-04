@@ -95,7 +95,7 @@
 | `openapi-gate` | `python -m pytest tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py -q` |
 | `openapi-gate` | `$(MAKE) openapi-spectral-report` |
 | `no-alias-gate` | `python scripts/no_alias_contract_guard.py` |
-| `api-vocabulary-gate` | `python scripts/api_vocabulary_inventory.py` |
+| `api-vocabulary` | `python scripts/api_vocabulary_inventory.py` |
 | `api-vocabulary-gate` | `python scripts/api_vocabulary_inventory.py --validate-only` |
 | `proposal-decision-vocabulary-gate` | `python scripts/proposal_decision_vocabulary.py --validate-only` |
 | `domain-data-products-gate` | `python scripts/validate_domain_data_product_declarations.py` |

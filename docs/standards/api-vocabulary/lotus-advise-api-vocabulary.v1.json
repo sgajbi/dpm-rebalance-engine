@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-04T20:24:51.154607+00:00",
+  "generatedAt": "2026-09-04T20:50:34.958053+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -17023,7 +17023,7 @@
       "location": "query",
       "required": true,
       "type": "string",
-      "description": "Opaque lotus-idea conversion-intent identity. A query parameter preserves addressability for every printable identity accepted by earlier contract versions.",
+      "description": "Opaque identity; query transport preserves earlier printable values.",
       "example": "conversion_intent_001",
       "allowedValues": [],
       "semanticId": "lotus.conversion_intent_id",

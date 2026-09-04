@@ -556,6 +556,14 @@ def test_demo_assurance_gate_covers_demo_critical_evidence() -> None:
     }
 
 
+def test_api_vocabulary_gate_detects_drift_without_rewriting_inventory() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+    gate_body = makefile.split("api-vocabulary-gate:\n", 1)[1].split("\n\n", 1)[0]
+
+    assert gate_body == "\tpython scripts/api_vocabulary_inventory.py --validate-only"
+    assert "api-vocabulary:\n\tpython scripts/api_vocabulary_inventory.py\n" in makefile
+
+
 def test_live_demo_certification_command_is_repo_native_and_report_only() -> None:
     makefile = Path("Makefile").read_text(encoding="utf-8")
 
