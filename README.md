@@ -198,8 +198,8 @@ Boundary rules that matter:
    /advisory/proposals/idea-intake/realization?conversion_intent_id={conversion_intent_id}`
    recovers the same aggregate from Idea's source-owned conversion identity without replaying the
    POST, accepting a raw idempotency key, or disclosing cross-scope existence. The request requires
-   a URL-safe path-segment conversion identity so every accepted intake remains recoverable, plus
-   the producer-authorized canonical
+   the opaque conversion identity as an encoded query value so every previously accepted printable
+   identity remains recoverable, plus the producer-authorized canonical
    `portfolio_id`; Advise includes it in deterministic identity and request fingerprinting and
    persists it in the receipt, so changed-portfolio key reuse fails closed without inferring scope
    from opaque identifiers. A pre-v1.6 claim has no trustworthy portfolio scope: reconcile its
