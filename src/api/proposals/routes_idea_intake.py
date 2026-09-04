@@ -10,7 +10,7 @@ from src.api.observability import correlation_id_var
 from src.api.proposals.errors import reject_unexpected_query_params, run_proposal_operation
 from src.api.proposals.feature_gates import assert_idea_proposal_reconciliation_enabled
 from src.api.proposals.idea_intake_parameters import (
-    IdeaProposalConversionIntentIdPath,
+    IdeaProposalConversionIntentIdQuery,
     IdeaProposalIntakeCorrelationIdHeader,
     IdeaProposalIntakeIdempotencyKeyHeader,
     IdeaProposalIntakeIdPath,
@@ -95,7 +95,7 @@ def accept_idea_proposal_intake(
 
 
 @shared.router.get(
-    "/advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization",
+    "/advisory/proposals/idea-intake/realization",
     response_model=IdeaProposalRealizationHistoryResponse,
     tags=["Advisory Proposal Lifecycle"],
     summary="Recover Advise-owned Idea realization by conversion intent",
@@ -108,7 +108,7 @@ def accept_idea_proposal_intake(
 )
 def recover_idea_proposal_realization(
     request: Request,
-    conversion_intent_id: IdeaProposalConversionIntentIdPath,
+    conversion_intent_id: IdeaProposalConversionIntentIdQuery,
     portfolio_id: IdeaProposalRealizationPortfolioHeader,
     principal: IdeaProposalIntakePrincipal = Depends(require_idea_proposal_realization_reader),
     repository: ProposalRepository = Depends(shared.get_proposal_repository),
@@ -121,6 +121,7 @@ def recover_idea_proposal_realization(
             portfolio_id=portfolio_id,
             principal=principal,
         ),
+        allowed_query_params={"conversion_intent_id"},
     )
 
 
@@ -158,9 +159,11 @@ def read_idea_proposal_realization(
 def _run_realization_read(
     request: Request,
     operation: Callable[[], IdeaProposalRealizationHistoryResponse],
+    *,
+    allowed_query_params: set[str] | None = None,
 ) -> IdeaProposalRealizationHistoryResponse:
     shared._assert_lifecycle_enabled()
-    reject_unexpected_query_params(request, allowed_params=set())
+    reject_unexpected_query_params(request, allowed_params=allowed_query_params or set())
     return cast(IdeaProposalRealizationHistoryResponse, run_proposal_operation(operation))
 
 

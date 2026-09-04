@@ -35,7 +35,7 @@ These endpoints accept normalized advisory input contracts and require `Idempote
 - `POST /advisory/proposals`
 - `POST /advisory/proposals/idea-intake`
 - `GET /advisory/proposals/idea-intake/{intake_id}/realization`
-- `GET /advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization`
+- `GET /advisory/proposals/idea-intake/realization?conversion_intent_id={conversion_intent_id}`
 - `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation`
 - `GET /advisory/proposals`
 - `GET /advisory/proposals/{proposal_id}`

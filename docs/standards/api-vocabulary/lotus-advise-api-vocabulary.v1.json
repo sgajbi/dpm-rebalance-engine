@@ -8,7 +8,7 @@
       "openApiVersion": "3.1.0"
     }
   ],
-  "generatedAt": "2026-09-04T19:21:50.094615+00:00",
+  "generatedAt": "2026-09-04T20:24:51.154607+00:00",
   "attributeCatalog": [
     {
       "semanticId": "lotus.access_class",
@@ -2538,7 +2538,7 @@
       "type": "string",
       "locations": [
         "body",
-        "path"
+        "query"
       ],
       "observedTypes": [
         "string"
@@ -17020,10 +17020,10 @@
     {
       "name": "conversion_intent_id",
       "kind": "request_option",
-      "location": "path",
+      "location": "query",
       "required": true,
       "type": "string",
-      "description": "Canonical conversion intent id used by lotus-advise APIs.",
+      "description": "Opaque lotus-idea conversion-intent identity. A query parameter preserves addressability for every printable identity accepted by earlier contract versions.",
       "example": "conversion_intent_001",
       "allowedValues": [],
       "semanticId": "lotus.conversion_intent_id",
@@ -53056,14 +53056,14 @@
     {
       "domain": "advisory_proposal_lifecycle",
       "method": "GET",
-      "path": "/advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization",
-      "operationId": "recover_idea_proposal_realization_advisory_proposals_idea_intake_by_conversion_intent__conversion_intent_id__realization_get",
+      "path": "/advisory/proposals/idea-intake/realization",
+      "operationId": "recover_idea_proposal_realization_advisory_proposals_idea_intake_realization_get",
       "summary": "Recover Advise-owned Idea realization by conversion intent",
       "request": {
         "fields": [
           {
             "name": "conversion_intent_id",
-            "location": "path",
+            "location": "query",
             "required": true,
             "type": "string",
             "semanticId": "lotus.conversion_intent_id",

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Header, Path
+from fastapi import Header, Path, Query
 
 from src.core.common.idempotency import MAX_IDEMPOTENCY_KEY_LENGTH
-from src.core.proposals.idea_proposal_intake import IDEA_PROPOSAL_CONVERSION_INTENT_ID_PATTERN
 
 IdeaProposalIntakeCorrelationIdHeader = Annotated[
     str | None,
@@ -66,12 +65,15 @@ IdeaProposalIntakeIdPath = Annotated[
     Path(min_length=1, max_length=160, examples=["ipi_7a1d2b3c4d5e"]),
 ]
 
-IdeaProposalConversionIntentIdPath = Annotated[
+IdeaProposalConversionIntentIdQuery = Annotated[
     str,
-    Path(
+    Query(
         min_length=1,
         max_length=160,
-        pattern=IDEA_PROPOSAL_CONVERSION_INTENT_ID_PATTERN,
+        description=(
+            "Opaque lotus-idea conversion-intent identity. A query parameter preserves "
+            "addressability for every printable identity accepted by earlier contract versions."
+        ),
         examples=["conversion_intent_001"],
     ),
 ]

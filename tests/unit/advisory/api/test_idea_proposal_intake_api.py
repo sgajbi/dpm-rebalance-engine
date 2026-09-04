@@ -313,14 +313,13 @@ def test_idea_proposal_intake_route_rejects_invalid_idempotency_keys() -> None:
     assert [response.status_code for response in responses] == [422, 422]
 
 
-def test_idea_proposal_intake_route_requires_addressable_identity_and_canonical_scope() -> None:
+def test_idea_proposal_intake_route_requires_canonical_scope() -> None:
     missing = _payload()
     missing.pop("portfolio_id")
     blank = {**_payload(), "portfolio_id": "   "}
     oversized = {**_payload(), "portfolio_id": "p" * 161}
     control_bearing = {**_payload(), "portfolio_id": "PB_SG_GLOBAL\nBAL_001"}
-    unaddressable = {**_payload(), "conversion_intent_id": "conversion/intent"}
-    invalid_payloads = (missing, blank, oversized, control_bearing, unaddressable)
+    invalid_payloads = (missing, blank, oversized, control_bearing)
 
     with TestClient(app) as client:
         responses = [
@@ -332,7 +331,7 @@ def test_idea_proposal_intake_route_requires_addressable_identity_and_canonical_
             for index, payload in enumerate(invalid_payloads)
         ]
 
-    assert [response.status_code for response in responses] == [422, 422, 422, 422, 422]
+    assert [response.status_code for response in responses] == [422, 422, 422, 422]
 
 
 def test_idea_proposal_intake_idempotency_is_namespaced_by_trusted_scope() -> None:
@@ -563,9 +562,7 @@ def test_idea_proposal_intake_route_is_documented_in_openapi() -> None:
         if parameter["in"] == "header"
     }
     assert "X-Authorized-Portfolio-Id" in realization_headers
-    recovery = openapi["paths"][
-        "/advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization"
-    ]["get"]
+    recovery = openapi["paths"]["/advisory/proposals/idea-intake/realization"]["get"]
     assert "lost intake response" in recovery["description"]
     assert "404" in recovery["responses"]
     assert "X-Authorized-Portfolio-Id" not in {
@@ -594,8 +591,8 @@ def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -
             headers=_realization_headers(),
         )
         recovered = client.get(
-            "/advisory/proposals/idea-intake/by-conversion-intent/"
-            "conversion_intent_001/realization",
+            "/advisory/proposals/idea-intake/realization",
+            params={"conversion_intent_id": "conversion_intent_001"},
             headers=_realization_headers(),
         )
 
@@ -616,6 +613,28 @@ def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -
     assert recovered.status_code == 200
     assert recovered.json()["intake_id"] == intake_id
     assert recovered.json()["conversion_intent_id"] == "conversion_intent_001"
+
+
+def test_idea_proposal_recovery_preserves_opaque_historical_conversion_identity() -> None:
+    conversion_intent_id = "legacy/conversion intent?version=1"
+    payload = {**_payload(), "conversion_intent_id": conversion_intent_id}
+
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=payload,
+            headers=_headers(idempotency_key="idea-realization-opaque-identity"),
+        )
+        recovered = client.get(
+            "/advisory/proposals/idea-intake/realization",
+            params={"conversion_intent_id": conversion_intent_id},
+            headers=_realization_headers(),
+        )
+
+    assert accepted.status_code == 202
+    assert recovered.status_code == 200
+    assert recovered.json()["intake_id"] == accepted.json()["intake_id"]
+    assert recovered.json()["conversion_intent_id"] == conversion_intent_id
 
 
 def test_idea_proposal_realization_routes_hide_cross_scope_existence_before_lookup(
@@ -639,8 +658,8 @@ def test_idea_proposal_realization_routes_hide_cross_scope_existence_before_look
                 "get_idea_proposal_realization",
             ),
             (
-                "/advisory/proposals/idea-intake/by-conversion-intent/"
-                "conversion_intent_001/realization",
+                "/advisory/proposals/idea-intake/realization?"
+                "conversion_intent_id=conversion_intent_001",
                 "get_idea_proposal_realization_by_conversion_intent",
             ),
         )

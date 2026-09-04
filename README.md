@@ -195,7 +195,7 @@ Boundary rules that matter:
    recorded as `REJECTED_BEFORE_WORK` without creating work. `GET
    /advisory/proposals/idea-intake/{intake_id}/realization` exposes that Advise-owned truth only to
    an exactly scoped reader. If the intake response is lost after Advise commits, read-only `GET
-   /advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization`
+   /advisory/proposals/idea-intake/realization?conversion_intent_id={conversion_intent_id}`
    recovers the same aggregate from Idea's source-owned conversion identity without replaying the
    POST, accepting a raw idempotency key, or disclosing cross-scope existence. The request requires
    a URL-safe path-segment conversion identity so every accepted intake remains recoverable, plus
