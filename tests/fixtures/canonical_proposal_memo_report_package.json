@@ -17,15 +17,16 @@
         "schema_version": "lotus.proposal-valuation-context.v1",
         "source_service": "LOTUS_CORE",
         "source_references": [
-          "lotus-core:portfolio:PB_SG_GLOBAL_BAL_001:2026-05-28"
+          "lotus-core:portfolio-state-snapshot:portfolio:PB_SG_GLOBAL_BAL_001:aaaaaaaaaaaaaaaaaaaaaaaa",
+          "lotus-core:portfolio-state-snapshot:market_data:PB_SG_GLOBAL_BAL_001:bbbbbbbbbbbbbbbbbbbbbbbb"
         ],
         "current_state": {
-          "effective_as_of_date": "2026-05-28",
+          "effective_as_of_date": "2026-04-10",
           "effective_reporting_currency": "USD",
           "supportability": "READY"
         },
         "simulated_state": {
-          "effective_as_of_date": "2026-05-28",
+          "effective_as_of_date": "2026-04-10",
           "effective_reporting_currency": "USD",
           "supportability": "READY"
         }

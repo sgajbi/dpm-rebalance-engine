@@ -22,6 +22,13 @@ CANONICAL_MEMO_REPORT_FIXTURE = (
     / "fixtures"
     / "canonical_proposal_memo_report_package.json"
 )
+CORE_PORTFOLIO_STATE_FIXTURE = (
+    Path(__file__).resolve().parents[4]
+    / "tests"
+    / "fixtures"
+    / "lotus_core"
+    / "portfolio_state_snapshot_v1.json"
+)
 
 
 def _proposal_request() -> dict:
@@ -246,9 +253,22 @@ def test_extract_report_as_of_date_ignores_invalid_direct_dates_before_lineage_f
 
 def test_extract_report_as_of_date_uses_typed_valuation_context_source() -> None:
     request = json.loads(CANONICAL_MEMO_REPORT_FIXTURE.read_text(encoding="utf-8"))
+    core_snapshot = json.loads(CORE_PORTFOLIO_STATE_FIXTURE.read_text(encoding="utf-8"))
 
-    assert extract_report_as_of_date(request) == "2026-05-28"
-    assert build_memo_report_package_job_request(request)["as_of_date"] == "2026-05-28"
+    expected_as_of = core_snapshot["valuation_context"]["effective_as_of_date"]
+    expected_source_refs = {
+        core_snapshot["source_provenance"][source_kind]["source_id"]
+        for source_kind in ("portfolio", "market_data")
+    }
+
+    assert (
+        set(
+            request["proposal_version"]["proposal_result"]["valuation_context"]["source_references"]
+        )
+        == expected_source_refs
+    )
+    assert extract_report_as_of_date(request) == expected_as_of
+    assert build_memo_report_package_job_request(request)["as_of_date"] == expected_as_of
 
 
 def test_extract_report_as_of_date_rejects_conflicting_typed_state_dates() -> None:

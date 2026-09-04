@@ -1,0 +1,42 @@
+{
+  "product_name": "PortfolioStateSnapshot",
+  "product_version": "v1",
+  "portfolio_id": "PB_SG_GLOBAL_BAL_001",
+  "as_of_date": "2026-04-10",
+  "snapshot_mode": "BASELINE",
+  "generated_at": "2026-04-10T10:02:00Z",
+  "contract_version": "rfc_081_v1",
+  "tenant_id": "tenant-sg-001",
+  "source_evidence_current": true,
+  "freshness_status": "CURRENT",
+  "valuation_context": {
+    "effective_as_of_date": "2026-04-10",
+    "supportability": "READY",
+    "reason_code": "SOURCE_EVIDENCE_READY"
+  },
+  "source_provenance": {
+    "schema_version": "lotus.source-provenance.v1",
+    "source_system": "LOTUS_CORE",
+    "portfolio": {
+      "source_system": "LOTUS_CORE",
+      "source_kind": "PORTFOLIO",
+      "source_id": "lotus-core:portfolio-state-snapshot:portfolio:PB_SG_GLOBAL_BAL_001:aaaaaaaaaaaaaaaaaaaaaaaa",
+      "as_of": "2026-04-10",
+      "contract_version": "PortfolioStateSnapshot:v1",
+      "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "valuation_timestamp": "2026-04-10T10:00:00Z",
+      "freshness_status": "CURRENT"
+    },
+    "market_data": {
+      "source_system": "LOTUS_CORE",
+      "source_kind": "MARKET_DATA",
+      "source_id": "lotus-core:portfolio-state-snapshot:market_data:PB_SG_GLOBAL_BAL_001:bbbbbbbbbbbbbbbbbbbbbbbb",
+      "as_of": "2026-04-10",
+      "contract_version": "PortfolioStateSnapshot:v1",
+      "source_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "valuation_timestamp": "2026-04-10T10:01:00Z",
+      "freshness_status": "CURRENT"
+    },
+    "raw_payload_stored": false
+  }
+}

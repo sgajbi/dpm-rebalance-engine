@@ -17,15 +17,18 @@
   "adapters": {
     "lotus_core": {
       "provider_contract": {
-        "name": "advisory-simulation",
-        "version": "advisory-simulation.v1",
-        "schema_ref": "src/integrations/lotus_core/contracts.py",
+        "name": "portfolio-state-snapshot-and-advisory-simulation",
+        "version": "lotus-core-advisory-consumer.v1",
+        "schema_ref": "src/integrations/lotus_core/portfolio_state_snapshot.py",
+        "provider_fixture_ref": "tests/fixtures/lotus_core/portfolio_state_snapshot_v1.json",
         "fixture_revision": "2026-08-28.issue-557"
       },
       "authority": "canonical portfolio state and advisory simulation execution",
       "valid_request": {
         "portfolio_id": "DEMO_ADV_USD_001",
         "as_of": "2026-03-27",
+        "tenant_id": "tenant-sg-001",
+        "snapshot_contract_version": "PortfolioStateSnapshot:v1",
         "contract_version": "advisory-simulation.v1",
         "request_hash": "sha256:adapter-contract-core",
         "idempotency_key": "idem-adapter-contract-core"
@@ -33,6 +36,9 @@
       "valid_response": {
         "portfolio_id": "DEMO_ADV_USD_001",
         "as_of": "2026-03-27",
+        "portfolio_state_product": "PortfolioStateSnapshot",
+        "portfolio_state_product_version": "v1",
+        "portfolio_state_provenance_contract": "PortfolioStateSnapshot:v1",
         "simulation_contract_version": "advisory-simulation.v1",
         "allocation_lens_source": "LOTUS_CORE",
         "provider_schema": "CoreProjectedTransactionEffects",
@@ -67,6 +73,7 @@
           "case_id": "valid_provider_response",
           "expected_behavior": "accepts matching contract header and canonical simulation lineage",
           "test_references": [
+            "tests/unit/advisory/api/test_portfolio_state_snapshot.py::test_authoritative_snapshot_preserves_core_owned_date_identity_and_hashes",
             "tests/unit/advisory/api/test_lotus_core_simulation_client.py::test_simulate_with_lotus_core_sends_contract_header_and_validates_response"
           ]
         },
@@ -81,6 +88,7 @@
           "case_id": "missing_fields",
           "expected_behavior": "rejects missing source identity and as-of fields",
           "test_references": [
+            "tests/unit/advisory/api/test_portfolio_state_snapshot.py::test_authoritative_snapshot_rejects_missing_stale_or_conflicting_evidence",
             "tests/unit/advisory/api/test_lotus_core_stateful_context.py::test_resolve_stateful_context_rejects_missing_resolved_as_of",
             "tests/unit/advisory/api/test_lotus_core_stateful_context.py::test_resolve_stateful_context_with_lotus_core_rejects_invalid_portfolio_payload"
           ]
@@ -89,6 +97,7 @@
           "case_id": "identity_as_of_mismatch",
           "expected_behavior": "rejects upstream portfolio and resolved-as-of mismatch",
           "test_references": [
+            "tests/unit/advisory/api/test_portfolio_state_snapshot.py::test_authoritative_snapshot_rejects_scope_mismatch",
             "tests/unit/advisory/api/test_lotus_core_stateful_context.py::test_resolve_stateful_context_rejects_upstream_identity_mismatch"
           ]
         },
@@ -96,6 +105,7 @@
           "case_id": "partial_data",
           "expected_behavior": "skips malformed rows without fabricating holdings or market data",
           "test_references": [
+            "tests/unit/advisory/api/test_portfolio_state_snapshot.py::test_authoritative_snapshot_rejects_missing_stale_or_conflicting_evidence",
             "tests/unit/advisory/api/test_lotus_core_stateful_context.py::test_stateful_builders_skip_malformed_rows",
             "tests/unit/advisory/api/test_lotus_core_stateful_context.py::test_enrich_stateful_simulate_request_for_trade_drafts_skips_malformed_lookup_rows"
           ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, cast
@@ -23,6 +24,12 @@ from src.integrations.lotus_core import stateful_context_hydration as _hydration
 from src.integrations.lotus_core import stateful_context_source_reads as _source_reads
 from src.integrations.lotus_core.context_resolution import (
     LotusCoreResolvedAdvisoryContext,
+)
+from src.integrations.lotus_core.portfolio_state_snapshot import (
+    AuthoritativePortfolioStateError,
+    core_snapshot_headers,
+    core_snapshot_request,
+    resolve_authoritative_portfolio_state,
 )
 from src.integrations.lotus_core.runtime_config import (
     resolve_lotus_core_timeout,
@@ -56,20 +63,15 @@ from src.integrations.lotus_core.stateful_context_completeness import (
 from src.integrations.lotus_core.stateful_context_market_data import (
     InvalidLotusCoreFxRateError,
 )
-from src.integrations.lotus_core.stateful_context_provenance import (
-    LotusCoreSourceProvenanceError,
-)
-from src.integrations.lotus_core.stateful_context_provenance import (
-    build_lotus_core_source_provenance as _build_lotus_core_source_provenance,
-)
 from src.integrations.lotus_core.stateful_context_routes import (
-    PORTFOLIO_PATH as _PORTFOLIO_PATH,
-)
-from src.integrations.lotus_core.stateful_context_routes import (
+    CORE_SNAPSHOT_PATH,
     cash_balances_path,
     positions_path,
     resolve_control_plane_base_url,
     resolve_query_base_url,
+)
+from src.integrations.lotus_core.stateful_context_routes import (
+    PORTFOLIO_PATH as _PORTFOLIO_PATH,
 )
 from src.integrations.lotus_core.stateful_context_source_reads import (
     LotusCoreStatefulContextUnavailableError,
@@ -118,6 +120,8 @@ _fetch_instrument_enrichment_bulk_with_diagnostics = (
 
 @dataclass(frozen=True)
 class _StatefulContextSourcePayloads:
+    resolved_as_of: str
+    source_provenance: SourceProvenanceEnvelope
     portfolio_payload: dict[str, Any]
     positions_payload: dict[str, Any]
     cash_payload: dict[str, Any]
@@ -224,22 +228,8 @@ def resolve_stateful_context_with_lotus_core(
         source_payloads.portfolio_payload,
         stateful_input=stateful_input,
     )
-    resolved_as_of = _resolved_stateful_as_of(
-        source_payloads.cash_payload,
-        stateful_input=stateful_input,
-    )
-    try:
-        source_provenance = _build_lotus_core_source_provenance(
-            portfolio_id=portfolio_id,
-            resolved_as_of=resolved_as_of,
-            portfolio_payload=source_payloads.portfolio_payload,
-            positions_payload=source_payloads.positions_payload,
-            cash_payload=source_payloads.cash_payload,
-        )
-    except LotusCoreSourceProvenanceError as exc:
-        raise LotusCoreStatefulContextUnavailableError(
-            "LOTUS_CORE_STATEFUL_CONTEXT_INVALID"
-        ) from exc
+    resolved_as_of = source_payloads.resolved_as_of
+    source_provenance = source_payloads.source_provenance
     portfolio_snapshot_id = source_provenance.portfolio.source_id
     market_data_snapshot_id = source_provenance.market_data.source_id
     source_completeness = _build_lotus_core_source_completeness(
@@ -293,7 +283,31 @@ def _fetch_stateful_context_source_payloads(
     base_url: str,
     control_plane_base_url: str,
 ) -> _StatefulContextSourcePayloads:
+    tenant_id = _required_tenant_id()
     with httpx.Client(timeout=_resolve_timeout()) as client:
+        core_snapshot_payload = _request_json(
+            client,
+            method="POST",
+            base_url=control_plane_base_url,
+            path=CORE_SNAPSHOT_PATH.format(portfolio_id=stateful_input.portfolio_id),
+            error_code="LOTUS_CORE_STATEFUL_CONTEXT_UNAVAILABLE",
+            json_body=core_snapshot_request(
+                as_of=stateful_input.as_of,
+                tenant_id=tenant_id,
+            ),
+            headers=core_snapshot_headers(tenant_id=tenant_id),
+        )
+        try:
+            resolved_as_of, source_provenance = resolve_authoritative_portfolio_state(
+                core_snapshot_payload,
+                expected_portfolio_id=stateful_input.portfolio_id,
+                requested_as_of=stateful_input.as_of,
+                expected_tenant_id=tenant_id,
+            )
+        except AuthoritativePortfolioStateError as exc:
+            raise LotusCoreStatefulContextUnavailableError(
+                "LOTUS_CORE_STATEFUL_CONTEXT_INVALID"
+            ) from exc
         portfolio_payload = _request_json(
             client,
             method="GET",
@@ -345,6 +359,8 @@ def _fetch_stateful_context_source_payloads(
         stateful_input=stateful_input,
     )
     return _StatefulContextSourcePayloads(
+        resolved_as_of=resolved_as_of,
+        source_provenance=source_provenance,
         portfolio_payload=portfolio_payload,
         positions_payload=positions_payload,
         cash_payload=cash_payload,
@@ -353,6 +369,13 @@ def _fetch_stateful_context_source_payloads(
         classification_taxonomy=classification_taxonomy,
         classification_taxonomy_unavailable=classification_taxonomy_unavailable,
     )
+
+
+def _required_tenant_id() -> str:
+    tenant_id = os.getenv("LOTUS_ADVISE_TENANT_ID", "").strip()
+    if not tenant_id:
+        raise LotusCoreStatefulContextUnavailableError("LOTUS_CORE_STATEFUL_CONTEXT_UNAVAILABLE")
+    return tenant_id
 
 
 def _held_position_instrument_ids(positions_payload: dict[str, Any]) -> list[str]:
@@ -433,21 +456,6 @@ def _resolved_portfolio_identity(
     if not portfolio_id or not base_currency:
         raise LotusCoreStatefulContextUnavailableError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
     return portfolio_id, base_currency
-
-
-def _resolved_stateful_as_of(
-    cash_payload: dict[str, Any],
-    *,
-    stateful_input: WorkspaceStatefulInput,
-) -> str:
-    resolved_as_of = _require_matching_payload_value(
-        cash_payload,
-        "resolved_as_of_date",
-        expected=stateful_input.as_of,
-    )
-    if not resolved_as_of:
-        raise LotusCoreStatefulContextUnavailableError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
-    return resolved_as_of
 
 
 def _build_stateful_simulate_request(

@@ -80,6 +80,14 @@ def test_lotus_core_contract_declares_source_effect_decision_ownership() -> None
     non_authoritative_fields = set(core_response["non_authoritative_decision_fields"])
     advise_decision_fields = set(core_response["advise_decision_authority_fields"])
 
+    provider_fixture = (
+        REPO_ROOT / manifest["adapters"]["lotus_core"]["provider_contract"]["provider_fixture_ref"]
+    )
+    assert provider_fixture.is_file()
+    assert json.loads(provider_fixture.read_text(encoding="utf-8"))["product_name"] == (
+        "PortfolioStateSnapshot"
+    )
+
     assert {
         "before",
         "after_simulated",

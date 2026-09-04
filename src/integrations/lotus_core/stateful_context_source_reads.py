@@ -56,13 +56,17 @@ def request_json(
     path: str,
     error_code: str,
     json_body: dict[str, Any] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     fetch_stat = _FETCH_STAT_BY_ERROR_CODE.get(error_code)
     if fetch_stat is not None:
         record_fetch_stat(fetch_stat)
     url = f"{base_url}{path}"
     try:
-        response = client.request(method, url, json=json_body)
+        if headers is None:
+            response = client.request(method, url, json=json_body)
+        else:
+            response = client.request(method, url, json=json_body, headers=headers)
         response.raise_for_status()
         payload = response.json()
     except (httpx.HTTPError, ValueError) as exc:
