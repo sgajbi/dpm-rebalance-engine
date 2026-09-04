@@ -203,6 +203,7 @@ class _FakeConnection:
         if sql in {
             "SELECT pg_advisory_lock(%s::bigint)",
             "SELECT pg_advisory_unlock(%s::bigint)",
+            "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY",
         } or sql.startswith(("CREATE TABLE", "CREATE INDEX", "CREATE UNIQUE INDEX")):
             return _FakeCursor()
         for field, store, default in _MIGRATION_DEFAULTS:

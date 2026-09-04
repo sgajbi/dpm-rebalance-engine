@@ -154,6 +154,7 @@ def get_idea_proposal_realization(
 ) -> IdeaProposalRealizationHistoryRecord | None:
     """Load one realization only when every trusted scope dimension matches."""
     with closing(connect()) as connection:
+        connection.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
         row = connection.execute(
             _REALIZATION_HISTORY_SELECT
             + """
@@ -176,6 +177,7 @@ def get_idea_proposal_realization_by_conversion_intent(
     portfolio_id: str,
 ) -> IdeaProposalRealizationHistoryRecord | None:
     with closing(connect()) as connection:
+        connection.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
         row = connection.execute(
             _REALIZATION_HISTORY_SELECT
             + """
