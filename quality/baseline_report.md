@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-04T20:39:16.425192+00:00`
+- Generated At: `2026-09-04T20:48:35.887566+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -20,7 +20,7 @@
 | 2 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2763 |
 | 3 | `tests/unit/advisory/engine/test_engine_proposal_workflow_service.py` | 2691 |
 | 4 | `tests/unit/advisory/api/test_api_workspace.py` | 2569 |
-| 5 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 2293 |
+| 5 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 2294 |
 | 6 | `scripts/validate_cross_service_parity_live.py` | 2155 |
 | 7 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1989 |
 | 8 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
@@ -33,7 +33,7 @@
 | ---: | --- | --- | ---: | ---: |
 | 1 | `test_lifecycle_async_and_support_schemas_have_descriptions_and_examples` | `tests/unit/advisory/contracts/test_contract_openapi_lifecycle_docs.py` | 62 | 405 |
 | 2 | `test_live_postgres_idea_intake_persists_portfolio_scope_for_recovery` | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1444 | 355 |
-| 3 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 197 | 325 |
+| 3 | `execute` | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 197 | 326 |
 | 4 | `test_quality_baseline_report_captures_required_quality_sections` | `tests/unit/scripts/test_quality_baseline_report.py` | 120 | 311 |
 | 5 | `test_resolve_stateful_context_with_lotus_core_builds_simulation_request` | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 1389 | 225 |
 | 6 | `test_proof_pack_indexes_assets_and_blocks_sensitive_committed_material` | `tests/unit/advisory/engine/test_engine_bank_demo_proof_models.py` | 381 | 216 |
