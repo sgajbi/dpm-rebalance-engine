@@ -101,6 +101,7 @@ def load_idea_proposal_realization_history_by_conversion_intent(
     portfolio_id: str,
     principal: IdeaProposalIntakePrincipal,
 ) -> IdeaProposalRealizationHistoryResponse:
+    """Recover Advise-owned state when the original intake response was unavailable."""
     normalized_conversion_intent_id = _required_printable(
         conversion_intent_id,
         "IDEA_PROPOSAL_CONVERSION_INTENT_ID_REQUIRED",

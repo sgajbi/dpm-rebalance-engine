@@ -101,9 +101,8 @@ def accept_idea_proposal_intake(
     summary="Recover Advise-owned Idea realization by conversion intent",
     description=(
         "Returns the canonical Advise-owned realization after a lost intake response, using the "
-        "Idea-owned conversion-intent identity and exact trusted scope. This is a read-only "
-        "recovery path: it does not replay the intake, create work, infer acceptance from "
-        "transport, or grant downstream authority."
+        "Idea-owned conversion-intent identity and exact trusted scope. This read-only recovery "
+        "path does not replay intake or infer downstream business state from transport."
     ),
     responses=_IDEA_REALIZATION_RESPONSES,
 )

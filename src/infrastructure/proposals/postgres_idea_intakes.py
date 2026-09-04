@@ -161,9 +161,7 @@ def get_idea_proposal_realization(
             """,
             (intake_id, tenant_id, legal_entity_code, portfolio_id),
         ).fetchone()
-        if row is None:
-            return None
-        return _history_from_row(connection=connection, row=row)
+        return None if row is None else _history_from_row(connection=connection, row=row)
 
 
 def get_idea_proposal_realization_by_conversion_intent(
@@ -190,9 +188,7 @@ def get_idea_proposal_realization_by_conversion_intent(
             """,
             (conversion_intent_id, tenant_id, legal_entity_code, portfolio_id),
         ).fetchone()
-        if row is None:
-            return None
-        return _history_from_row(connection=connection, row=row)
+        return None if row is None else _history_from_row(connection=connection, row=row)
 
 
 def _history_from_row(*, connection: Any, row: Any) -> IdeaProposalRealizationHistoryRecord:
