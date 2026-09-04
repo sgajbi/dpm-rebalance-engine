@@ -63,6 +63,36 @@ def test_core_snapshot_request_declares_advise_consumer_and_bounded_section() ->
     }
 
 
+@pytest.mark.parametrize(
+    "requested_as_of",
+    [
+        "2026-04-10T10:00:00Z",
+        "2026-04-10T23:59:59-05:00",
+    ],
+)
+def test_core_snapshot_request_normalizes_supported_timestamps_to_business_date(
+    requested_as_of: str,
+) -> None:
+    request = core_snapshot_request(as_of=requested_as_of, tenant_id="tenant-sg-001")
+
+    assert request["as_of_date"] == "2026-04-10"
+    effective_as_of, _ = resolve_authoritative_portfolio_state(
+        _snapshot_payload(),
+        expected_portfolio_id="PB_SG_GLOBAL_BAL_001",
+        requested_as_of=requested_as_of,
+        expected_tenant_id="tenant-sg-001",
+    )
+    assert effective_as_of == "2026-04-10"
+
+
+def test_core_snapshot_request_rejects_invalid_business_date_or_timestamp() -> None:
+    with pytest.raises(
+        AuthoritativePortfolioStateError,
+        match="LOTUS_CORE_STATEFUL_CONTEXT_INVALID",
+    ):
+        core_snapshot_request(as_of="not-a-date", tenant_id="tenant-sg-001")
+
+
 def test_authoritative_snapshot_preserves_core_owned_date_identity_and_hashes() -> None:
     effective_as_of, provenance = _resolve(_snapshot_payload())
 

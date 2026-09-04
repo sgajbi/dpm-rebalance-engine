@@ -81,7 +81,7 @@ class _CorePortfolioStateSnapshot(BaseModel):
 
 def core_snapshot_request(*, as_of: str, tenant_id: str) -> dict[str, object]:
     return {
-        "as_of_date": as_of,
+        "as_of_date": _requested_business_date(as_of).isoformat(),
         "snapshot_mode": "BASELINE",
         "consumer_system": "lotus-advise",
         "tenant_id": tenant_id,
@@ -112,7 +112,7 @@ def resolve_authoritative_portfolio_state(
 ) -> tuple[str, SourceProvenanceEnvelope]:
     try:
         snapshot = _CorePortfolioStateSnapshot.model_validate(payload)
-        requested_date = date.fromisoformat(requested_as_of)
+        requested_date = _requested_business_date(requested_as_of)
     except (ValidationError, ValueError) as exc:
         raise AuthoritativePortfolioStateError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID") from exc
 
@@ -133,6 +133,17 @@ def resolve_authoritative_portfolio_state(
         portfolio=_to_advise_record(snapshot.source_provenance.portfolio),
         market_data=_to_advise_record(snapshot.source_provenance.market_data),
     )
+
+
+def _requested_business_date(value: str) -> date:
+    normalized = value.strip()
+    try:
+        return date.fromisoformat(normalized)
+    except ValueError:
+        try:
+            return datetime.fromisoformat(normalized.replace("Z", "+00:00")).date()
+        except ValueError as exc:
+            raise AuthoritativePortfolioStateError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID") from exc
 
 
 def _to_advise_record(record: _CoreSourceRecord) -> SourceProvenanceRecord:
