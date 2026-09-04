@@ -336,12 +336,15 @@ Boundary rules:
    canonical developer fixture for standalone and Workbench-orchestrated local startup. Production
    Compose must continue to require deployment-owned tenant configuration and must not inherit this
    local fixture,
-7. Lotus Core source provenance is part of advisory result lineage. Stateful context must preserve
-   upstream portfolio and market-data snapshot identity, source version, event or batch refs, source
-   hash, valuation timestamp, freshness posture, and contract version as typed provenance on the
-   resolved context, advisory snapshots, and proposal lineage without storing raw source payloads.
-   Conflicting source snapshot or provenance values must fail closed before advisory snapshot
-   construction, caching, persistence, or replay,
+7. Lotus Core source provenance is part of advisory result lineage. Stateful context must consume
+   `PortfolioStateSnapshot:v1` from Core's governed `core-snapshot` route and preserve its stable
+   portfolio and market-data identities, source-owned effective date, source hashes, valuation
+   timestamps, freshness posture, and contract version as typed provenance. Only current evidence
+   with `READY` / `SOURCE_EVIDENCE_READY` valuation supportability and coherent scope/dates is
+   usable. Portfolio, positions, and cash query reads may supply simulation input rows but must not
+   synthesize or override provenance. Missing, stale, malformed, or conflicting source evidence
+   fails closed before advisory snapshot construction, caching, persistence, or replay; raw source
+   payloads are not stored,
 8. Lotus Core source-derived FX rates must be finite, strictly positive, and as-of eligible before
    advisory valuation. Invalid explicit rates or source ratios fail closed with
    `LOTUS_CORE_STATEFUL_FX_INVALID`; missing eligible rates remain data-quality evidence rather

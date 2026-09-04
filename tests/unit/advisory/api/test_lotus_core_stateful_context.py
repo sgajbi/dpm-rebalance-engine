@@ -6,7 +6,6 @@ from typing import Any
 import pytest
 
 from src.core.advisory_engine import run_proposal_simulation
-from src.core.common.canonical import hash_canonical_payload
 from src.core.models import (
     EngineOptions,
     MarketDataSnapshot,
@@ -72,6 +71,54 @@ class _FakeResponse:
         return self._payload
 
 
+def _authoritative_snapshot_response(url: str, request: dict[str, Any]) -> _FakeResponse:
+    portfolio_id = url.rsplit("/", 2)[-2]
+    as_of = str(request["as_of_date"])
+    tenant_id = str(request["tenant_id"])
+    return _FakeResponse(
+        {
+            "product_name": "PortfolioStateSnapshot",
+            "product_version": "v1",
+            "portfolio_id": portfolio_id,
+            "as_of_date": as_of,
+            "snapshot_mode": "BASELINE",
+            "generated_at": f"{as_of}T10:02:00Z",
+            "contract_version": "rfc_081_v1",
+            "tenant_id": tenant_id,
+            "source_evidence_current": True,
+            "freshness_status": "CURRENT",
+            "valuation_context": {
+                "effective_as_of_date": as_of,
+                "supportability": "READY",
+                "reason_code": "SOURCE_EVIDENCE_READY",
+            },
+            "source_provenance": {
+                "schema_version": "lotus.source-provenance.v1",
+                "source_system": "LOTUS_CORE",
+                "portfolio": {
+                    "source_system": "LOTUS_CORE",
+                    "source_kind": "PORTFOLIO",
+                    "source_id": f"core-portfolio-{portfolio_id}-{as_of}",
+                    "as_of": as_of,
+                    "contract_version": "PortfolioStateSnapshot:v1",
+                    "source_hash": "a" * 64,
+                    "freshness_status": "CURRENT",
+                },
+                "market_data": {
+                    "source_system": "LOTUS_CORE",
+                    "source_kind": "MARKET_DATA",
+                    "source_id": f"core-market-{portfolio_id}-{as_of}",
+                    "as_of": as_of,
+                    "contract_version": "PortfolioStateSnapshot:v1",
+                    "source_hash": "b" * 64,
+                    "freshness_status": "CURRENT",
+                },
+                "raw_payload_stored": False,
+            },
+        }
+    )
+
+
 class _FakeClient:
     def __init__(self, responses: dict[tuple[str, str], _FakeResponse]) -> None:
         self._responses = responses
@@ -83,9 +130,18 @@ class _FakeClient:
     def __exit__(self, exc_type, exc, tb) -> None:
         return None
 
-    def request(self, method: str, url: str, json: dict[str, Any] | None = None) -> _FakeResponse:
+    def request(
+        self,
+        method: str,
+        url: str,
+        json: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> _FakeResponse:
+        del headers
         self.requests.append((method.upper(), url, json))
         key = (method.upper(), url)
+        if key not in self._responses and url.endswith("/core-snapshot") and json is not None:
+            return _authoritative_snapshot_response(url, json)
         if key not in self._responses and "?" in url:
             key = (method.upper(), url.split("?", 1)[0])
         if key not in self._responses:
@@ -744,14 +800,6 @@ def test_resolve_stateful_context_rejects_missing_resolved_as_of(
         lambda payloads: payloads["positions"].update({"portfolio_id": "OTHER_PORTFOLIO"}),
         lambda payloads: payloads["cash"].update({"portfolio_id": "OTHER_PORTFOLIO"}),
         lambda payloads: payloads["cash"].update({"resolved_as_of_date": "2026-03-28"}),
-        lambda payloads: (
-            payloads["positions"].update({"portfolio_snapshot_id": "ps_rev_1"})
-            or payloads["cash"].update({"portfolio_snapshot_id": "ps_rev_2"})
-        ),
-        lambda payloads: (
-            payloads["positions"].update({"market_data_snapshot_id": "md_rev_1"})
-            or payloads["cash"].update({"market_data_snapshot_id": "md_rev_2"})
-        ),
     ],
 )
 def test_resolve_stateful_context_rejects_upstream_identity_mismatch(
@@ -797,7 +845,7 @@ def test_resolve_stateful_context_rejects_upstream_identity_mismatch(
     assert str(exc_info.value) == "LOTUS_CORE_STATEFUL_CONTEXT_INVALID"
 
 
-def test_resolve_stateful_context_preserves_upstream_source_provenance(monkeypatch) -> None:
+def test_resolve_stateful_context_ignores_non_authoritative_route_provenance(monkeypatch) -> None:
     from src.core.workspace.models import WorkspaceStatefulInput
 
     base_url = "http://host.docker.internal:8201"
@@ -851,20 +899,24 @@ def test_resolve_stateful_context_preserves_upstream_source_provenance(monkeypat
 
     provenance = resolved.resolved_context.source_provenance
     assert provenance is not None
-    assert resolved.resolved_context.portfolio_snapshot_id == "core-portfolio-snapshot-rev-001"
-    assert resolved.resolved_context.market_data_snapshot_id == "core-market-data-snapshot-rev-001"
+    assert resolved.resolved_context.portfolio_snapshot_id == (
+        "core-portfolio-PF_REVISIONED-2026-03-27"
+    )
+    assert resolved.resolved_context.market_data_snapshot_id == (
+        "core-market-PF_REVISIONED-2026-03-27"
+    )
     assert resolved.simulate_request.portfolio_snapshot.snapshot_id == (
-        "core-portfolio-snapshot-rev-001"
+        "core-portfolio-PF_REVISIONED-2026-03-27"
     )
     assert resolved.simulate_request.market_data_snapshot.snapshot_id == (
-        "core-market-data-snapshot-rev-001"
+        "core-market-PF_REVISIONED-2026-03-27"
     )
-    assert provenance.portfolio.source_version == "portfolio-revision-001"
-    assert provenance.portfolio.source_event_id == "portfolio-event-001"
-    assert provenance.portfolio.source_hash == "sha256:portfolio-source"
-    assert provenance.market_data.source_version == "market-data-revision-001"
-    assert provenance.market_data.source_batch_id == "market-data-batch-001"
-    assert provenance.market_data.valuation_timestamp == "2026-03-27T09:35:00Z"
+    assert provenance.portfolio.source_version is None
+    assert provenance.portfolio.source_event_id is None
+    assert provenance.portfolio.source_hash == "a" * 64
+    assert provenance.market_data.source_version is None
+    assert provenance.market_data.source_batch_id is None
+    assert provenance.market_data.valuation_timestamp is None
     assert provenance.raw_payload_stored is False
 
     result = run_proposal_simulation(
@@ -878,15 +930,15 @@ def test_resolve_stateful_context_preserves_upstream_source_provenance(monkeypat
         simulation_contract_version="advisory-simulation.v1",
     )
 
-    assert result.lineage.portfolio_snapshot_id == "core-portfolio-snapshot-rev-001"
-    assert result.lineage.market_data_snapshot_id == "core-market-data-snapshot-rev-001"
+    assert result.lineage.portfolio_snapshot_id == "core-portfolio-PF_REVISIONED-2026-03-27"
+    assert result.lineage.market_data_snapshot_id == "core-market-PF_REVISIONED-2026-03-27"
     assert result.lineage.source_provenance == provenance
     lineage_payload = result.lineage.model_dump(mode="json")
     assert "positions" not in str(lineage_payload)
     assert "cash_accounts" not in str(lineage_payload)
 
 
-def test_resolve_stateful_context_accepts_componentized_market_data_hashes(monkeypatch) -> None:
+def test_resolve_stateful_context_uses_authoritative_market_data_hash(monkeypatch) -> None:
     from src.core.workspace.models import WorkspaceStatefulInput
 
     base_url = "http://host.docker.internal:8201"
@@ -935,26 +987,15 @@ def test_resolve_stateful_context_accepts_componentized_market_data_hashes(monke
 
     provenance = resolved.resolved_context.source_provenance
     assert provenance is not None
-    expected_market_hash = hash_canonical_payload(
-        {
-            "source_system": "LOTUS_CORE",
-            "source_kind": "MARKET_DATA",
-            "component_hashes": [
-                {"component": "cash_balances", "source_hash": cash_hash},
-                {"component": "positions", "source_hash": positions_hash},
-            ],
-        }
-    )
-    assert provenance.market_data.source_hash == expected_market_hash
-    assert provenance.market_data.source_id == (
-        f"lotus-core:market-data:PB_SG_GLOBAL_BAL_001:2026-04-10:{expected_market_hash}"
-    )
-    assert provenance.market_data.valuation_timestamp == "2026-08-01T11:46:22.097731Z"
+    assert provenance.market_data.source_hash == "b" * 64
+    assert provenance.market_data.source_hash not in {positions_hash, cash_hash}
+    assert provenance.market_data.source_id == ("core-market-PB_SG_GLOBAL_BAL_001-2026-04-10")
+    assert provenance.market_data.valuation_timestamp is None
     assert provenance.market_data.freshness_status == "CURRENT"
     assert resolved.resolved_context.market_data_snapshot_id == provenance.market_data.source_id
 
 
-def test_resolve_stateful_context_binds_lone_market_component_hash_to_component(
+def test_resolve_stateful_context_does_not_promote_component_hash_to_provenance(
     monkeypatch,
 ) -> None:
     from src.core.workspace.models import WorkspaceStatefulInput
@@ -1001,19 +1042,11 @@ def test_resolve_stateful_context_binds_lone_market_component_hash_to_component(
 
     provenance = resolved.resolved_context.source_provenance
     assert provenance is not None
-    assert provenance.market_data.source_hash == hash_canonical_payload(
-        {
-            "source_system": "LOTUS_CORE",
-            "source_kind": "MARKET_DATA",
-            "component_hashes": [
-                {"component": "positions", "source_hash": positions_hash},
-            ],
-        }
-    )
+    assert provenance.market_data.source_hash == "b" * 64
     assert provenance.market_data.source_hash != positions_hash
 
 
-def test_resolve_stateful_context_selects_latest_market_timestamp_by_instant(
+def test_resolve_stateful_context_does_not_infer_provenance_timestamp_from_component_reads(
     monkeypatch,
 ) -> None:
     from src.core.workspace.models import WorkspaceStatefulInput
@@ -1060,10 +1093,12 @@ def test_resolve_stateful_context_selects_latest_market_timestamp_by_instant(
 
     provenance = resolved.resolved_context.source_provenance
     assert provenance is not None
-    assert provenance.market_data.valuation_timestamp == "2026-08-01T23:30:00-05:00"
+    assert provenance.market_data.valuation_timestamp is None
 
 
-def test_resolve_stateful_context_degrades_invalid_component_freshness(monkeypatch) -> None:
+def test_resolve_stateful_context_does_not_infer_freshness_from_component_reads(
+    monkeypatch,
+) -> None:
     from src.core.workspace.models import WorkspaceStatefulInput
 
     base_url = "http://host.docker.internal:8201"
@@ -1108,7 +1143,7 @@ def test_resolve_stateful_context_degrades_invalid_component_freshness(monkeypat
 
     provenance = resolved.resolved_context.source_provenance
     assert provenance is not None
-    assert provenance.market_data.freshness_status == "UNKNOWN"
+    assert provenance.market_data.freshness_status == "CURRENT"
 
 
 def test_lotus_core_source_completeness_counts_rejections_without_raw_payloads() -> None:
@@ -1463,7 +1498,7 @@ def test_resolve_stateful_context_with_lotus_core_builds_simulation_request(
     assert resolved.resolved_context.portfolio_id == "DEMO_ADV_USD_001"
     assert resolved.resolved_context.as_of == "2026-03-27"
     assert resolved.resolved_context.portfolio_snapshot_id == (
-        "lotus-core:portfolio:DEMO_ADV_USD_001:2026-03-27"
+        "core-portfolio-DEMO_ADV_USD_001-2026-03-27"
     )
     request = resolved.simulate_request
     assert request.portfolio_snapshot.base_currency == "USD"
@@ -1789,6 +1824,7 @@ def test_resolve_stateful_context_with_lotus_core_reuses_cached_context(
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
             return super().request(method, url, json=json)
@@ -1802,7 +1838,7 @@ def test_resolve_stateful_context_with_lotus_core_reuses_cached_context(
     second = resolve_stateful_context_with_lotus_core(stateful_input)
 
     assert first.resolved_context == second.resolved_context
-    assert request_counter["count"] == 4
+    assert request_counter["count"] == 5
     stats = get_stateful_context_cache_stats_for_tests()
     assert stats["resolved_context"].misses == 1
     assert stats["resolved_context"].hits == 1
@@ -1908,6 +1944,7 @@ def test_resolve_stateful_context_with_lotus_core_refetches_when_cache_ttl_is_ze
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
             return super().request(method, url, json=json)
@@ -1920,7 +1957,7 @@ def test_resolve_stateful_context_with_lotus_core_refetches_when_cache_ttl_is_ze
     resolve_stateful_context_with_lotus_core(stateful_input)
     resolve_stateful_context_with_lotus_core(stateful_input)
 
-    assert request_counter["count"] == 8
+    assert request_counter["count"] == 10
     fetch_stats = get_stateful_context_fetch_stats_for_tests()
     assert_core_context_fetch_counts(fetch_stats, portfolio=2, positions=2, cash=2)
 
@@ -1941,6 +1978,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_distinct_as_of_inputs
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
             is_cash_request = (
@@ -1984,7 +2022,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_distinct_as_of_inputs
         first.resolved_context.portfolio_snapshot_id
         != second.resolved_context.portfolio_snapshot_id
     )
-    assert request_counter["count"] == 8
+    assert request_counter["count"] == 10
     fetch_stats = get_stateful_context_fetch_stats_for_tests()
     assert_core_context_fetch_counts(fetch_stats, portfolio=2, positions=2, cash=2)
 
@@ -2019,6 +2057,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_environment_scope(
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
             return super().request(method, url, json=json)
@@ -2038,7 +2077,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_environment_scope(
     second = resolve_stateful_context_with_lotus_core(stateful_input)
 
     assert first.resolved_context == second.resolved_context
-    assert request_counter["count"] == 8
+    assert request_counter["count"] == 10
     stats = get_stateful_context_cache_stats_for_tests()
     assert stats["resolved_context"].misses == 2
     assert stats["resolved_context"].hits == 0
@@ -2076,6 +2115,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_optional_identity_dim
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
             return super().request(method, url, json=json)
@@ -2103,7 +2143,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_optional_identity_dim
     )
 
     assert first.resolved_context == second.resolved_context
-    assert request_counter["count"] == 8
+    assert request_counter["count"] == 10
     stats = get_stateful_context_cache_stats_for_tests()
     assert stats["resolved_context"].misses == 2
     assert stats["resolved_context"].hits == 0
@@ -2142,6 +2182,7 @@ def test_resolve_stateful_context_with_lotus_core_evicts_oldest_cache_entry(
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
             pf_cache_a_cash_url = (
@@ -2180,7 +2221,7 @@ def test_resolve_stateful_context_with_lotus_core_evicts_oldest_cache_entry(
     resolve_stateful_context_with_lotus_core(second)
     resolve_stateful_context_with_lotus_core(first)
 
-    assert request_counter["count"] == 12
+    assert request_counter["count"] == 15
 
 
 def test_resolve_stateful_context_with_lotus_core_does_not_cache_failures(
@@ -2211,6 +2252,7 @@ def test_resolve_stateful_context_with_lotus_core_does_not_cache_failures(
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
             return super().request(method, url, json=json)
@@ -2225,7 +2267,7 @@ def test_resolve_stateful_context_with_lotus_core_does_not_cache_failures(
     with pytest.raises(LotusCoreStatefulContextUnavailableError):
         resolve_stateful_context_with_lotus_core(stateful_input)
 
-    assert request_counter["count"] == 8
+    assert request_counter["count"] == 10
 
 
 def test_resolve_stateful_context_with_lotus_core_recovers_after_failed_resolution(
@@ -2248,8 +2290,11 @@ def test_resolve_stateful_context_with_lotus_core_recovers_after_failed_resoluti
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
+            if method.upper() == "POST" and url.endswith("/core-snapshot") and json is not None:
+                return _authoritative_snapshot_response(url, json)
             if (method.upper(), url) == ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001"):
                 return _FakeResponse(dict(portfolio_payload))
             if method.upper() == "GET" and url in {
@@ -2286,7 +2331,7 @@ def test_resolve_stateful_context_with_lotus_core_recovers_after_failed_resoluti
     recovered = resolve_stateful_context_with_lotus_core(stateful_input)
 
     assert recovered.resolved_context.portfolio_id == "DEMO_ADV_USD_001"
-    assert request_counter["count"] == 8
+    assert request_counter["count"] == 10
     stats = get_stateful_context_cache_stats_for_tests()
     assert stats["resolved_context"].misses == 2
     assert stats["resolved_context"].expirations == 0
@@ -2542,6 +2587,7 @@ def test_enrich_stateful_simulate_request_for_trade_drafts_reuses_lookup_cache_s
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ) -> _FakeResponse:
             request_counter["count"] += 1
             return super().request(method, url, json=json)

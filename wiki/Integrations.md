@@ -61,13 +61,20 @@ Important rule:
 
 - simulation execution authority lives on the control-plane binding
 - query reads do not substitute for execution authority
+- stateful proposal context first consumes Core's governed
+  `POST /integration/portfolios/{portfolio_id}/core-snapshot` contract as
+  `PortfolioStateSnapshot:v1`. The request carries the deployment-owned tenant identity in both
+  the governed payload and `X-Tenant-Id`; Advise identifies itself as the service consumer.
 - stateful context reads must reject returned portfolio, positions, cash, or resolved-as-of identity
   that conflicts with the requested source identity before advisory snapshots are built or cached
 - advisory lineage preserves Lotus Core portfolio and market-data source provenance as typed
-  metadata: upstream snapshot id, source version, event or batch reference, source hash, valuation
-  timestamp, freshness posture, and advisory simulation contract version. Raw Lotus Core payloads
-  are not stored in proposal lineage. Conflicting provenance fails closed before snapshot
-  construction, cache writes, persistence, or replay.
+  metadata from `PortfolioStateSnapshot:v1`: stable snapshot identity, source-owned effective date,
+  source hash, valuation timestamp, and freshness posture. Advise accepts only current evidence with
+  `READY` / `SOURCE_EVIDENCE_READY` valuation supportability and coherent portfolio and market-data
+  dates. The separate portfolio, positions, and cash reads continue to supply simulation input rows;
+  they cannot manufacture or override authoritative provenance. Missing, stale, malformed, or
+  conflicting snapshot evidence fails closed before construction, cache writes, persistence, or
+  replay. Raw Lotus Core payloads are never stored in proposal lineage.
 - source-derived FX rates must be finite, strictly positive, and as-of eligible before valuation.
   Explicit invalid rates or source ratios fail closed with `LOTUS_CORE_STATEFUL_FX_INVALID`.
   Future-only FX lookup rows are not selected, and missing eligible FX remains bounded

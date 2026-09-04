@@ -13,6 +13,7 @@ INSTRUMENT_ENRICHMENT_BULK_PATH = "/integration/instruments/enrichment-bulk"
 PRICES_PATH = "/prices/?security_id={instrument_id}"
 FX_RATES_PATH = "/fx-rates/?from_currency={from_currency}&to_currency={to_currency}"
 CLASSIFICATION_TAXONOMY_PATH = "/integration/reference/classification-taxonomy"
+CORE_SNAPSHOT_PATH = "/integration/portfolios/{portfolio_id}/core-snapshot"
 
 
 def _sanitized_base_url(value: str) -> str:

@@ -66,8 +66,10 @@
 
 ## Required Runtime Identity
 
-Production-like report and AI integrations require `LOTUS_ADVISE_TENANT_ID` to contain the trusted
-tenant identifier propagated to downstream boundaries. Report requests also require a bounded
+Production-like Core, Report, and AI integrations require `LOTUS_ADVISE_TENANT_ID` to contain the
+trusted tenant identifier propagated to downstream boundaries. Core snapshot requests bind this
+identity in both `X-Tenant-Id` and the governed request body; missing identity fails before an
+outbound request. Report requests also require a bounded
 `requested_by` actor in the advisory request payload. Missing, blank, over-length, or
 control-character-containing values fail closed before `lotus-report` or `lotus-ai` HTTP
 submission.
@@ -75,6 +77,12 @@ submission.
 Report requests additionally require source-derived as-of date, reporting currency, and proposal
 jurisdiction metadata. The service does not manufacture current-date, USD, or SG fallbacks for
 production-like downstream report submissions.
+
+For stateful proposal diagnostics, `LOTUS_CORE_STATEFUL_CONTEXT_UNAVAILABLE` means the authoritative
+Core snapshot could not be obtained. `LOTUS_CORE_STATEFUL_CONTEXT_INVALID` means the returned
+`PortfolioStateSnapshot:v1` was malformed, stale, unsupported, or inconsistent in portfolio,
+tenant, requested scope, effective date, or typed provenance. Neither condition permits fallback to
+the caller's date or to identities derived from the lower-level portfolio, positions, or cash reads.
 
 ## Runtime Configuration Guardrails
 
