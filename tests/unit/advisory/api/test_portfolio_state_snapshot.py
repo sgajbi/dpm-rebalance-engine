@@ -92,6 +92,10 @@ def test_authoritative_snapshot_preserves_core_owned_date_identity_and_hashes() 
         (("valuation_context", "effective_as_of_date"), None),
         (("valuation_context", "supportability"), "UNAVAILABLE"),
         (("source_provenance", "portfolio", "as_of"), "2026-03-26"),
+        (
+            ("source_provenance", "portfolio", "valuation_timestamp"),
+            "2026-04-10T10:00:00",
+        ),
         (("source_provenance", "market_data", "as_of"), "2026-03-26"),
         (("source_provenance", "portfolio", "source_hash"), "not-a-hash"),
     ],
