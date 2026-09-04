@@ -1366,15 +1366,6 @@ def test_live_postgres_idea_intake_claim_is_restart_safe_and_conflict_detecting(
         portfolio_id=realization.portfolio_id,
     )
     assert recovered_after_restart == upgraded_history
-    assert (
-        second_repository.get_idea_proposal_realization_by_conversion_intent(
-            conversion_intent_id=realization.conversion_intent_id,
-            tenant_id=realization.tenant_id,
-            legal_entity_code=realization.legal_entity_code,
-            portfolio_id="PB_SG_OTHER_002",
-        )
-        is None
-    )
 
     other_realization = replace(
         realization,

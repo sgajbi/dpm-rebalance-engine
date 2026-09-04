@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import cast
 
 from fastapi import Depends, Request, status
@@ -47,6 +48,11 @@ _IDEA_PROPOSAL_INTAKE_DESCRIPTION = (
     "create an advisory proposal record, create orders, authorize client publication, or promote "
     "a supported feature."
 )
+_IDEA_REALIZATION_RESPONSES = {
+    status.HTTP_401_UNAUTHORIZED: {"description": "Trusted reader is missing or invalid."},
+    status.HTTP_403_FORBIDDEN: {"description": "Principal lacks the realization read capability."},
+    status.HTTP_404_NOT_FOUND: {"description": "No realization exists in trusted scope."},
+}
 
 
 @shared.router.post(
@@ -99,17 +105,7 @@ def accept_idea_proposal_intake(
         "recovery path: it does not replay the intake, create work, infer acceptance from "
         "transport, or grant downstream authority."
     ),
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {
-            "description": "Trusted realization reader principal is missing or invalid."
-        },
-        status.HTTP_403_FORBIDDEN: {
-            "description": "Principal lacks the realization read capability."
-        },
-        status.HTTP_404_NOT_FOUND: {
-            "description": "No realization exists in the exact trusted scope."
-        },
-    },
+    responses=_IDEA_REALIZATION_RESPONSES,
 )
 def recover_idea_proposal_realization(
     request: Request,
@@ -118,17 +114,13 @@ def recover_idea_proposal_realization(
     principal: IdeaProposalIntakePrincipal = Depends(require_idea_proposal_realization_reader),
     repository: ProposalRepository = Depends(shared.get_proposal_repository),
 ) -> IdeaProposalRealizationHistoryResponse:
-    shared._assert_lifecycle_enabled()
-    reject_unexpected_query_params(request, allowed_params=set())
-    return cast(
-        IdeaProposalRealizationHistoryResponse,
-        run_proposal_operation(
-            lambda: load_idea_proposal_realization_history_by_conversion_intent(
-                repository=repository,
-                conversion_intent_id=conversion_intent_id,
-                portfolio_id=portfolio_id,
-                principal=principal,
-            )
+    return _run_realization_read(
+        request,
+        lambda: load_idea_proposal_realization_history_by_conversion_intent(
+            repository=repository,
+            conversion_intent_id=conversion_intent_id,
+            portfolio_id=portfolio_id,
+            principal=principal,
         ),
     )
 
@@ -144,17 +136,7 @@ def recover_idea_proposal_realization(
         "scope must all match. Intake acceptance remains distinct from proposal creation, "
         "suitability, execution, and client publication."
     ),
-    responses={
-        status.HTTP_401_UNAUTHORIZED: {
-            "description": "Trusted realization reader principal is missing or invalid."
-        },
-        status.HTTP_403_FORBIDDEN: {
-            "description": "Principal lacks the realization read capability."
-        },
-        status.HTTP_404_NOT_FOUND: {
-            "description": "No realization exists in the exact trusted scope."
-        },
-    },
+    responses=_IDEA_REALIZATION_RESPONSES,
 )
 def read_idea_proposal_realization(
     request: Request,
@@ -163,19 +145,24 @@ def read_idea_proposal_realization(
     principal: IdeaProposalIntakePrincipal = Depends(require_idea_proposal_realization_reader),
     repository: ProposalRepository = Depends(shared.get_proposal_repository),
 ) -> IdeaProposalRealizationHistoryResponse:
-    shared._assert_lifecycle_enabled()
-    reject_unexpected_query_params(request, allowed_params=set())
-    return cast(
-        IdeaProposalRealizationHistoryResponse,
-        run_proposal_operation(
-            lambda: load_idea_proposal_realization_history(
-                repository=repository,
-                intake_id=intake_id,
-                portfolio_id=portfolio_id,
-                principal=principal,
-            )
+    return _run_realization_read(
+        request,
+        lambda: load_idea_proposal_realization_history(
+            repository=repository,
+            intake_id=intake_id,
+            portfolio_id=portfolio_id,
+            principal=principal,
         ),
     )
+
+
+def _run_realization_read(
+    request: Request,
+    operation: Callable[[], IdeaProposalRealizationHistoryResponse],
+) -> IdeaProposalRealizationHistoryResponse:
+    shared._assert_lifecycle_enabled()
+    reject_unexpected_query_params(request, allowed_params=set())
+    return cast(IdeaProposalRealizationHistoryResponse, run_proposal_operation(operation))
 
 
 @shared.router.post(

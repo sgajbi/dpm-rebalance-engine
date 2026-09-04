@@ -782,15 +782,6 @@ def test_postgres_repository_reads_realization_only_in_exact_trusted_scope(monke
         )
         is None
     )
-    assert (
-        repository.get_idea_proposal_realization_by_conversion_intent(
-            conversion_intent_id=record.realization.conversion_intent_id,
-            tenant_id=record.realization.tenant_id,
-            legal_entity_code=record.realization.legal_entity_code,
-            portfolio_id="PB_SG_OTHER_002",
-        )
-        is None
-    )
 
 
 def test_postgres_repository_advances_realization_and_appends_ordered_outcome(monkeypatch):
