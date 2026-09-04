@@ -31,6 +31,8 @@ def test_engineering_health_report_captures_structural_metrics(tmp_path: Path) -
                 "\tpython -m ruff check .",
                 "typecheck:",
                 "\tpython -m mypy --config-file mypy.ini",
+                "api-vocabulary:",
+                "\tpython scripts/api_vocabulary_inventory.py",
                 "quality-baseline:",
                 "\tpython scripts/quality_baseline_report.py --output-dir quality",
                 "proposal-decision-vocabulary-gate:",
@@ -52,6 +54,7 @@ def test_engineering_health_report_captures_structural_metrics(tmp_path: Path) -
     assert report.router_hotspots[0].path == "src/api/routes_demo.py"
     assert report.router_hotspots[0].route_decorator_count == 1
     assert any(gate.make_target == "lint" for gate in report.gate_inventory)
+    assert any(gate.make_target == "api-vocabulary" for gate in report.gate_inventory)
     assert any(gate.make_target == "quality-baseline" for gate in report.gate_inventory)
     assert any(
         gate.make_target == "proposal-decision-vocabulary-gate" for gate in report.gate_inventory
