@@ -181,6 +181,9 @@ make domain-data-products-gate
 make trust-telemetry-freshness-gate
 ```
 
+`make api-vocabulary-gate` is non-mutating and fails on committed inventory drift. Run
+`make api-vocabulary` explicitly when an intentional API change requires inventory regeneration.
+
 ### Release And Certification Evidence
 
 ```powershell

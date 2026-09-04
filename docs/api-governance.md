@@ -20,7 +20,8 @@ vocabulary checks, no-alias checks, and enforced Spectral OpenAPI rules.
 - `make openapi-gate`
 - `make openapi-spectral-report`
 - `make no-alias-gate`
-- `make api-vocabulary-gate`
+- `make api-vocabulary` intentionally refreshes the tracked inventory after an API change.
+- `make api-vocabulary-gate` validates the committed inventory without modifying the worktree.
 - `.spectral.yaml` for enforced API documentation rules and warning inventory
 - `quality/api_governance_rules.md`
 
