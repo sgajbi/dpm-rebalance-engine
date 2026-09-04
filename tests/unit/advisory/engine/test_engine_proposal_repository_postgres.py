@@ -764,15 +764,17 @@ def test_postgres_repository_reads_realization_only_in_exact_trusted_scope(monke
     )
 
     assert history is not None
-    assert history.realization == record.realization
-    assert history.outcomes == (record.initial_outcome,)
     recovered = repository.get_idea_proposal_realization_by_conversion_intent(
         conversion_intent_id=record.realization.conversion_intent_id,
         tenant_id=record.realization.tenant_id,
         legal_entity_code=record.realization.legal_entity_code,
         portfolio_id=record.realization.portfolio_id,
     )
-    assert recovered == history
+    assert (recovered, history.realization, history.outcomes) == (
+        history,
+        record.realization,
+        (record.initial_outcome,),
+    )
     assert (
         repository.get_idea_proposal_realization(
             intake_id=record.realization.intake_id,

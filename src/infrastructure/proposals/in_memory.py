@@ -236,10 +236,13 @@ class InMemoryProposalRepository(ProposalRepository):
                 (
                     realization.realization_id
                     for realization in self._idea_proposal_realizations.values()
-                    if realization.conversion_intent_id == conversion_intent_id
-                    and realization.tenant_id == tenant_id
-                    and realization.legal_entity_code == legal_entity_code
-                    and realization.portfolio_id == portfolio_id
+                    if (
+                        realization.conversion_intent_id,
+                        realization.tenant_id,
+                        realization.legal_entity_code,
+                        realization.portfolio_id,
+                    )
+                    == (conversion_intent_id, tenant_id, legal_entity_code, portfolio_id)
                 ),
                 None,
             )

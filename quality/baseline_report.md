@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-04T19:49:44.193608+00:00`
+- Generated At: `2026-09-04T19:58:39.977061+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1112`
 - Packages: `42`
 - Modules: `1070`
-- Total Python lines: `205210`
+- Total Python lines: `205211`
 
 ## Largest Files
 
@@ -20,7 +20,7 @@
 | 2 | `tests/unit/advisory/api/test_lotus_core_stateful_context.py` | 2763 |
 | 3 | `tests/unit/advisory/engine/test_engine_proposal_workflow_service.py` | 2691 |
 | 4 | `tests/unit/advisory/api/test_api_workspace.py` | 2569 |
-| 5 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 2291 |
+| 5 | `tests/unit/advisory/engine/test_engine_proposal_repository_postgres.py` | 2293 |
 | 6 | `scripts/validate_cross_service_parity_live.py` | 2155 |
 | 7 | `tests/integration/advisory/engine/test_engine_proposal_repository_postgres_integration.py` | 1989 |
 | 8 | `tests/unit/advisory/engine/test_advisory_copilot_persistence.py` | 1907 |
@@ -48,7 +48,7 @@
   complexity proxies.
 - Radon config executable: `True`
 - Radon analyzed block inventory: `5144`
-- Radon complexity rank inventory: `A=5011, B=133`
+- Radon complexity rank inventory: `A=5013, B=131`
 - Radon worst complexity: `rank=B, complexity=10`
 - Radon C/D/E/F-ranked block enforcement is repo-native through
   `make complexity-regression-gate` and the `lint` lane.
@@ -127,7 +127,7 @@
 - Requested docs present: `docs/architecture.md, docs/api-governance.md, docs/observability.md, docs/security.md, docs/operations-runbook.md, docs/supported-features.md`
 - Requested docs missing: `none`
 - Interrogate config executable: `True`
-- Interrogate docstring inventory: `total=5918, missing=5722, covered=196, coverage=3.3%`
+- Interrogate docstring inventory: `total=5918, missing=5721, covered=197, coverage=3.3%`
 - Interrogate documentation coverage trend is hard-gated by `make quality-trend-gate`;
   absolute public API and module-ownership thresholds remain report-only until
   classified.
