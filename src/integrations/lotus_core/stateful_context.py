@@ -284,6 +284,15 @@ def _fetch_stateful_context_source_payloads(
     control_plane_base_url: str,
 ) -> _StatefulContextSourcePayloads:
     tenant_id = _required_tenant_id()
+    try:
+        snapshot_request = core_snapshot_request(
+            as_of=stateful_input.as_of,
+            tenant_id=tenant_id,
+        )
+    except AuthoritativePortfolioStateError as exc:
+        raise LotusCoreStatefulContextUnavailableError(
+            "LOTUS_CORE_STATEFUL_CONTEXT_INVALID"
+        ) from exc
     with httpx.Client(timeout=_resolve_timeout()) as client:
         core_snapshot_payload = _request_json(
             client,
@@ -291,10 +300,7 @@ def _fetch_stateful_context_source_payloads(
             base_url=control_plane_base_url,
             path=CORE_SNAPSHOT_PATH.format(portfolio_id=stateful_input.portfolio_id),
             error_code="LOTUS_CORE_STATEFUL_CONTEXT_UNAVAILABLE",
-            json_body=core_snapshot_request(
-                as_of=stateful_input.as_of,
-                tenant_id=tenant_id,
-            ),
+            json_body=snapshot_request,
             headers=core_snapshot_headers(tenant_id=tenant_id),
         )
         try:
