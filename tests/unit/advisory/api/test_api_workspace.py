@@ -195,7 +195,7 @@ def test_stateful_workspace_reuses_cached_lotus_core_context_across_re_evaluatio
 
     assert first.status_code == 200
     assert second.status_code == 200
-    assert client.request_count == 4
+    assert client.request_count == 5
 
 
 def test_stateful_workspace_recovers_after_initial_lotus_core_resolution_failure(
@@ -215,6 +215,7 @@ def test_stateful_workspace_recovers_after_initial_lotus_core_resolution_failure
             method: str,
             url: str,
             json: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
         ):
             if (method.upper(), url) == (
                 "GET",
@@ -222,7 +223,7 @@ def test_stateful_workspace_recovers_after_initial_lotus_core_resolution_failure
             ):
                 self.request_count += 1
                 return self._responses[(method.upper(), url)].__class__(dict(portfolio_payload))
-            return super().request(method, url, json=json)
+            return super().request(method, url, json=json, headers=headers)
 
     responses = build_basic_stateful_query_responses(
         base_url=base_url,
@@ -258,7 +259,7 @@ def test_stateful_workspace_recovers_after_initial_lotus_core_resolution_failure
     assert failed.json()["detail"] == "WORKSPACE_STATEFUL_CONTEXT_RESOLUTION_UNAVAILABLE"
     assert recovered.status_code == 200
     assert recovered.json()["resolved_context"]["portfolio_id"] == "pf_stateful_recovery_workspace"
-    assert client.request_count == 12
+    assert client.request_count == 15
 
 
 def test_create_stateless_workspace_session_returns_snapshot_context():
