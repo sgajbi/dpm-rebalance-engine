@@ -33,7 +33,7 @@
 
 | Area | Before | After | Improvement Evidence |
 | --- | --- | --- | --- |
-| Complexity | Radon and Xenon tracked as pending report-only tools. | Radon config executable; inventory `A=5012, B=131`; worst block `B/10`; C/D/E/F gate enforced through `make lint`. | Complexity is now measured repeatably and regression-blocked for C-ranked and worse blocks. |
+| Complexity | Radon and Xenon tracked as pending report-only tools. | Radon config executable; inventory `A=5011, B=133`; worst block `B/10`; C/D/E/F gate enforced through `make lint`. | Complexity is now measured repeatably and regression-blocked for C-ranked and worse blocks. |
 | Maintainability | Review ledger existed but recent proposal, policy-pack, OpenAPI, proof-material, dependency-linking, and observability slices were absent. | Review ledger includes `LA-REV-611` through `LA-REV-955` with scoped findings, evidence, and follow-up. | Modularization and hotspot reductions are traceable by owner boundary and test evidence. |
 | OpenAPI quality | Spectral rules were present but report-only until Node/Spectral execution was added to CI. | Spectral config executable; OpenAPI path inventory `84`; current Spectral issue inventory `0`; enforced through `make openapi-gate`. | OpenAPI quality moved from report-only posture to enforced zero-finding gate. |
 | Architecture boundaries | Import-linter contracts were present but report-only pending installation and baseline. | Import-linter inventory `total=4, kept=4, broken=0`; architecture contracts run inside `make lint`. | Layering contracts are now executable and locally enforced. |

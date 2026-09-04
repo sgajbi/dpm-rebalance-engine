@@ -174,7 +174,6 @@ def get_idea_proposal_realization_by_conversion_intent(
     legal_entity_code: str,
     portfolio_id: str,
 ) -> IdeaProposalRealizationHistoryRecord | None:
-    """Recover one realization from its source-owned identity and exact trusted scope."""
     with closing(connect()) as connection:
         row = connection.execute(
             """
