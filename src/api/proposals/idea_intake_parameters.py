@@ -65,6 +65,11 @@ IdeaProposalIntakeIdPath = Annotated[
     Path(min_length=1, max_length=160, examples=["ipi_7a1d2b3c4d5e"]),
 ]
 
+IdeaProposalConversionIntentIdPath = Annotated[
+    str,
+    Path(min_length=1, max_length=160, examples=["conversion_intent_001"]),
+]
+
 IdeaProposalActorHeader = Annotated[str | None, Header(alias="X-Actor-Id")]
 IdeaProposalRoleHeader = Annotated[str | None, Header(alias="X-Role")]
 IdeaProposalTenantHeader = Annotated[str | None, Header(alias="X-Tenant-Id")]

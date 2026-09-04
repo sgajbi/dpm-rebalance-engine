@@ -9,6 +9,7 @@ from src.api.observability import correlation_id_var
 from src.api.proposals.errors import reject_unexpected_query_params, run_proposal_operation
 from src.api.proposals.feature_gates import assert_idea_proposal_reconciliation_enabled
 from src.api.proposals.idea_intake_parameters import (
+    IdeaProposalConversionIntentIdPath,
     IdeaProposalIntakeCorrelationIdHeader,
     IdeaProposalIntakeIdempotencyKeyHeader,
     IdeaProposalIntakeIdPath,
@@ -35,6 +36,7 @@ from src.core.proposals.idea_realization_commands import (
 from src.core.proposals.idea_realization_read_model import (
     IdeaProposalRealizationHistoryResponse,
     load_idea_proposal_realization_history,
+    load_idea_proposal_realization_history_by_conversion_intent,
 )
 from src.core.proposals.repository import ProposalRepository
 
@@ -81,6 +83,51 @@ def accept_idea_proposal_intake(
                 idempotency_key=idempotency_key,
                 principal=principal,
                 repository=repository,
+            )
+        ),
+    )
+
+
+@shared.router.get(
+    "/advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization",
+    response_model=IdeaProposalRealizationHistoryResponse,
+    tags=["Advisory Proposal Lifecycle"],
+    summary="Recover Advise-owned Idea realization by conversion intent",
+    description=(
+        "Returns the canonical Advise-owned realization after a lost intake response, using the "
+        "Idea-owned conversion-intent identity and exact trusted scope. This is a read-only "
+        "recovery path: it does not replay the intake, create work, infer acceptance from "
+        "transport, or grant downstream authority."
+    ),
+    responses={
+        status.HTTP_401_UNAUTHORIZED: {
+            "description": "Trusted realization reader principal is missing or invalid."
+        },
+        status.HTTP_403_FORBIDDEN: {
+            "description": "Principal lacks the realization read capability."
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "description": "No realization exists in the exact trusted scope."
+        },
+    },
+)
+def recover_idea_proposal_realization(
+    request: Request,
+    conversion_intent_id: IdeaProposalConversionIntentIdPath,
+    portfolio_id: IdeaProposalRealizationPortfolioHeader,
+    principal: IdeaProposalIntakePrincipal = Depends(require_idea_proposal_realization_reader),
+    repository: ProposalRepository = Depends(shared.get_proposal_repository),
+) -> IdeaProposalRealizationHistoryResponse:
+    shared._assert_lifecycle_enabled()
+    reject_unexpected_query_params(request, allowed_params=set())
+    return cast(
+        IdeaProposalRealizationHistoryResponse,
+        run_proposal_operation(
+            lambda: load_idea_proposal_realization_history_by_conversion_intent(
+                repository=repository,
+                conversion_intent_id=conversion_intent_id,
+                portfolio_id=portfolio_id,
+                principal=principal,
             )
         ),
     )

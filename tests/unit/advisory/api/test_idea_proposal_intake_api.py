@@ -561,6 +561,14 @@ def test_idea_proposal_intake_route_is_documented_in_openapi() -> None:
         if parameter["in"] == "header"
     }
     assert "X-Authorized-Portfolio-Id" in realization_headers
+    recovery_operation = openapi["paths"][
+        "/advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization"
+    ]["get"]
+    assert recovery_operation["summary"] == (
+        "Recover Advise-owned Idea realization by conversion intent"
+    )
+    assert "lost intake response" in recovery_operation["description"]
+    assert "404" in recovery_operation["responses"]
     assert "X-Authorized-Portfolio-Id" not in {
         parameter["name"] for parameter in operation["parameters"] if parameter["in"] == "header"
     }
@@ -601,6 +609,59 @@ def test_idea_proposal_realization_route_returns_one_durable_initial_outcome() -
     assert len(body["outcomes"]) == 1
     assert body["outcomes"][0]["status"] == "ACCEPTED_FOR_REVIEW"
     assert body["outcomes"][0]["terminal"] is False
+
+
+def test_idea_proposal_realization_recovery_route_survives_lost_intake_response() -> None:
+    with TestClient(app) as client:
+        accepted = client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-lost-response"),
+        )
+        response = client.get(
+            "/advisory/proposals/idea-intake/by-conversion-intent/"
+            "conversion_intent_001/realization",
+            headers=_realization_headers(),
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["intake_id"] == accepted.json()["intake_id"]
+    assert body["realization_id"] == accepted.json()["realization_id"]
+    assert body["conversion_intent_id"] == "conversion_intent_001"
+    assert body["source_evidence_fingerprint"] == accepted.json()["source_evidence_fingerprint"]
+    assert body["current_status"] == "ACCEPTED_FOR_REVIEW"
+    assert body["current_source_event_version"] == 1
+
+
+def test_idea_proposal_realization_recovery_hides_cross_scope_existence(
+    monkeypatch,
+) -> None:
+    with TestClient(app) as client:
+        client.post(
+            "/advisory/proposals/idea-intake",
+            json=_payload(),
+            headers=_headers(idempotency_key="idea-realization-recovery-scope"),
+        )
+        repository = proposals_router.get_proposal_repository()
+
+        def fail_if_queried(**_kwargs):
+            raise AssertionError("repository lookup must not occur for unauthorized scope")
+
+        monkeypatch.setattr(
+            repository,
+            "get_idea_proposal_realization_by_conversion_intent",
+            fail_if_queried,
+            raising=False,
+        )
+        response = client.get(
+            "/advisory/proposals/idea-intake/by-conversion-intent/"
+            "conversion_intent_001/realization",
+            headers=_realization_headers(portfolio_id="PB_OTHER"),
+        )
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "IDEA_PROPOSAL_REALIZATION_NOT_FOUND"
 
 
 def test_idea_proposal_realization_route_fails_closed_before_scope_mismatch_lookup(
