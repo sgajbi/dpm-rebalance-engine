@@ -33,7 +33,9 @@ not promoted here.
 - Lotus Idea intake realization: `POST /advisory/proposals/idea-intake` accepts source-safe
   conversion intent and creates deterministic durable adviser-review work plus an initial
   Advise-owned outcome when review is supported. Scoped consumers read the realization through
-  `GET /advisory/proposals/idea-intake/{intake_id}/realization`. Explicit reconciliation through
+  `GET /advisory/proposals/idea-intake/{intake_id}/realization`; a lost response is recoverable
+  read-only through the same exact scope plus the Idea-owned conversion-intent identity. Explicit
+  reconciliation through
   `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` links one
   existing same-portfolio proposal and emits bounded terminal outcomes only from authoritative
   Advise proposal state. Supportability remains `not_certified`; production IdP binding,

@@ -194,7 +194,11 @@ Boundary rules that matter:
    work item in `PENDING_ADVISER_REVIEW` and an `ACCEPTED_FOR_REVIEW` outcome; unsupported intent is
    recorded as `REJECTED_BEFORE_WORK` without creating work. `GET
    /advisory/proposals/idea-intake/{intake_id}/realization` exposes that Advise-owned truth only to
-   an exactly scoped reader. The request requires the producer-authorized canonical
+   an exactly scoped reader. If the intake response is lost after Advise commits, read-only `GET
+   /advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization`
+   recovers the same aggregate from Idea's source-owned conversion identity without replaying the
+   POST, accepting a raw idempotency key, or disclosing cross-scope existence. The request requires
+   the producer-authorized canonical
    `portfolio_id`; Advise includes it in deterministic identity and request fingerprinting and
    persists it in the receipt, so changed-portfolio key reuse fails closed without inferring scope
    from opaque identifiers. A pre-v1.6 claim has no trustworthy portfolio scope: reconcile its
@@ -223,7 +227,8 @@ Main runtime surfaces come from [src/api/main.py](src/api/main.py):
   create, version, transition, approval, delivery, execution, async, and support routes under
   `/advisory/proposals/*`
   plus source-safe `POST /advisory/proposals/idea-intake` and scoped
-  `GET /advisory/proposals/idea-intake/{intake_id}/realization` plus explicit
+  `GET /advisory/proposals/idea-intake/{intake_id}/realization`, read-only lost-response recovery by
+  scoped conversion intent, plus explicit
   `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` routes for
   `lotus-idea` conversion-intent handoff, proposal linkage, and Advise-owned outcomes
 - advisory workspace

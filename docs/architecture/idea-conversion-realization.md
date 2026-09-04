@@ -35,6 +35,10 @@ flowchart LR
    checks.
 4. `GET /advisory/proposals/idea-intake/{intake_id}/realization` returns the aggregate and its
    ordered source-event history for downstream reconciliation.
+5. If the POST response is lost after the Advise commit, `GET
+   /advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization`
+   recovers the same aggregate from the Idea-owned conversion identity and exact trusted scope.
+   Recovery is read-only and never resubmits the intake or infers acceptance from a timeout.
 
 ## Outcome Vocabulary
 

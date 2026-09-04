@@ -163,6 +163,8 @@ Current governed usage includes:
 - source-safe conversion intake and scoped realization read through
   `POST /advisory/proposals/idea-intake` and
   `GET /advisory/proposals/idea-intake/{intake_id}/realization`
+- read-only recovery after a lost intake response through scoped Idea-owned conversion identity at
+  `GET /advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization`
 - explicit same-portfolio proposal linkage and authoritative outcome reconciliation through
   `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation`
 - downstream reconciliation of policy-evaluation workflow receipts with Advise-produced
