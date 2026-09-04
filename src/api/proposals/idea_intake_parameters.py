@@ -70,10 +70,7 @@ IdeaProposalConversionIntentIdQuery = Annotated[
     Query(
         min_length=1,
         max_length=160,
-        description=(
-            "Opaque lotus-idea conversion-intent identity. A query parameter preserves "
-            "addressability for every printable identity accepted by earlier contract versions."
-        ),
+        description="Opaque identity; query transport preserves earlier printable values.",
         examples=["conversion_intent_001"],
     ),
 ]
