@@ -35,6 +35,7 @@ These endpoints accept normalized advisory input contracts and require `Idempote
 - `POST /advisory/proposals`
 - `POST /advisory/proposals/idea-intake`
 - `GET /advisory/proposals/idea-intake/{intake_id}/realization`
+- `GET /advisory/proposals/idea-intake/by-conversion-intent/{conversion_intent_id}/realization`
 - `POST /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation`
 - `GET /advisory/proposals`
 - `GET /advisory/proposals/{proposal_id}`
@@ -85,7 +86,9 @@ one deterministic durable work item in `PENDING_ADVISER_REVIEW` plus an append-o
 `GET /advisory/proposals/idea-intake/{intake_id}/realization` returns this Advise-owned state only
 when the trusted reader capability and tenant, legal-entity, and producer-authorized portfolio scope
 all match; mismatched scope is not disclosed. The realization survives expiry or purge of the
-24-hour transport replay claim. `POST
+24-hour transport replay claim. When the original response is lost, the conversion-intent route
+recovers that same aggregate read-only from Idea's source identity and exact trusted scope; it
+does not accept raw idempotency material or create another intake. `POST
 /advisory/proposals/idea-intake/{intake_id}/realization/proposal-reconciliation` requires the write
 capability, exact trusted scope, an existing same-portfolio proposal, and the expected source-event
 version. It links one proposal once, appends `PROPOSAL_LINKED`, and emits a terminal advisory
