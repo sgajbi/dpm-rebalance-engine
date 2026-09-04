@@ -136,6 +136,14 @@ def test_local_docker_compose_does_not_publish_internal_postgres_port() -> None:
     assert '"5432:5432"' not in compose_text
 
 
+def test_local_docker_compose_waits_for_required_postgres_health() -> None:
+    compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
+
+    assert (
+        "    depends_on:\n      postgres:\n        condition: service_healthy\n    ports:\n"
+    ) in compose_text
+
+
 def test_local_docker_compose_wires_required_workspace_postgres_dsn() -> None:
     compose_text = Path("docker-compose.yml").read_text(encoding="utf-8")
 

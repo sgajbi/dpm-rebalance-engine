@@ -6,6 +6,9 @@ services:
     image: lotus-advise:latest
     init: true
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
