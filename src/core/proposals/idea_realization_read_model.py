@@ -79,13 +79,39 @@ def load_idea_proposal_realization_history(
     principal: IdeaProposalIntakePrincipal,
 ) -> IdeaProposalRealizationHistoryResponse:
     normalized_intake_id = _required_printable(intake_id, "IDEA_PROPOSAL_INTAKE_ID_REQUIRED")
-    normalized_portfolio_id = _required_printable(
-        portfolio_id, "IDEA_PROPOSAL_PORTFOLIO_ID_REQUIRED"
+    normalized_portfolio_id = _authorized_portfolio_id(
+        portfolio_id=portfolio_id,
+        principal=principal,
     )
-    if principal.authorized_portfolio_id != normalized_portfolio_id:
-        raise ProposalNotFoundError("IDEA_PROPOSAL_REALIZATION_NOT_FOUND")
     history = repository.get_idea_proposal_realization(
         intake_id=normalized_intake_id,
+        tenant_id=principal.tenant_id,
+        legal_entity_code=principal.legal_entity_code,
+        portfolio_id=normalized_portfolio_id,
+    )
+    if history is None:
+        raise ProposalNotFoundError("IDEA_PROPOSAL_REALIZATION_NOT_FOUND")
+    return build_idea_proposal_realization_history_response(history)
+
+
+def load_idea_proposal_realization_history_by_conversion_intent(
+    *,
+    repository: ProposalRepository,
+    conversion_intent_id: str,
+    portfolio_id: str,
+    principal: IdeaProposalIntakePrincipal,
+) -> IdeaProposalRealizationHistoryResponse:
+    """Recover Advise-owned state when the original intake response was unavailable."""
+    normalized_conversion_intent_id = _required_printable(
+        conversion_intent_id,
+        "IDEA_PROPOSAL_CONVERSION_INTENT_ID_REQUIRED",
+    )
+    normalized_portfolio_id = _authorized_portfolio_id(
+        portfolio_id=portfolio_id,
+        principal=principal,
+    )
+    history = repository.get_idea_proposal_realization_by_conversion_intent(
+        conversion_intent_id=normalized_conversion_intent_id,
         tenant_id=principal.tenant_id,
         legal_entity_code=principal.legal_entity_code,
         portfolio_id=normalized_portfolio_id,
@@ -138,4 +164,11 @@ def _required_printable(value: str, detail: str) -> str:
     normalized = value.strip()
     if not normalized or not normalized.isprintable():
         raise ProposalValidationError(detail)
+    return normalized
+
+
+def _authorized_portfolio_id(*, portfolio_id: str, principal: IdeaProposalIntakePrincipal) -> str:
+    normalized = _required_printable(portfolio_id, "IDEA_PROPOSAL_PORTFOLIO_ID_REQUIRED")
+    if principal.authorized_portfolio_id != normalized:
+        raise ProposalNotFoundError("IDEA_PROPOSAL_REALIZATION_NOT_FOUND")
     return normalized

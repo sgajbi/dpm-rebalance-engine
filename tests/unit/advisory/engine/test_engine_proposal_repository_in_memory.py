@@ -111,9 +111,25 @@ def test_idea_intake_creates_one_scope_checked_review_realization() -> None:
     assert history.realization.review_work_id == "iarw_123456789abc"
     assert history.realization.current_status == "ACCEPTED_FOR_REVIEW"
     assert [outcome.source_event_version for outcome in history.outcomes] == [1]
+    recovered = repository.get_idea_proposal_realization_by_conversion_intent(
+        conversion_intent_id=record.realization.conversion_intent_id,
+        tenant_id=record.realization.tenant_id,
+        legal_entity_code=record.realization.legal_entity_code,
+        portfolio_id=record.realization.portfolio_id,
+    )
+    assert recovered == history
     assert (
         repository.get_idea_proposal_realization(
             intake_id=record.realization.intake_id,
+            tenant_id=record.realization.tenant_id,
+            legal_entity_code=record.realization.legal_entity_code,
+            portfolio_id="PB_OTHER",
+        )
+        is None
+    )
+    assert (
+        repository.get_idea_proposal_realization_by_conversion_intent(
+            conversion_intent_id=record.realization.conversion_intent_id,
             tenant_id=record.realization.tenant_id,
             legal_entity_code=record.realization.legal_entity_code,
             portfolio_id="PB_OTHER",

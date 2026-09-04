@@ -42,6 +42,15 @@ class ProposalRepository(Protocol):
         portfolio_id: str,
     ) -> Optional[IdeaProposalRealizationHistoryRecord]: ...
 
+    def get_idea_proposal_realization_by_conversion_intent(
+        self,
+        *,
+        conversion_intent_id: str,
+        tenant_id: str,
+        legal_entity_code: str,
+        portfolio_id: str,
+    ) -> Optional[IdeaProposalRealizationHistoryRecord]: ...
+
     def advance_idea_proposal_realization(
         self,
         *,

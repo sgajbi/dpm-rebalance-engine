@@ -288,11 +288,14 @@ class _FakeConnection:
         if "FROM proposal_idea_review_realizations" in sql:
             if "WHERE realization_id = %s" in sql:
                 return _FakeCursor(self.idea_realizations.get(args[0]))
+            identity_field = (
+                "conversion_intent_id" if "WHERE conversion_intent_id = %s" in sql else "intake_id"
+            )
             row = next(
                 (
                     stored
                     for stored in self.idea_realizations.values()
-                    if stored["intake_id"] == args[0]
+                    if stored[identity_field] == args[0]
                     and stored["tenant_id"] == args[1]
                     and stored["legal_entity_code"] == args[2]
                     and stored["portfolio_id"] == args[3]
@@ -763,9 +766,25 @@ def test_postgres_repository_reads_realization_only_in_exact_trusted_scope(monke
     assert history is not None
     assert history.realization == record.realization
     assert history.outcomes == (record.initial_outcome,)
+    recovered = repository.get_idea_proposal_realization_by_conversion_intent(
+        conversion_intent_id=record.realization.conversion_intent_id,
+        tenant_id=record.realization.tenant_id,
+        legal_entity_code=record.realization.legal_entity_code,
+        portfolio_id=record.realization.portfolio_id,
+    )
+    assert recovered == history
     assert (
         repository.get_idea_proposal_realization(
             intake_id=record.realization.intake_id,
+            tenant_id=record.realization.tenant_id,
+            legal_entity_code=record.realization.legal_entity_code,
+            portfolio_id="PB_SG_OTHER_002",
+        )
+        is None
+    )
+    assert (
+        repository.get_idea_proposal_realization_by_conversion_intent(
+            conversion_intent_id=record.realization.conversion_intent_id,
             tenant_id=record.realization.tenant_id,
             legal_entity_code=record.realization.legal_entity_code,
             portfolio_id="PB_SG_OTHER_002",

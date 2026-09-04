@@ -163,21 +163,55 @@ def get_idea_proposal_realization(
         ).fetchone()
         if row is None:
             return None
-        realization = _realization_from_row(row)
-        outcome_rows = connection.execute(
+        return _history_from_row(connection=connection, row=row)
+
+
+def get_idea_proposal_realization_by_conversion_intent(
+    *,
+    connect: Callable[[], Any],
+    conversion_intent_id: str,
+    tenant_id: str,
+    legal_entity_code: str,
+    portfolio_id: str,
+) -> IdeaProposalRealizationHistoryRecord | None:
+    """Recover one realization from its source-owned identity and exact trusted scope."""
+    with closing(connect()) as connection:
+        row = connection.execute(
             """
-            SELECT outcome_id, realization_id, source_event_version, status, reason_code,
-                   occurred_at_utc, review_work_id, proposal_id, terminal
-            FROM proposal_idea_realization_outcomes
-            WHERE realization_id = %s
-            ORDER BY source_event_version
+            SELECT realization_id, intake_id, review_work_id, review_work_status, proposal_id,
+                   tenant_id, legal_entity_code,
+                   portfolio_id, idea_candidate_id, conversion_intent_id,
+                   source_evidence_fingerprint, current_status, current_source_event_version,
+                   created_at_utc, updated_at_utc
+            FROM proposal_idea_review_realizations
+            WHERE conversion_intent_id = %s
+              AND tenant_id = %s
+              AND legal_entity_code = %s
+              AND portfolio_id = %s
             """,
-            (realization.realization_id,),
-        ).fetchall()
-        return IdeaProposalRealizationHistoryRecord(
-            realization=realization,
-            outcomes=tuple(_outcome_from_row(outcome_row) for outcome_row in outcome_rows),
-        )
+            (conversion_intent_id, tenant_id, legal_entity_code, portfolio_id),
+        ).fetchone()
+        if row is None:
+            return None
+        return _history_from_row(connection=connection, row=row)
+
+
+def _history_from_row(*, connection: Any, row: Any) -> IdeaProposalRealizationHistoryRecord:
+    realization = _realization_from_row(row)
+    outcome_rows = connection.execute(
+        """
+        SELECT outcome_id, realization_id, source_event_version, status, reason_code,
+               occurred_at_utc, review_work_id, proposal_id, terminal
+        FROM proposal_idea_realization_outcomes
+        WHERE realization_id = %s
+        ORDER BY source_event_version
+        """,
+        (realization.realization_id,),
+    ).fetchall()
+    return IdeaProposalRealizationHistoryRecord(
+        realization=realization,
+        outcomes=tuple(_outcome_from_row(outcome_row) for outcome_row in outcome_rows),
+    )
 
 
 def advance_idea_proposal_realization(

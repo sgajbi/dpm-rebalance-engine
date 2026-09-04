@@ -42,6 +42,22 @@ class PostgresIdeaIntakeRepositoryMixin:
             portfolio_id=portfolio_id,
         )
 
+    def get_idea_proposal_realization_by_conversion_intent(
+        self,
+        *,
+        conversion_intent_id: str,
+        tenant_id: str,
+        legal_entity_code: str,
+        portfolio_id: str,
+    ) -> Optional[IdeaProposalRealizationHistoryRecord]:
+        return postgres_idea_intakes.get_idea_proposal_realization_by_conversion_intent(
+            connect=self._connect,
+            conversion_intent_id=conversion_intent_id,
+            tenant_id=tenant_id,
+            legal_entity_code=legal_entity_code,
+            portfolio_id=portfolio_id,
+        )
+
     def advance_idea_proposal_realization(
         self,
         *,

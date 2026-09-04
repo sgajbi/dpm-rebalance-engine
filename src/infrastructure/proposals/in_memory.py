@@ -221,19 +221,49 @@ class InMemoryProposalRepository(ProposalRepository):
             realization_id = self._idea_realization_by_intake.get(
                 (tenant_id, legal_entity_code, portfolio_id, intake_id)
             )
-            if realization_id is None:
-                return None
-            realization = self._idea_proposal_realizations[realization_id]
-            outcomes = tuple(
-                sorted(
-                    self._idea_proposal_realization_outcomes.get(realization_id, []),
-                    key=lambda outcome: outcome.source_event_version,
-                )
+            return self._idea_realization_history(realization_id)
+
+    def get_idea_proposal_realization_by_conversion_intent(
+        self,
+        *,
+        conversion_intent_id: str,
+        tenant_id: str,
+        legal_entity_code: str,
+        portfolio_id: str,
+    ) -> Optional[IdeaProposalRealizationHistoryRecord]:
+        with self._lock:
+            realization_id = next(
+                (
+                    realization.realization_id
+                    for realization in self._idea_proposal_realizations.values()
+                    if (
+                        realization.tenant_id,
+                        realization.legal_entity_code,
+                        realization.portfolio_id,
+                        realization.conversion_intent_id,
+                    )
+                    == (tenant_id, legal_entity_code, portfolio_id, conversion_intent_id)
+                ),
+                None,
             )
-            return IdeaProposalRealizationHistoryRecord(
-                realization=copy_record(realization),
-                outcomes=tuple(copy_records(outcomes)),
+            return self._idea_realization_history(realization_id)
+
+    def _idea_realization_history(
+        self, realization_id: str | None
+    ) -> Optional[IdeaProposalRealizationHistoryRecord]:
+        if realization_id is None:
+            return None
+        realization = self._idea_proposal_realizations[realization_id]
+        outcomes = tuple(
+            sorted(
+                self._idea_proposal_realization_outcomes.get(realization_id, []),
+                key=lambda outcome: outcome.source_event_version,
             )
+        )
+        return IdeaProposalRealizationHistoryRecord(
+            realization=copy_record(realization),
+            outcomes=tuple(copy_records(outcomes)),
+        )
 
     def advance_idea_proposal_realization(
         self,
