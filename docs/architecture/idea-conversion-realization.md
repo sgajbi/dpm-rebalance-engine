@@ -39,8 +39,8 @@ flowchart LR
    /advisory/proposals/idea-intake/realization?conversion_intent_id={conversion_intent_id}`
    recovers the same aggregate from the Idea-owned conversion identity and exact trusted scope.
    Recovery is read-only and never resubmits the intake or infers acceptance from a timeout.
-   Intake rejects conversion-intent identities that are not URL-safe path segments, so every
-   committed identity remains addressable by this recovery contract.
+   The conversion identity is an opaque encoded query value, so previously accepted printable
+   identities remain addressable by this recovery contract without rewriting durable records.
 
 ## Outcome Vocabulary
 
