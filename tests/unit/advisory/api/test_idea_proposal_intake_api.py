@@ -313,12 +313,14 @@ def test_idea_proposal_intake_route_rejects_invalid_idempotency_keys() -> None:
     assert [response.status_code for response in responses] == [422, 422]
 
 
-def test_idea_proposal_intake_route_requires_canonical_portfolio_scope() -> None:
+def test_idea_proposal_intake_route_requires_addressable_identity_and_canonical_scope() -> None:
     missing = _payload()
     missing.pop("portfolio_id")
     blank = {**_payload(), "portfolio_id": "   "}
     oversized = {**_payload(), "portfolio_id": "p" * 161}
     control_bearing = {**_payload(), "portfolio_id": "PB_SG_GLOBAL\nBAL_001"}
+    unaddressable = {**_payload(), "conversion_intent_id": "conversion/intent"}
+    invalid_payloads = (missing, blank, oversized, control_bearing, unaddressable)
 
     with TestClient(app) as client:
         responses = [
@@ -327,10 +329,10 @@ def test_idea_proposal_intake_route_requires_canonical_portfolio_scope() -> None
                 json=payload,
                 headers=_headers(idempotency_key=f"portfolio-validation-{index}"),
             )
-            for index, payload in enumerate((missing, blank, oversized, control_bearing))
+            for index, payload in enumerate(invalid_payloads)
         ]
 
-    assert [response.status_code for response in responses] == [422, 422, 422, 422]
+    assert [response.status_code for response in responses] == [422, 422, 422, 422, 422]
 
 
 def test_idea_proposal_intake_idempotency_is_namespaced_by_trusted_scope() -> None:
