@@ -137,14 +137,10 @@ def resolve_authoritative_portfolio_state(
 
 
 def _requested_business_date(value: str) -> date:
-    normalized = value.strip()
     try:
-        return date.fromisoformat(normalized)
-    except ValueError:
-        try:
-            return datetime.fromisoformat(normalized.replace("Z", "+00:00")).date()
-        except ValueError as exc:
-            raise AuthoritativePortfolioStateError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID") from exc
+        return datetime.fromisoformat(value.strip().replace("Z", "+00:00")).date()
+    except ValueError as exc:
+        raise AuthoritativePortfolioStateError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID") from exc
 
 
 def _to_advise_record(record: _CoreSourceRecord) -> SourceProvenanceRecord:

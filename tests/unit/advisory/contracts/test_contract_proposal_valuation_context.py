@@ -83,6 +83,12 @@ def test_valuation_context_preserves_ready_source_evidence_for_both_states() -> 
     assert context.current_state.effective_reporting_currency == "USD"
     assert context.current_state.reason_code is None
 
+    timestamp_context = _context(
+        source_provenance=_provenance(), requested_as_of_date="2026-03-25T23:59:59-05:00"
+    )
+    assert timestamp_context.current_state.requested_as_of_date == "2026-03-25T23:59:59-05:00"
+    assert timestamp_context.current_state.supportability == "READY"
+
 
 def test_valuation_context_restricts_unhonored_requested_date_and_currency() -> None:
     context = _context(

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from src.core.advisory.valuation_context_models import (
     ProposalValuationContext,
     ProposalValuationContextState,
@@ -111,7 +113,18 @@ def _primary_requested_mismatch_reason(
 
 
 def _values_mismatch(requested: str | None, effective: str | None) -> bool:
-    return requested is not None and effective is not None and requested != effective
+    return (
+        requested is not None
+        and effective is not None
+        and (_comparison_value(requested) != _comparison_value(effective))
+    )
+
+
+def _comparison_value(value: str) -> str:
+    try:
+        return datetime.fromisoformat(value.strip().replace("Z", "+00:00")).date().isoformat()
+    except ValueError:
+        return value.strip()
 
 
 def _supportability(
