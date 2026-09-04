@@ -121,6 +121,7 @@ def _values_mismatch(requested: str | None, effective: str | None) -> bool:
 
 
 def _comparison_value(value: str) -> str:
+    """Normalize ISO date/time evidence to its calendar date for equality checks."""
     try:
         return datetime.fromisoformat(value.strip().replace("Z", "+00:00")).date().isoformat()
     except ValueError:
