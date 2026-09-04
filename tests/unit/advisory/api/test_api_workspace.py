@@ -195,7 +195,7 @@ def test_stateful_workspace_reuses_cached_lotus_core_context_across_re_evaluatio
 
     assert first.status_code == 200
     assert second.status_code == 200
-    assert client.request_count == 5
+    assert client.request_count == 6
 
 
 def test_stateful_workspace_recovers_after_initial_lotus_core_resolution_failure(
@@ -259,7 +259,7 @@ def test_stateful_workspace_recovers_after_initial_lotus_core_resolution_failure
     assert failed.json()["detail"] == "WORKSPACE_STATEFUL_CONTEXT_RESOLUTION_UNAVAILABLE"
     assert recovered.status_code == 200
     assert recovered.json()["resolved_context"]["portfolio_id"] == "pf_stateful_recovery_workspace"
-    assert client.request_count == 15
+    assert client.request_count == 18
 
 
 def test_create_stateless_workspace_session_returns_snapshot_context():

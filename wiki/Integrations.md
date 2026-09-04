@@ -71,8 +71,10 @@ Important rule:
   metadata from `PortfolioStateSnapshot:v1`: stable snapshot identity, source-owned effective date,
   source hash, valuation timestamp, and freshness posture. Advise accepts only current evidence with
   `READY` / `SOURCE_EVIDENCE_READY` valuation supportability and coherent portfolio and market-data
-  dates. The separate portfolio, positions, and cash reads continue to supply simulation input rows;
-  they cannot manufacture or override authoritative provenance. Missing, stale, malformed, or
+  dates, never a future effective date. The separate portfolio, positions, and cash reads continue
+  to supply simulation input rows; identical source identities and hashes must fence those reads
+  before and after so concurrent Core revision changes fail closed. Component reads cannot
+  manufacture or override authoritative provenance. Missing, stale, malformed, drifting, or
   conflicting snapshot evidence fails closed before construction, cache writes, persistence, or
   replay. Raw Lotus Core payloads are never stored in proposal lineage.
 - source-derived FX rates must be finite, strictly positive, and as-of eligible before valuation.

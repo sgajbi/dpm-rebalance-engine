@@ -294,26 +294,14 @@ def _fetch_stateful_context_source_payloads(
             "LOTUS_CORE_STATEFUL_CONTEXT_INVALID"
         ) from exc
     with httpx.Client(timeout=_resolve_timeout()) as client:
-        core_snapshot_payload = _request_json(
+        authoritative_state = _fetch_authoritative_portfolio_state(
             client,
-            method="POST",
-            base_url=control_plane_base_url,
-            path=CORE_SNAPSHOT_PATH.format(portfolio_id=stateful_input.portfolio_id),
-            error_code="LOTUS_CORE_STATEFUL_CONTEXT_UNAVAILABLE",
-            json_body=snapshot_request,
-            headers=core_snapshot_headers(tenant_id=tenant_id),
+            control_plane_base_url=control_plane_base_url,
+            stateful_input=stateful_input,
+            tenant_id=tenant_id,
+            snapshot_request=snapshot_request,
         )
-        try:
-            resolved_as_of, source_provenance = resolve_authoritative_portfolio_state(
-                core_snapshot_payload,
-                expected_portfolio_id=stateful_input.portfolio_id,
-                requested_as_of=stateful_input.as_of,
-                expected_tenant_id=tenant_id,
-            )
-        except AuthoritativePortfolioStateError as exc:
-            raise LotusCoreStatefulContextUnavailableError(
-                "LOTUS_CORE_STATEFUL_CONTEXT_INVALID"
-            ) from exc
+        resolved_as_of, source_provenance = authoritative_state
         portfolio_payload = _request_json(
             client,
             method="GET",
@@ -358,6 +346,14 @@ def _fetch_stateful_context_source_payloads(
         except (LotusCoreStatefulContextUnavailableError, AssertionError):
             classification_taxonomy = None
             classification_taxonomy_unavailable = True
+        if authoritative_state != _fetch_authoritative_portfolio_state(
+            client,
+            control_plane_base_url=control_plane_base_url,
+            stateful_input=stateful_input,
+            tenant_id=tenant_id,
+            snapshot_request=snapshot_request,
+        ):
+            raise LotusCoreStatefulContextUnavailableError("LOTUS_CORE_STATEFUL_CONTEXT_INVALID")
     _validate_stateful_payload_identity(
         portfolio_payload=portfolio_payload,
         positions_payload=positions_payload,
@@ -376,6 +372,36 @@ def _fetch_stateful_context_source_payloads(
         classification_taxonomy=classification_taxonomy,
         classification_taxonomy_unavailable=classification_taxonomy_unavailable,
     )
+
+
+def _fetch_authoritative_portfolio_state(
+    client: httpx.Client,
+    *,
+    control_plane_base_url: str,
+    stateful_input: WorkspaceStatefulInput,
+    tenant_id: str,
+    snapshot_request: dict[str, object],
+) -> tuple[str, SourceProvenanceEnvelope]:
+    payload = _request_json(
+        client,
+        method="POST",
+        base_url=control_plane_base_url,
+        path=CORE_SNAPSHOT_PATH.format(portfolio_id=stateful_input.portfolio_id),
+        error_code="LOTUS_CORE_STATEFUL_CONTEXT_UNAVAILABLE",
+        json_body=snapshot_request,
+        headers=core_snapshot_headers(tenant_id=tenant_id),
+    )
+    try:
+        return resolve_authoritative_portfolio_state(
+            payload,
+            expected_portfolio_id=stateful_input.portfolio_id,
+            requested_as_of=stateful_input.as_of,
+            expected_tenant_id=tenant_id,
+        )
+    except AuthoritativePortfolioStateError as exc:
+        raise LotusCoreStatefulContextUnavailableError(
+            "LOTUS_CORE_STATEFUL_CONTEXT_INVALID"
+        ) from exc
 
 
 def _required_tenant_id() -> str:

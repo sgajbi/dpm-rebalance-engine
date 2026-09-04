@@ -83,6 +83,9 @@ Core snapshot could not be obtained. `LOTUS_CORE_STATEFUL_CONTEXT_INVALID` means
 `PortfolioStateSnapshot:v1` was malformed, stale, unsupported, or inconsistent in portfolio,
 tenant, requested scope, effective date, or typed provenance. Neither condition permits fallback to
 the caller's date or to identities derived from the lower-level portfolio, positions, or cash reads.
+Advise also returns `LOTUS_CORE_STATEFUL_CONTEXT_INVALID` when an effective date is in the future or
+when the authoritative source identities/hashes change across the fenced component-read window;
+retry only after Core presents one stable coherent revision.
 
 ## Runtime Configuration Guardrails
 

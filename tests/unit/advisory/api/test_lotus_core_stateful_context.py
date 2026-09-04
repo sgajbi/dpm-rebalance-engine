@@ -155,6 +155,27 @@ class _FakeClient:
         return self._responses[key]
 
 
+def _empty_stateful_responses(
+    base_url: str,
+    *,
+    portfolio_id: str = "DEMO_ADV_USD_001",
+    as_of: str = "2026-03-27",
+    base_currency: str = "USD",
+) -> dict[tuple[str, str], _FakeResponse]:
+    portfolio_url = f"{base_url}/portfolios/{portfolio_id}"
+    return {
+        ("GET", portfolio_url): _FakeResponse(
+            {"portfolio_id": portfolio_id, "base_currency": base_currency}
+        ),
+        ("GET", f"{portfolio_url}/positions"): _FakeResponse(
+            {"portfolio_id": portfolio_id, "positions": []}
+        ),
+        ("GET", f"{portfolio_url}/cash-balances"): _FakeResponse(
+            {"portfolio_id": portfolio_id, "resolved_as_of_date": as_of, "cash_accounts": []}
+        ),
+    }
+
+
 @pytest.fixture
 def stateful_input():
     from src.core.workspace.models import WorkspaceStatefulInput
@@ -1769,6 +1790,44 @@ def test_invalid_authoritative_snapshot_fails_before_weaker_source_reads(
     assert client.requests[0][2]["consumer_system"] == "lotus-advise"
 
 
+def test_stateful_resolver_rejects_revision_change_during_component_reads(
+    monkeypatch, stateful_input
+) -> None:
+    base_url = "http://core-query.test"
+    monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://core-control.test")
+    responses = _empty_stateful_responses(base_url)
+
+    class _RevisionChangingClient(_FakeClient):
+        snapshot_reads = 0
+
+        def request(self, method, url, json=None, headers=None):
+            response = super().request(method, url, json=json, headers=headers)
+            if method.upper() == "POST" and url.endswith("/core-snapshot"):
+                self.snapshot_reads += 1
+                if self.snapshot_reads == 2:
+                    record = response._payload["source_provenance"]["portfolio"]
+                    record["source_hash"] = "c" * 64
+                    record["source_id"] = (
+                        f"lotus-core:portfolio-state-snapshot:portfolio:DEMO_ADV_USD_001:{'c' * 24}"
+                    )
+            return response
+
+    client = _RevisionChangingClient(responses)
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.stateful_context.httpx.Client",
+        lambda timeout: client,
+    )
+
+    with pytest.raises(
+        LotusCoreStatefulContextUnavailableError,
+        match="LOTUS_CORE_STATEFUL_CONTEXT_INVALID",
+    ):
+        resolve_stateful_context_with_lotus_core(stateful_input)
+
+    assert client.snapshot_reads == 2
+
+
 def test_stateful_resolver_requires_tenant_before_opening_core_client(
     monkeypatch, stateful_input
 ) -> None:
@@ -1878,36 +1937,7 @@ def test_resolve_stateful_context_with_lotus_core_reuses_cached_context(
     monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
     monkeypatch.setenv("LOTUS_CORE_BASE_URL", control_plane_base_url)
     request_counter = {"count": 0}
-    responses = {
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "base_currency": "USD"}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/positions"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "positions": []}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/cash-balances"): _FakeResponse(
-            {
-                "portfolio_id": "DEMO_ADV_USD_001",
-                "resolved_as_of_date": "2026-03-27",
-                "cash_accounts": [],
-            }
-        ),
-        (
-            "POST",
-            f"{control_plane_base_url}/integration/instruments/enrichment-bulk",
-        ): _FakeResponse(
-            {
-                "records": [
-                    {
-                        "security_id": "SEC_AAPL_US",
-                        "issuer_id": "ISSUER_AAPL",
-                        "ultimate_parent_issuer_id": "ISSUER_AAPL",
-                        "ultimate_parent_issuer_name": "Apple Inc.",
-                    }
-                ]
-            }
-        ),
-    }
+    responses = _empty_stateful_responses(base_url)
 
     class _CountingFakeClient(_FakeClient):
         def request(
@@ -1929,7 +1959,7 @@ def test_resolve_stateful_context_with_lotus_core_reuses_cached_context(
     second = resolve_stateful_context_with_lotus_core(stateful_input)
 
     assert first.resolved_context == second.resolved_context
-    assert request_counter["count"] == 5
+    assert request_counter["count"] == 6
     stats = get_stateful_context_cache_stats_for_tests()
     assert stats["resolved_context"].misses == 1
     assert stats["resolved_context"].hits == 1
@@ -2013,21 +2043,7 @@ def test_resolve_stateful_context_with_lotus_core_refetches_when_cache_ttl_is_ze
     monkeypatch.setenv("LOTUS_CORE_BASE_URL", control_plane_base_url)
     monkeypatch.setenv("LOTUS_CORE_STATEFUL_CONTEXT_CACHE_TTL_SECONDS", "0")
     request_counter = {"count": 0}
-    responses = {
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "base_currency": "USD"}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/positions"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "positions": []}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/cash-balances"): _FakeResponse(
-            {
-                "portfolio_id": "DEMO_ADV_USD_001",
-                "resolved_as_of_date": "2026-03-27",
-                "cash_accounts": [],
-            }
-        ),
-    }
+    responses = _empty_stateful_responses(base_url)
 
     class _CountingFakeClient(_FakeClient):
         def request(
@@ -2048,7 +2064,7 @@ def test_resolve_stateful_context_with_lotus_core_refetches_when_cache_ttl_is_ze
     resolve_stateful_context_with_lotus_core(stateful_input)
     resolve_stateful_context_with_lotus_core(stateful_input)
 
-    assert request_counter["count"] == 10
+    assert request_counter["count"] == 12
     fetch_stats = get_stateful_context_fetch_stats_for_tests()
     assert_core_context_fetch_counts(fetch_stats, portfolio=2, positions=2, cash=2)
 
@@ -2087,14 +2103,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_distinct_as_of_inputs
                 )
             return super().request(method, url, json=json)
 
-    responses = {
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "base_currency": "USD"}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/positions"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "positions": []}
-        ),
-    }
+    responses = _empty_stateful_responses(base_url)
     monkeypatch.setattr(
         "src.integrations.lotus_core.stateful_context.httpx.Client",
         lambda timeout: _AsOfAwareFakeClient(responses),
@@ -2113,7 +2122,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_distinct_as_of_inputs
         first.resolved_context.portfolio_snapshot_id
         != second.resolved_context.portfolio_snapshot_id
     )
-    assert request_counter["count"] == 10
+    assert request_counter["count"] == 12
     fetch_stats = get_stateful_context_fetch_stats_for_tests()
     assert_core_context_fetch_counts(fetch_stats, portfolio=2, positions=2, cash=2)
 
@@ -2126,21 +2135,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_environment_scope(
     base_url = "http://host.docker.internal:8201"
     monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
     request_counter = {"count": 0}
-    responses = {
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "base_currency": "USD"}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/positions"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "positions": []}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/cash-balances"): _FakeResponse(
-            {
-                "portfolio_id": "DEMO_ADV_USD_001",
-                "resolved_as_of_date": "2026-03-27",
-                "cash_accounts": [],
-            }
-        ),
-    }
+    responses = _empty_stateful_responses(base_url)
 
     class _CountingFakeClient(_FakeClient):
         def request(
@@ -2168,7 +2163,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_environment_scope(
     second = resolve_stateful_context_with_lotus_core(stateful_input)
 
     assert first.resolved_context == second.resolved_context
-    assert request_counter["count"] == 10
+    assert request_counter["count"] == 12
     stats = get_stateful_context_cache_stats_for_tests()
     assert stats["resolved_context"].misses == 2
     assert stats["resolved_context"].hits == 0
@@ -2184,21 +2179,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_optional_identity_dim
     base_url = "http://host.docker.internal:8201"
     monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
     request_counter = {"count": 0}
-    responses = {
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "base_currency": "USD"}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/positions"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "positions": []}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/cash-balances"): _FakeResponse(
-            {
-                "portfolio_id": "DEMO_ADV_USD_001",
-                "resolved_as_of_date": "2026-03-27",
-                "cash_accounts": [],
-            }
-        ),
-    }
+    responses = _empty_stateful_responses(base_url)
 
     class _CountingFakeClient(_FakeClient):
         def request(
@@ -2234,7 +2215,7 @@ def test_resolve_stateful_context_with_lotus_core_isolates_optional_identity_dim
     )
 
     assert first.resolved_context == second.resolved_context
-    assert request_counter["count"] == 10
+    assert request_counter["count"] == 12
     stats = get_stateful_context_cache_stats_for_tests()
     assert stats["resolved_context"].misses == 2
     assert stats["resolved_context"].hits == 0
@@ -2252,20 +2233,8 @@ def test_resolve_stateful_context_with_lotus_core_evicts_oldest_cache_entry(
     monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
     monkeypatch.setenv("LOTUS_CORE_STATEFUL_CONTEXT_CACHE_MAX_SIZE", "1")
     request_counter = {"count": 0}
-    responses = {
-        ("GET", f"{base_url}/portfolios/pf_cache_a"): _FakeResponse(
-            {"portfolio_id": "pf_cache_a", "base_currency": "USD"}
-        ),
-        ("GET", f"{base_url}/portfolios/pf_cache_a/positions"): _FakeResponse(
-            {"portfolio_id": "pf_cache_a", "positions": []}
-        ),
-        ("GET", f"{base_url}/portfolios/pf_cache_b"): _FakeResponse(
-            {"portfolio_id": "pf_cache_b", "base_currency": "USD"}
-        ),
-        ("GET", f"{base_url}/portfolios/pf_cache_b/positions"): _FakeResponse(
-            {"portfolio_id": "pf_cache_b", "positions": []}
-        ),
-    }
+    responses = _empty_stateful_responses(base_url, portfolio_id="pf_cache_a")
+    responses.update(_empty_stateful_responses(base_url, portfolio_id="pf_cache_b"))
 
     class _CountingFakeClient(_FakeClient):
         def request(
@@ -2312,7 +2281,7 @@ def test_resolve_stateful_context_with_lotus_core_evicts_oldest_cache_entry(
     resolve_stateful_context_with_lotus_core(second)
     resolve_stateful_context_with_lotus_core(first)
 
-    assert request_counter["count"] == 15
+    assert request_counter["count"] == 18
 
 
 def test_resolve_stateful_context_with_lotus_core_does_not_cache_failures(
@@ -2321,21 +2290,7 @@ def test_resolve_stateful_context_with_lotus_core_does_not_cache_failures(
     base_url = "http://host.docker.internal:8201"
     monkeypatch.setenv("LOTUS_CORE_QUERY_BASE_URL", base_url)
     request_counter = {"count": 0}
-    responses = {
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "base_currency": ""}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/positions"): _FakeResponse(
-            {"portfolio_id": "DEMO_ADV_USD_001", "positions": []}
-        ),
-        ("GET", f"{base_url}/portfolios/DEMO_ADV_USD_001/cash-balances"): _FakeResponse(
-            {
-                "portfolio_id": "DEMO_ADV_USD_001",
-                "resolved_as_of_date": "2026-03-27",
-                "cash_accounts": [],
-            }
-        ),
-    }
+    responses = _empty_stateful_responses(base_url, base_currency="")
 
     class _CountingFakeClient(_FakeClient):
         def request(
@@ -2358,7 +2313,7 @@ def test_resolve_stateful_context_with_lotus_core_does_not_cache_failures(
     with pytest.raises(LotusCoreStatefulContextUnavailableError):
         resolve_stateful_context_with_lotus_core(stateful_input)
 
-    assert request_counter["count"] == 10
+    assert request_counter["count"] == 12
 
 
 def test_resolve_stateful_context_with_lotus_core_recovers_after_failed_resolution(
@@ -2422,7 +2377,7 @@ def test_resolve_stateful_context_with_lotus_core_recovers_after_failed_resoluti
     recovered = resolve_stateful_context_with_lotus_core(stateful_input)
 
     assert recovered.resolved_context.portfolio_id == "DEMO_ADV_USD_001"
-    assert request_counter["count"] == 10
+    assert request_counter["count"] == 12
     stats = get_stateful_context_cache_stats_for_tests()
     assert stats["resolved_context"].misses == 2
     assert stats["resolved_context"].expirations == 0
