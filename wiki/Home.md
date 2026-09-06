@@ -25,7 +25,7 @@ unless a supported-feature page and implementation evidence say otherwise.
 - `make check`
 - `make demo-certification-live`
 - `python scripts/postgres_migrate.py --target all`
-- `python <workspace-root>/lotus-platform/codex/skills/lotus-readme-wiki-governance/scripts/audit_wiki_quality.py --wiki-dir wiki` — run from this repository's root, with `<workspace-root>` the directory holding the Lotus checkouts
+- `make wiki-quality-gate` — runs the platform-owned wiki audit against this repository's `wiki/`, resolving the auditor path itself so no workspace layout is assumed
 
 ## Service Identity
 
