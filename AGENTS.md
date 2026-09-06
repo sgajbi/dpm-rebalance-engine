@@ -259,7 +259,8 @@ If both changed:
 
 Documented commands must state their working directory, provide runnable OS-specific variants, use
 portable paths, and be verified from a fresh checkout. Detailed authoring rules live in
-`docs/documentation/LOTUS-DOCUMENTATION-LAYERING.md`.
+`<lotus-platform>/docs/documentation/LOTUS-DOCUMENTATION-LAYERING.md`, or without a sibling
+checkout at `https://github.com/sgajbi/lotus-platform/blob/main/docs/documentation/LOTUS-DOCUMENTATION-LAYERING.md`.
 
 ## Cross-Links
 
