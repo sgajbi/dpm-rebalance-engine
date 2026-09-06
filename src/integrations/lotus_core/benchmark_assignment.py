@@ -336,15 +336,14 @@ def _supportability(
     assignment was reported READY on the strength of freshness alone. Source
     states the limitation; this adapter must not discard it."""
 
-    return (
-        "READY"
-        if response.source_evidence_current
-        and response.freshness_status.upper() == _CURRENT_FRESHNESS_STATUS
-        and response.degradation.status.upper() == _NO_DEGRADATION_STATUS
-        and response.reconciliation_status.upper() == _RECONCILED_STATUS
-        and response.data_quality_status.upper() == _COMPLETE_DATA_QUALITY_STATUS
-        else "PARTIAL"
+    stated_dimensions_are_healthy = (
+        response.source_evidence_current,
+        response.freshness_status.upper() == _CURRENT_FRESHNESS_STATUS,
+        response.degradation.status.upper() == _NO_DEGRADATION_STATUS,
+        response.reconciliation_status.upper() == _RECONCILED_STATUS,
+        response.data_quality_status.upper() == _COMPLETE_DATA_QUALITY_STATUS,
     )
+    return "READY" if all(stated_dimensions_are_healthy) else "PARTIAL"
 
 
 __all__ = [
