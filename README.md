@@ -294,7 +294,7 @@ Resolved from `PATH`. Nothing here assumes an operating system, drive or workspa
 | tool | version | source of the claim |
 |---|---|---|
 | Python | 3.11 | every CI lane pins `PYTHON_VERSION: "3.11"`; `pyproject.toml` declares no `requires-python`, so CI is the only authority |
-| `make` | any | every gate and lane is a make target. Absent on Windows by default; this workstation uses GNU Make 4.4.1 from the winget package `ezwinports.make` (Chocolatey, Scoop and MSYS2 also provide it, untested here) |
+| `make` | GNU Make, any recent | every gate and lane is a make target; not installed by default on Windows |
 | Docker | any recent | container path and compose runs |
 | `git` | any recent | version control |
 
