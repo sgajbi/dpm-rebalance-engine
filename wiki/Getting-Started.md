@@ -22,18 +22,20 @@ it is the specified behaviour of PEP 668. CI does not need the step because `act
 supplies an isolated interpreter, which is why the requirement stays invisible in a green
 pipeline.
 
+`venv/` is this repository's conventional location and is already gitignored.
+
 On Linux or macOS:
 
 ```bash
-python -m venv .venv
-. .venv/bin/activate
+python -m venv venv
+. venv/bin/activate
 ```
 
 On Windows PowerShell:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 ```
 
 ## Key Commands
