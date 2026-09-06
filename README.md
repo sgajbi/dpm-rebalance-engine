@@ -300,28 +300,17 @@ Resolved from `PATH`. Nothing here assumes an operating system, drive or workspa
 
 ### Install
 
-`make install` resolves to `install-ci`, which runs `python -m pip install` directly rather than
-into a managed environment, so create and activate a virtualenv FIRST. PEP 668 distributions
-(most current Linux packages, and Homebrew Python on macOS) mark the system interpreter externally
-managed and refuse a system-wide `pip install`. This has not been reproduced here: it is the
-specified behaviour of PEP 668, not an error anyone on this project has hit. CI does not need the
-step because `actions/setup-python` supplies an isolated interpreter, which is why the requirement
-stays invisible in a green pipeline.
-
-On Linux or macOS:
+`make install` pips into whatever `python` resolves to, so create and activate a virtualenv
+first — on PEP 668 distributions a system-wide install is refused. `venv/` is this repository's
+conventional location and is already gitignored.
+[wiki/Getting-Started.md](wiki/Getting-Started.md) explains why CI never encounters this.
 
 ```bash
-python -m venv .venv
-. .venv/bin/activate
-make install
+python -m venv venv && . venv/bin/activate && make install
 ```
 
-On Windows PowerShell:
-
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-make install
+python -m venv venv; .\venv\Scripts\Activate.ps1; make install
 ```
 
 ### Run
