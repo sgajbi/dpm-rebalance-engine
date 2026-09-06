@@ -468,7 +468,10 @@ Boundary rules:
 Use these commands as the primary local contract:
 
 1. install
-   `make install`
+   `make install` — create and activate a virtualenv FIRST; `make install` resolves to
+   `install-ci`, which runs `python -m pip install` directly, and PEP 668 distributions refuse a
+   system-wide install. See [wiki/Getting-Started.md](wiki/Getting-Started.md) for the per-platform
+   commands.
 2. fast local gate
    `make check`
 3. PR-grade local gate
