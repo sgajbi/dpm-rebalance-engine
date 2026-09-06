@@ -310,8 +310,17 @@ python3 -m venv venv && . venv/bin/activate && make install
 ```
 
 ```powershell
-python -m venv venv; .\venv\Scripts\Activate.ps1; make install
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+if ((Get-Command python).Source -ne (Resolve-Path .\venv\Scripts\python.exe).Path) {
+    throw "venv is not active - do not run make install, it would install globally"
+}
+make install
 ```
+
+Activation is verified rather than assumed. `Activate.ps1` fails silently under a
+restrictive execution policy, and a `;` separator would then run `make install` against
+the system interpreter -- the global install this section exists to prevent.
 
 ### Run
 

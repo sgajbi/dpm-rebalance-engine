@@ -25,7 +25,7 @@ unless a supported-feature page and implementation evidence say otherwise.
 - `make check`
 - `make demo-certification-live`
 - `python scripts/postgres_migrate.py --target all`
-- `make wiki-quality-gate` — runs the platform-owned wiki audit against this repository's `wiki/`, resolving the auditor path itself so no workspace layout is assumed
+- `make wiki-quality-gate` — runs the platform-owned wiki audit against this repository's `wiki/`. It returns success without looking for the auditor when no wiki page changed, so a checkout with no `lotus-platform` beside it still runs `make check`. When a page did change, the auditor is located at `LOTUS_PLATFORM_ROOT`, else `--platform-root`, else the sibling `../lotus-platform`; if none holds it, the gate fails and names the path it tried rather than skipping the audit.
 
 ## Service Identity
 
