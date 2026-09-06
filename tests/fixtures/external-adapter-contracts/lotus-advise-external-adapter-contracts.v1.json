@@ -1,6 +1,6 @@
 {
   "manifest_version": "lotus-advise.external-adapter-contracts.v1",
-  "fixture_revision": "2026-08-28.issue-557",
+  "fixture_revision": "2026-09-07.issue-589",
   "required_case_ids": [
     "valid_provider_response",
     "malformed_json",
@@ -21,7 +21,7 @@
         "version": "lotus-core-advisory-consumer.v1",
         "schema_ref": "src/integrations/lotus_core/portfolio_state_snapshot.py",
         "provider_fixture_ref": "tests/fixtures/lotus_core/portfolio_state_snapshot_v1.json",
-        "fixture_revision": "2026-08-28.issue-557"
+        "fixture_revision": "2026-09-07.issue-589"
       },
       "authority": "canonical portfolio state and advisory simulation execution",
       "valid_request": {
@@ -162,7 +162,7 @@
         "name": "risk-concentration",
         "version": "risk-concentration.v1",
         "schema_ref": "src/integrations/lotus_risk/concentration_response.py",
-        "fixture_revision": "2026-08-28.issue-557"
+        "fixture_revision": "2026-09-07.issue-589"
       },
       "authority": "risk-lens concentration enrichment",
       "valid_request": {
@@ -270,7 +270,7 @@
         "name": "portfolio-review-report-package",
         "version": "portfolio-review-report-package.v1",
         "schema_ref": "src/integrations/lotus_report/response_projection.py",
-        "fixture_revision": "2026-08-28.issue-557"
+        "fixture_revision": "2026-09-07.issue-589"
       },
       "authority": "report/render/archive package readiness",
       "valid_request": {
@@ -380,7 +380,7 @@
         "name": "workflow-pack-execution",
         "version": "workflow-pack-execution.v1",
         "schema_ref": "src/integrations/lotus_ai/workflow_request.py",
-        "fixture_revision": "2026-08-28.issue-557"
+        "fixture_revision": "2026-09-07.issue-589"
       },
       "authority": "governed AI workflow-pack execution and model-risk controls",
       "valid_request": {
@@ -489,6 +489,120 @@
             "tests/unit/advisory/api/test_lotus_ai_advisory_copilot_request.py::test_safe_reason_removes_raw_prompt_material_and_bounds_values",
             "tests/unit/advisory/api/test_lotus_ai_advisory_copilot.py::test_generate_advisory_copilot_rejects_unsafe_output",
             "tests/unit/advisory/api/test_lotus_ai_workflow_response.py::test_optional_text_can_bound_copilot_lineage_without_leaking_long_provider_text"
+          ]
+        }
+      ]
+    },
+    "lotus_core_benchmark_assignment": {
+      "provider_contract": {
+        "name": "core-effective-dated-benchmark-assignment",
+        "version": "lotus-core-benchmark-assignment-consumer.v1",
+        "schema_ref": "src/integrations/lotus_core/benchmark_assignment.py",
+        "provider_fixture_ref": "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py",
+        "fixture_revision": "2026-09-07.issue-589"
+      },
+      "authority": "source-owned effective-dated benchmark assignment; this consumer admits the tenant, never mints one, and never infers supportability the source did not state",
+      "valid_request": {
+        "portfolio_id": "PF_1",
+        "as_of_date": "2026-03-25",
+        "tenant_id": "tenant_sg",
+        "carried_headers": [
+          "X-Correlation-Id",
+          "X-Tenant-Id"
+        ]
+      },
+      "valid_response": {
+        "portfolio_id": "PF_1",
+        "benchmark_id": "BM_GLOBAL_BALANCED",
+        "as_of_date": "2026-03-25",
+        "tenant_id": "tenant_sg",
+        "reconciliation_status": "RECONCILED",
+        "data_quality_status": "COMPLETE",
+        "freshness_status": "CURRENT",
+        "supportability": "READY"
+      },
+      "cases": [
+        {
+          "case_id": "valid_provider_response",
+          "expected_behavior": "maps source-owned assignment facts with full audit context and READY supportability",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_maps_core_v1_assignment_with_full_source_audit_context",
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_reports_ready_when_every_status_the_source_states_is_healthy"
+          ]
+        },
+        {
+          "case_id": "malformed_json",
+          "expected_behavior": "maps a non-object or schema-invalid provider payload to a typed source-invalid refusal",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_rejects_missing_or_mismatched_source_evidence"
+          ]
+        },
+        {
+          "case_id": "missing_fields",
+          "expected_behavior": "refuses an assignment missing required source-owned fields rather than defaulting them",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_rejects_missing_or_mismatched_source_evidence"
+          ]
+        },
+        {
+          "case_id": "identity_as_of_mismatch",
+          "expected_behavior": "refuses a response whose portfolio or effective-dated identity is not the one requested",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_rejects_missing_or_mismatched_source_evidence"
+          ]
+        },
+        {
+          "case_id": "partial_data",
+          "expected_behavior": "reports PARTIAL when the source states any limitation on its own evidence, including reconciliation and data-quality status",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_reports_partial_when_the_source_states_a_limitation_on_its_own_evidence",
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_maps_source_degradation_to_partial_without_discarding_source_facts"
+          ]
+        },
+        {
+          "case_id": "auth_failure",
+          "expected_behavior": "refuses an unscoped read before any request is sent, and never mints or defaults a tenant",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_refuses_an_unscoped_read_before_sending_any_request",
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_the_production_policy_context_shape_is_accepted_and_never_supplies_authority"
+          ]
+        },
+        {
+          "case_id": "timeout",
+          "expected_behavior": "masks transport failure under a stable unavailable posture without inventing evidence",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_maps_core_transport_failure_to_typed_unavailable_evidence"
+          ]
+        },
+        {
+          "case_id": "retry",
+          "expected_behavior": "does not reissue the read without admitted authority; the recording client observes no call",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_refuses_an_unscoped_read_before_sending_any_request"
+          ]
+        },
+        {
+          "case_id": "duplicate_response",
+          "expected_behavior": "refuses a response that does not correspond to the request it answers, detected through the echoed tenant",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_refuses_a_response_whose_echoed_tenant_was_rewritten",
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_a_response_that_echoes_no_tenant_is_refused"
+          ]
+        },
+        {
+          "case_id": "provider_error_mapping",
+          "expected_behavior": "maps provider status codes to typed unavailable and not-found reasons",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_rejects_missing_or_mismatched_source_evidence",
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_maps_core_transport_failure_to_typed_unavailable_evidence"
+          ]
+        },
+        {
+          "case_id": "no_raw_payload_or_secret",
+          "expected_behavior": "carries only correlation and admitted tenant outbound, and forwards no unowned policy fields into the provider body",
+          "test_references": [
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_sends_the_admitted_tenant_in_the_header_core_actually_reads",
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_omits_blank_optional_context_without_forwarding_unowned_fields"
           ]
         }
       ]

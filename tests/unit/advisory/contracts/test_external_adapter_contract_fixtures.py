@@ -12,7 +12,13 @@ CONTRACT_FIXTURE = (
     / "external-adapter-contracts"
     / "lotus-advise-external-adapter-contracts.v1.json"
 )
-REQUIRED_ADAPTERS = {"lotus_core", "lotus_risk", "lotus_report", "lotus_ai"}
+REQUIRED_ADAPTERS = {
+    "lotus_core",
+    "lotus_core_benchmark_assignment",
+    "lotus_risk",
+    "lotus_report",
+    "lotus_ai",
+}
 REQUIRED_CASE_IDS = {
     "valid_provider_response",
     "malformed_json",
@@ -55,7 +61,7 @@ def test_external_adapter_contract_manifest_declares_all_authority_seams() -> No
     manifest = _manifest()
 
     assert manifest["manifest_version"] == "lotus-advise.external-adapter-contracts.v1"
-    assert manifest["fixture_revision"] == "2026-08-28.issue-557"
+    assert manifest["fixture_revision"] == "2026-09-07.issue-589"
     assert set(manifest["required_case_ids"]) == REQUIRED_CASE_IDS
     assert set(manifest["adapters"]) == REQUIRED_ADAPTERS
 
