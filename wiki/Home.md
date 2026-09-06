@@ -25,7 +25,7 @@ unless a supported-feature page and implementation evidence say otherwise.
 - `make check`
 - `make demo-certification-live`
 - `python scripts/postgres_migrate.py --target all`
-- `python C:\Users\Sandeep\projects\lotus-platform\codex\skills\lotus-readme-wiki-governance\scripts\audit_wiki_quality.py --wiki-dir C:\Users\Sandeep\projects\lotus-advise\wiki`
+- `python <workspace-root>/lotus-platform/codex/skills/lotus-readme-wiki-governance/scripts/audit_wiki_quality.py --wiki-dir wiki` — run from this repository's root, with `<workspace-root>` the directory holding the Lotus checkouts
 
 ## Service Identity
 

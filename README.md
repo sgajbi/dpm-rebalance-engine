@@ -287,21 +287,57 @@ Key code areas:
 
 ## Quick Start
 
-Install dependencies:
+### Prerequisites
+
+Resolved from `PATH`. Nothing here assumes an operating system, drive or workspace layout:
+
+| tool | version | source of the claim |
+|---|---|---|
+| Python | 3.11 | every CI lane pins `PYTHON_VERSION: "3.11"`; `pyproject.toml` declares no `requires-python`, so CI is the only authority |
+| `make` | any | every gate and lane is a make target |
+| Docker | any recent | container path and compose runs |
+| `git` | any recent | version control |
+
+### Install
+
+`make install` resolves to `install-ci`, which runs `python -m pip install` directly rather than
+into a managed environment, so create and activate a virtualenv FIRST. PEP 668 distributions
+(most current Linux packages, and Homebrew Python on macOS) mark the system interpreter externally
+managed and refuse a system-wide `pip install`. This has not been reproduced here: it is the
+specified behaviour of PEP 668, not an error anyone on this project has hit. CI does not need the
+step because `actions/setup-python` supplies an isolated interpreter, which is why the requirement
+stays invisible in a green pipeline.
 
 ```bash
+python -m venv .venv
+
+# POSIX
+. .venv/bin/activate
+
+# Windows PowerShell
+# .venv/Scripts/Activate.ps1
+
 make install
 ```
 
-Run the service locally:
+### Run
 
 ```bash
 make run
 ```
 
+This serves on `http://127.0.0.1:8000`, matching the container, which EXPOSEs and listens on 8000
+and is mapped `8000:8000` by compose. Use that address if you have not set up dev ingress.
+
 Canonical local service identity for cross-app and demo-oriented flows:
 
 - `http://advise.dev.lotus`
+
+That hostname is NOT automatic. It resolves only once the dev-ingress host entries are applied
+(they are listed in `lotus-platform/platform-stack/dev-ingress/hosts.example` and applied by that
+repository's `Sync-Dev-Ingress-Hosts` automation), and it additionally requires the dev ingress
+itself to be running. Without both, the probes below fail while the service is perfectly healthy
+on `127.0.0.1:8000`.
 
 Quick probes:
 
