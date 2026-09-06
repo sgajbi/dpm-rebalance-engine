@@ -1,5 +1,41 @@
 # Getting Started
 
+Current scope: every command below is implemented and runs against this repository today.
+
+## Reader Map
+
+| Read this section | When you need |
+|---|---|
+| [Before The First Command](#before-the-first-command) | a fresh checkout, before running anything |
+| [Key Commands](#key-commands) | the repo-native install, check and run targets |
+| [Local Expectations](#local-expectations) | what upstream integrations local Docker validation assumes |
+| [API Discovery](#api-discovery) | finding the route families and contract surface |
+| [Demo Scenarios](#demo-scenarios) | running the governed demo path rather than ad hoc calls |
+
+## Before The First Command
+
+`make install` resolves to `install-ci`, which runs `python -m pip install` directly rather than
+into a managed environment. Create and activate a virtualenv FIRST: PEP 668 distributions (most
+current Linux packages, and Homebrew Python on macOS) mark the system interpreter externally
+managed and refuse a system-wide `pip install`. This has not been reproduced by the maintainers;
+it is the specified behaviour of PEP 668. CI does not need the step because `actions/setup-python`
+supplies an isolated interpreter, which is why the requirement stays invisible in a green
+pipeline.
+
+On Linux or macOS:
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+```
+
+On Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
 ## Key Commands
 
 - `make install`

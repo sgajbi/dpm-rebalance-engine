@@ -2,7 +2,9 @@
 
 ## Local Working Loop
 
-Use the repository-native commands first:
+On a fresh checkout, create and activate a virtualenv before `make install` — see
+[Getting-Started](Getting-Started#before-the-first-command) for why and how. Then use the
+repository-native commands:
 
 - `make install`
 - `make check`
