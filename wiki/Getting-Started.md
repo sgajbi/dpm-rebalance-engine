@@ -14,7 +14,35 @@ Current scope: every command below is implemented and runs against this reposito
 
 ## Before The First Command
 
-On Windows, GNU Make is not present by default and must be installed separately. winget, Chocolatey, Scoop and MSYS2 all provide it; pick whichever package manager the machine already uses.
+On Windows, GNU Make is not present by default and must be installed separately. winget,
+Chocolatey, Scoop and MSYS2 all provide it. Which one supplies it does not matter; two other
+things do.
+
+**It must be on the PATH of the shell you run these commands in.** MSYS2 installs `make`
+inside its own prefix and does not normally expose it to PowerShell, so run the commands from
+the MSYS2 shell or add its binary directory to PATH.
+
+**A POSIX shell must back it.** GNU Make runs each recipe through `$(SHELL)`, which on
+Windows resolves to `SHELL` if set, otherwise `sh.exe` if one is on PATH, and otherwise
+`cmd.exe`. Two recipes here cannot run under `cmd.exe`:
+
+- `coverage-combined` (`Makefile:270-272`) begins lines with `COVERAGE_FILE=... python ...`,
+  a POSIX-only assignment prefix. Reached by `make ci` and `make ci-local`.
+- `docker-build` (`Makefile:284-294`) uses backslash line continuations, which `cmd.exe` does
+  not honour. Reached by `make ci`.
+
+`lint`, `typecheck`, `test-unit` and the gate targets use neither and run either way. So a
+machine can pass `make --version` and still fail every PR-grade command. Confirm both before
+continuing:
+
+```powershell
+make --version
+Get-Command sh.exe
+```
+
+If `sh.exe` does not resolve, install Git for Windows (which supplies one at
+`C:\Program Files\Git\usr\bin\sh.exe`) and confirm it is on PATH, or set `SHELL` to a POSIX
+shell before invoking make. Git Bash, MSYS2 and WSL all satisfy this.
 
 `make install` resolves to `install-ci`, which runs `python -m pip install` directly rather than
 into a managed environment. Create and activate a virtualenv FIRST: PEP 668 distributions (most
