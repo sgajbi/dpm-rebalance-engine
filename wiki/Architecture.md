@@ -1,5 +1,17 @@
 # Architecture
 
+Current scope: the runtime areas and boundary rules below are implemented in this repository.
+Route-level detail lives in [API-Surface](API-Surface), and lifecycle semantics in
+[Proposal-Lifecycle](Proposal-Lifecycle).
+
+## Reader Map
+
+| Read this section | When you need |
+|---|---|
+| [Service Role](#service-role) | what `lotus-advise` sits between, and what it converts |
+| [Main Runtime Areas](#main-runtime-areas) | the API layer, route families, and how the runtime is organised |
+| [Boundary Rules](#boundary-rules) | what this service must not own, before adding anything |
+
 ## Service Role
 
 `lotus-advise` sits between authoritative upstream portfolio/risk data and advisory workflow consumers. Its job is to convert canonical portfolio context into governed advisory decisions, proposal versions, and workflow evidence.
