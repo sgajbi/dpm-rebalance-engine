@@ -306,7 +306,7 @@ conventional location and is already gitignored.
 [wiki/Getting-Started.md](wiki/Getting-Started.md) explains why CI never encounters this.
 
 ```bash
-python -m venv venv && . venv/bin/activate && make install
+python3 -m venv venv && . venv/bin/activate && make install
 ```
 
 ```powershell
