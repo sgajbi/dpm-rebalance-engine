@@ -15,6 +15,7 @@ _BENCHMARK_ASSIGNMENT_PATH = "/integration/portfolios/{portfolio_id}/benchmark-a
 _CURRENT_FRESHNESS_STATUS = "CURRENT"
 _NO_DEGRADATION_STATUS = "NONE"
 _RECONCILED_STATUS = "RECONCILED"
+_CORE_TENANT_HEADER = "X-Tenant-Id"
 _COMPLETE_DATA_QUALITY_STATUS = "COMPLETE"
 
 LotusCoreBenchmarkAssignmentSupportability: TypeAlias = Literal["READY", "PARTIAL"]
@@ -25,6 +26,7 @@ LotusCoreBenchmarkAssignmentUnavailableReason: TypeAlias = Literal[
     "CORE_BENCHMARK_ASSIGNMENT_PORTFOLIO_MISMATCH",
     "CORE_BENCHMARK_ASSIGNMENT_AS_OF_MISMATCH",
     "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH",
+    "CORE_BENCHMARK_ASSIGNMENT_TENANT_REQUIRED",
 ]
 
 
@@ -120,19 +122,40 @@ def fetch_benchmark_assignment_with_lotus_core(
 ) -> LotusCoreBenchmarkAssignment:
     """Fetch Core's effective-dated BenchmarkAssignment:v1 without inferring its semantics."""
 
+    admitted_tenant_id = _require_admitted_tenant(policy_context)
     response = _post_benchmark_assignment_request(
         portfolio_id=portfolio_id,
         as_of_date=as_of_date,
         reporting_currency=reporting_currency,
         policy_context=policy_context,
         correlation_id=correlation_id,
+        admitted_tenant_id=admitted_tenant_id,
     )
     return _map_response(
         response,
         requested_portfolio_id=portfolio_id,
         requested_as_of_date=as_of_date,
-        requested_tenant_id=_core_policy_context(policy_context).get("tenant_id"),
+        requested_tenant_id=admitted_tenant_id,
     )
+
+
+def _require_admitted_tenant(policy_context: dict[str, object] | None) -> str:
+    """Establish the tenant this read is made under, before any request is sent.
+
+    Core's shared middleware requires a nonblank `X-Tenant-Id` on this route and
+    answers 401 without one, so an unscoped call cannot succeed. It must also not
+    be attempted: refusing only after the response returns would mean the request
+    was already made under no established authority.
+
+    This never mints or defaults a tenant. Absent authority is a refusal.
+    """
+
+    admitted = _core_policy_context(policy_context).get("tenant_id")
+    if not admitted:
+        raise LotusCoreBenchmarkAssignmentUnavailableError(
+            "CORE_BENCHMARK_ASSIGNMENT_TENANT_REQUIRED"
+        )
+    return admitted
 
 
 def _post_benchmark_assignment_request(
@@ -142,6 +165,7 @@ def _post_benchmark_assignment_request(
     reporting_currency: str | None,
     policy_context: dict[str, object] | None,
     correlation_id: str,
+    admitted_tenant_id: str,
 ) -> httpx.Response:
     path = _BENCHMARK_ASSIGNMENT_PATH.format(portfolio_id=quote(portfolio_id, safe=""))
     url = f"{resolve_control_plane_base_url()}{path}"
@@ -154,7 +178,10 @@ def _post_benchmark_assignment_request(
                     reporting_currency=reporting_currency,
                     policy_context=policy_context,
                 ),
-                headers={"X-Correlation-Id": correlation_id},
+                headers={
+                    "X-Correlation-Id": correlation_id,
+                    _CORE_TENANT_HEADER: admitted_tenant_id,
+                },
             )
             response.raise_for_status()
             return response
@@ -202,7 +229,7 @@ def _map_response(
     *,
     requested_portfolio_id: str,
     requested_as_of_date: str,
-    requested_tenant_id: str | None = None,
+    requested_tenant_id: str,
 ) -> LotusCoreBenchmarkAssignment:
     parsed = _parse_response(response)
     _validate_requested_identity(
@@ -264,7 +291,7 @@ def _validate_requested_identity(
     *,
     requested_portfolio_id: str,
     requested_as_of_date: str,
-    requested_tenant_id: str | None = None,
+    requested_tenant_id: str,
 ) -> None:
     if response.portfolio_id != requested_portfolio_id:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
@@ -280,23 +307,20 @@ def _validate_requested_identity(
 def _validate_requested_tenant(
     response: _CoreBenchmarkAssignmentResponse,
     *,
-    requested_tenant_id: str | None,
+    requested_tenant_id: str,
 ) -> None:
-    """Bind the response to the tenant scope the caller admitted.
+    """Bind the response to the tenant this read was admitted under.
 
     A matching portfolio and as-of date do not establish that the assignment
     belongs to the requesting tenant: Core is asked with a tenant and answers
     with one, and until they are compared a misrouted or cache-collided
     response is indistinguishable from a correct one.
 
-    The two absent cases are decided rather than allowed to fall through. If
-    the caller named no tenant there is nothing to bind to, and inventing a
-    scope it did not ask for would be worse than the gap. If the caller named
-    one and the response states none, the response cannot be confirmed in
-    scope, so it is refused."""
+    A response that states no tenant cannot be confirmed in scope either, so it
+    is refused rather than accepted on the strength of the other two fields.
+    There is no unscoped case to decide here: `_require_admitted_tenant` has
+    already refused before the request was sent."""
 
-    if requested_tenant_id is None:
-        return
     if response.tenant_id is None or response.tenant_id != requested_tenant_id:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
             "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"

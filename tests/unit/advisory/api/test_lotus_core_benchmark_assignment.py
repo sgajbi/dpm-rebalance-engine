@@ -127,7 +127,10 @@ def test_fetch_maps_core_v1_assignment_with_full_source_audit_context(monkeypatc
                 "reporting_currency": "USD",
                 "policy_context": {"tenant_id": "tenant_sg", "policy_pack_id": "policy_pb_v1"},
             },
-            "headers": {"X-Correlation-Id": "corr-554"},
+            "headers": {
+                "X-Correlation-Id": "corr-554",
+                "X-Tenant-Id": "tenant_sg",
+            },
         }
     ]
 
@@ -183,7 +186,7 @@ def test_fetch_rejects_missing_or_mismatched_source_evidence(
             portfolio_id="PF_1",
             as_of_date="2026-03-25",
             reporting_currency=None,
-            policy_context=None,
+            policy_context={"tenant_id": "tenant_sg"},
             correlation_id="corr-554",
         )
 
@@ -202,7 +205,7 @@ def test_fetch_maps_core_transport_failure_to_typed_unavailable_evidence(monkeyp
             portfolio_id="PF_1",
             as_of_date="2026-03-25",
             reporting_currency=None,
-            policy_context=None,
+            policy_context={"tenant_id": "tenant_sg"},
             correlation_id="corr-554",
         )
 
@@ -220,11 +223,14 @@ def test_fetch_omits_blank_optional_context_without_forwarding_unowned_fields(mo
         portfolio_id="PF_1",
         as_of_date="2026-03-25",
         reporting_currency="  ",
-        policy_context={"tenant_id": " ", "benchmark_id": "BM_NOT_FORWARDED"},
+        policy_context={"tenant_id": "tenant_sg", "benchmark_id": "BM_NOT_FORWARDED"},
         correlation_id="corr-554",
     )
 
-    assert client.calls[0]["json"] == {"as_of_date": "2026-03-25"}
+    assert client.calls[0]["json"] == {
+        "as_of_date": "2026-03-25",
+        "policy_context": {"tenant_id": "tenant_sg"},
+    }
 
 
 def test_fetch_maps_source_degradation_to_partial_without_discarding_source_facts(
@@ -249,7 +255,7 @@ def test_fetch_maps_source_degradation_to_partial_without_discarding_source_fact
         portfolio_id="PF_1",
         as_of_date="2026-03-25",
         reporting_currency=None,
-        policy_context=None,
+        policy_context={"tenant_id": "tenant_sg"},
         correlation_id="corr-554",
     )
 
@@ -314,21 +320,73 @@ def test_fetch_accepts_the_assignment_when_the_response_states_the_admitted_tena
     assert evidence.source_tenant_id == "tenant_sg"
 
 
-def test_fetch_does_not_invent_a_tenant_scope_the_caller_never_asked_for(monkeypatch) -> None:
-    """A request that named no tenant has nothing to bind the response to.
+@pytest.mark.parametrize(
+    "policy_context",
+    [None, {}, {"tenant_id": "   "}, {"policy_pack_id": "policy_pb_v1"}],
+    ids=["no context", "empty context", "blank tenant", "context without a tenant"],
+)
+def test_fetch_refuses_an_unscoped_read_before_sending_any_request(
+    monkeypatch, policy_context: dict[str, object] | None
+) -> None:
+    """An unscoped read is refused, and refused before the request is made.
 
-    Refusing here would refuse against a scope this adapter invented rather
-    than one the caller admitted, and defaulting a tenant would be worse still.
-    The response's own tenant is recorded either way, so the gap stays visible
-    downstream instead of being silently resolved here."""
+    Core's shared middleware requires a nonblank `X-Tenant-Id` on this route and
+    answers 401 without one, so an unscoped call could not have succeeded. It
+    must also not be attempted: refusing only after a response came back would
+    mean the request had already been made under no established authority. The
+    recording client proves the difference -- it registers no call at all.
 
-    evidence = _fetch(
-        monkeypatch,
-        payload=_payload(tenant_id="tenant_other"),
-        policy_context=None,
+    This replaces an earlier test asserting the opposite. Tolerating the
+    unscoped case was wrong in both directions: Core would have rejected it, and
+    had it succeeded it would have let tenant-owned evidence reach READY with no
+    tenant established."""
+
+    client = _FakeClient(_FakeResponse(status_code=200, payload=_payload()))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
     )
 
-    assert evidence.source_tenant_id == "tenant_other"
+    with pytest.raises(LotusCoreBenchmarkAssignmentUnavailableError) as exc_info:
+        fetch_benchmark_assignment_with_lotus_core(
+            portfolio_id="PF_1",
+            as_of_date="2026-03-25",
+            reporting_currency=None,
+            policy_context=policy_context,
+            correlation_id="corr-589",
+        )
+
+    assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_TENANT_REQUIRED"
+    assert client.calls == [], "the adapter must not reach Core without an admitted tenant"
+
+
+def test_fetch_sends_the_admitted_tenant_in_the_header_core_actually_reads(monkeypatch) -> None:
+    """The tenant must travel in `X-Tenant-Id`, not only in the body.
+
+    Core resolves the tenant from that header in shared middleware before this
+    protected route runs; a tenant present only in the body `policy_context`
+    reaches a route that was never entered. The body still carries it, because
+    that is Core's policy input, but the header is what establishes ingress
+    authority."""
+
+    client = _FakeClient(_FakeResponse(status_code=200, payload=_payload()))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
+    )
+
+    fetch_benchmark_assignment_with_lotus_core(
+        portfolio_id="PF_1",
+        as_of_date="2026-03-25",
+        reporting_currency=None,
+        policy_context={"tenant_id": "tenant_sg"},
+        correlation_id="corr-589",
+    )
+
+    assert client.calls[0]["headers"] == {
+        "X-Correlation-Id": "corr-589",
+        "X-Tenant-Id": "tenant_sg",
+    }
 
 
 @pytest.mark.parametrize(
