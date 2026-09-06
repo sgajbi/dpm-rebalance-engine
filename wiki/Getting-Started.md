@@ -38,7 +38,14 @@ On Windows PowerShell:
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
+if ((Get-Command python).Source -ne (Resolve-Path .\venv\Scripts\python.exe).Path) {
+    throw "venv is not active - do not run make install, it would install globally"
+}
 ```
+
+Activation is verified rather than assumed: `Activate.ps1` fails silently under a
+restrictive execution policy, and every command after it would then target the system
+interpreter instead of the virtualenv.
 
 ## Key Commands
 
