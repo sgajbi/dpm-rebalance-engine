@@ -1,5 +1,21 @@
 # Proposal Lifecycle
 
+Current scope: every stage below is implemented and persisted. Evidence sections state what is
+recorded at each transition rather than what is planned.
+
+## Reader Map
+
+| Read this section | When you need |
+|---|---|
+| [Core Model](#core-model) | the aggregate, versions, events and approval records |
+| [What Creation Does](#what-creation-does) | what is written when a proposal first appears |
+| [Versioning](#versioning) | how immutable versions relate to the aggregate |
+| [Transitions And Approvals](#transitions-and-approvals) | which state changes are legal, and who records them |
+| [Delivery And Execution Posture](#delivery-and-execution-posture) | how posture is derived from workflow history |
+| [Decision Summary And Alternatives](#decision-summary-and-alternatives) | what a proposal records about the choice it represents |
+| [Valuation-Context Evidence](#valuation-context-evidence) | the valuation facts captured alongside a decision |
+| [Benchmark And Mandate-Limit Evidence](#benchmark-and-mandate-limit-evidence) | benchmark and limit checks retained for audit |
+
 ## Core Model
 
 The lifecycle surface persists advisory proposals as:

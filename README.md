@@ -308,15 +308,19 @@ specified behaviour of PEP 668, not an error anyone on this project has hit. CI 
 step because `actions/setup-python` supplies an isolated interpreter, which is why the requirement
 stays invisible in a green pipeline.
 
+On Linux or macOS:
+
 ```bash
 python -m venv .venv
-
-# POSIX
 . .venv/bin/activate
+make install
+```
 
-# Windows PowerShell
-# .venv/Scripts/Activate.ps1
+On Windows PowerShell:
 
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 make install
 ```
 
