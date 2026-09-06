@@ -257,3 +257,121 @@ def test_fetch_maps_source_degradation_to_partial_without_discarding_source_fact
         "PARTIAL",
         "BM_GLOBAL_BALANCED",
     )
+
+
+def _fetch(monkeypatch, *, payload: object, policy_context: dict[str, object] | None):
+    client = _FakeClient(_FakeResponse(status_code=200, payload=payload))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
+    )
+    return fetch_benchmark_assignment_with_lotus_core(
+        portfolio_id="PF_1",
+        as_of_date="2026-03-25",
+        reporting_currency=None,
+        policy_context=policy_context,
+        correlation_id="corr-589",
+    )
+
+
+@pytest.mark.parametrize(
+    "response_tenant_id",
+    ["tenant_other", None],
+    ids=["a different tenant", "no stated tenant"],
+)
+def test_fetch_refuses_an_assignment_it_cannot_confirm_belongs_to_the_requested_tenant(
+    monkeypatch, response_tenant_id: str | None
+) -> None:
+    """A matching portfolio and as-of date do not establish tenant scope.
+
+    Core is asked with a tenant and answers with one, and until the two are
+    compared a misrouted or cache-collided response is indistinguishable from a
+    correct one. A response that states no tenant cannot be confirmed either,
+    so it is refused rather than accepted on the strength of the other two
+    fields matching."""
+
+    with pytest.raises(LotusCoreBenchmarkAssignmentUnavailableError) as exc_info:
+        _fetch(
+            monkeypatch,
+            payload=_payload(tenant_id=response_tenant_id),
+            policy_context={"tenant_id": "tenant_sg"},
+        )
+
+    assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"
+
+
+def test_fetch_accepts_the_assignment_when_the_response_states_the_admitted_tenant(
+    monkeypatch,
+) -> None:
+    """The control for the refusals above: same path, matching tenant, accepted."""
+
+    evidence = _fetch(
+        monkeypatch,
+        payload=_payload(tenant_id="tenant_sg"),
+        policy_context={"tenant_id": "tenant_sg"},
+    )
+
+    assert evidence.source_tenant_id == "tenant_sg"
+
+
+def test_fetch_does_not_invent_a_tenant_scope_the_caller_never_asked_for(monkeypatch) -> None:
+    """A request that named no tenant has nothing to bind the response to.
+
+    Refusing here would refuse against a scope this adapter invented rather
+    than one the caller admitted, and defaulting a tenant would be worse still.
+    The response's own tenant is recorded either way, so the gap stays visible
+    downstream instead of being silently resolved here."""
+
+    evidence = _fetch(
+        monkeypatch,
+        payload=_payload(tenant_id="tenant_other"),
+        policy_context=None,
+    )
+
+    assert evidence.source_tenant_id == "tenant_other"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"reconciliation_status": "PENDING"},
+        {"data_quality_status": "INCOMPLETE"},
+    ],
+    ids=["unreconciled", "incomplete data quality"],
+)
+def test_fetch_reports_partial_when_the_source_states_a_limitation_on_its_own_evidence(
+    monkeypatch, overrides: dict[str, str]
+) -> None:
+    """READY was decided from currency, freshness and degradation alone.
+
+    `reconciliation_status` and `data_quality_status` were parsed and stored
+    but excluded from the decision, so an unreconciled or incomplete assignment
+    was reported as ready to use. Keeping a limitation in the payload while
+    reporting READY discards it exactly where it would have been acted on."""
+
+    evidence = _fetch(
+        monkeypatch,
+        payload=_payload(**overrides),
+        policy_context={"tenant_id": "tenant_sg"},
+    )
+
+    assert evidence.supportability == "PARTIAL"
+    assert (evidence.source_reconciliation_status, evidence.source_data_quality_status) == (
+        overrides.get("reconciliation_status", "RECONCILED"),
+        overrides.get("data_quality_status", "COMPLETE"),
+    )
+
+
+def test_fetch_reports_ready_when_every_status_the_source_states_is_healthy(monkeypatch) -> None:
+    """The control for the two downgrades above: same fields, healthy values,
+    opposite outcome. Case follows the normalization the module already applies
+    to freshness and degradation, so a source that lowercases its own
+    vocabulary is not downgraded over formatting."""
+
+    evidence = _fetch(
+        monkeypatch,
+        payload=_payload(reconciliation_status="reconciled", data_quality_status="complete"),
+        policy_context={"tenant_id": "tenant_sg"},
+    )
+
+    assert evidence.supportability == "READY"

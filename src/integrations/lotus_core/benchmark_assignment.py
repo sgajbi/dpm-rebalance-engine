@@ -14,6 +14,8 @@ from src.integrations.lotus_core.stateful_context_routes import resolve_control_
 _BENCHMARK_ASSIGNMENT_PATH = "/integration/portfolios/{portfolio_id}/benchmark-assignment"
 _CURRENT_FRESHNESS_STATUS = "CURRENT"
 _NO_DEGRADATION_STATUS = "NONE"
+_RECONCILED_STATUS = "RECONCILED"
+_COMPLETE_DATA_QUALITY_STATUS = "COMPLETE"
 
 LotusCoreBenchmarkAssignmentSupportability: TypeAlias = Literal["READY", "PARTIAL"]
 LotusCoreBenchmarkAssignmentUnavailableReason: TypeAlias = Literal[
@@ -22,6 +24,7 @@ LotusCoreBenchmarkAssignmentUnavailableReason: TypeAlias = Literal[
     "CORE_BENCHMARK_ASSIGNMENT_SOURCE_INVALID",
     "CORE_BENCHMARK_ASSIGNMENT_PORTFOLIO_MISMATCH",
     "CORE_BENCHMARK_ASSIGNMENT_AS_OF_MISMATCH",
+    "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH",
 ]
 
 
@@ -128,6 +131,7 @@ def fetch_benchmark_assignment_with_lotus_core(
         response,
         requested_portfolio_id=portfolio_id,
         requested_as_of_date=as_of_date,
+        requested_tenant_id=_core_policy_context(policy_context).get("tenant_id"),
     )
 
 
@@ -198,12 +202,14 @@ def _map_response(
     *,
     requested_portfolio_id: str,
     requested_as_of_date: str,
+    requested_tenant_id: str | None = None,
 ) -> LotusCoreBenchmarkAssignment:
     parsed = _parse_response(response)
     _validate_requested_identity(
         parsed,
         requested_portfolio_id=requested_portfolio_id,
         requested_as_of_date=requested_as_of_date,
+        requested_tenant_id=requested_tenant_id,
     )
     _validate_effective_range(parsed)
     return LotusCoreBenchmarkAssignment(
@@ -258,6 +264,7 @@ def _validate_requested_identity(
     *,
     requested_portfolio_id: str,
     requested_as_of_date: str,
+    requested_tenant_id: str | None = None,
 ) -> None:
     if response.portfolio_id != requested_portfolio_id:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
@@ -266,6 +273,33 @@ def _validate_requested_identity(
     if response.as_of_date.isoformat() != requested_as_of_date:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
             "CORE_BENCHMARK_ASSIGNMENT_AS_OF_MISMATCH"
+        )
+    _validate_requested_tenant(response, requested_tenant_id=requested_tenant_id)
+
+
+def _validate_requested_tenant(
+    response: _CoreBenchmarkAssignmentResponse,
+    *,
+    requested_tenant_id: str | None,
+) -> None:
+    """Bind the response to the tenant scope the caller admitted.
+
+    A matching portfolio and as-of date do not establish that the assignment
+    belongs to the requesting tenant: Core is asked with a tenant and answers
+    with one, and until they are compared a misrouted or cache-collided
+    response is indistinguishable from a correct one.
+
+    The two absent cases are decided rather than allowed to fall through. If
+    the caller named no tenant there is nothing to bind to, and inventing a
+    scope it did not ask for would be worse than the gap. If the caller named
+    one and the response states none, the response cannot be confirmed in
+    scope, so it is refused."""
+
+    if requested_tenant_id is None:
+        return
+    if response.tenant_id is None or response.tenant_id != requested_tenant_id:
+        raise LotusCoreBenchmarkAssignmentUnavailableError(
+            "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"
         )
 
 
@@ -295,11 +329,20 @@ def _validate_effective_date_contains_as_of(response: _CoreBenchmarkAssignmentRe
 def _supportability(
     response: _CoreBenchmarkAssignmentResponse,
 ) -> LotusCoreBenchmarkAssignmentSupportability:
+    """READY means the source says its evidence is usable, in every dimension it states.
+
+    `reconciliation_status` and `data_quality_status` were parsed and stored
+    but excluded from this decision, so an unreconciled or incomplete
+    assignment was reported READY on the strength of freshness alone. Source
+    states the limitation; this adapter must not discard it."""
+
     return (
         "READY"
         if response.source_evidence_current
         and response.freshness_status.upper() == _CURRENT_FRESHNESS_STATUS
         and response.degradation.status.upper() == _NO_DEGRADATION_STATUS
+        and response.reconciliation_status.upper() == _RECONCILED_STATUS
+        and response.data_quality_status.upper() == _COMPLETE_DATA_QUALITY_STATUS
         else "PARTIAL"
     )
 
