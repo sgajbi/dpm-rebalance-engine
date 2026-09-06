@@ -312,41 +312,60 @@ def test_fetch_refuses_a_response_whose_echoed_tenant_was_rewritten(monkeypatch)
     assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"
 
 
-def test_a_response_without_a_tenant_is_not_treated_as_an_attribution_failure(
+def test_a_response_that_echoes_no_tenant_is_refused(monkeypatch) -> None:
+    """A missing echo means the response did not answer the request we made.
+
+    This test previously asserted the opposite, and the reasoning it carried was
+    sound when it was written: a null echo said something about the request, not
+    about the assignment, because a request could legitimately carry no policy
+    context. `_request_payload` now sends the admitted tenant on every request,
+    so that is no longer reachable. A response echoing nothing is stale, from an
+    incompatible Core revision, or in breach of the documented echo -- and none
+    of those should be mapped and reported READY.
+
+    The two changes were made in the same slice and only one of them was
+    reconsidered; the relaxation outlived the condition that justified it.
+
+    This is still not attribution. It says the response corresponds to the
+    request, not that the assignment belongs to the tenant.
+    """
+
+    with pytest.raises(LotusCoreBenchmarkAssignmentUnavailableError) as exc_info:
+        _fetch(
+            monkeypatch,
+            payload=_payload(tenant_id=None),
+            policy_context={},
+        )
+
+    assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"
+
+
+def test_every_request_carries_the_admitted_tenant_so_a_missing_echo_is_anomalous(
     monkeypatch,
 ) -> None:
-    """A null echoed tenant means an empty request context, not an unowned assignment.
+    """The premise the refusal above depends on, pinned rather than assumed.
 
-    An earlier revision refused this, on the reasoning that a response stating no
-    tenant "cannot be confirmed in scope". That reasoning does not survive reading
-    Core: the field is an echo, so its absence says something about the request we
-    sent, not about the assignment. Refusing it asserted a meaning the field does
-    not carry, and would have failed every call that sent no body policy context.
+    If the payload ever stopped sending the tenant unconditionally, refusing a
+    null echo would start rejecting valid responses. This asserts the tenant is
+    in the body even when the caller supplies no policy context at all.
+    """
 
-    Scope is established by `X-Tenant-Id`, which Core's middleware enforces before
-    the route runs."""
-
-    evidence = _fetch(
-        monkeypatch,
-        payload=_payload(tenant_id=None),
-        policy_context={},
+    client = _FakeClient(_FakeResponse(status_code=200, payload=_payload()))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
     )
 
-    assert evidence.source_tenant_id is None
-
-
-def test_fetch_accepts_the_assignment_when_the_response_states_the_admitted_tenant(
-    monkeypatch,
-) -> None:
-    """The control for the refusals above: same path, matching tenant, accepted."""
-
-    evidence = _fetch(
-        monkeypatch,
-        payload=_payload(tenant_id="tenant_sg"),
-        policy_context={"tenant_id": "tenant_sg"},
+    fetch_benchmark_assignment_with_lotus_core(
+        portfolio_id="PF_1",
+        as_of_date="2026-03-25",
+        reporting_currency=None,
+        policy_context=None,
+        correlation_id="corr-621",
+        tenant_id="tenant_sg",
     )
 
-    assert evidence.source_tenant_id == "tenant_sg"
+    assert client.calls[0]["json"]["policy_context"] == {"tenant_id": "tenant_sg"}
 
 
 @pytest.mark.parametrize(

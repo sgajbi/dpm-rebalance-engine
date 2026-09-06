@@ -341,9 +341,18 @@ def _validate_requested_tenant(
     Core's shared middleware enforces before the route executes. Independent
     tenant attribution for BenchmarkAssignment:v1 would have to come from Core's
     own store; it does not exist today and is raised upstream rather than
-    simulated here."""
+    simulated here.
 
-    if response.tenant_id is not None and response.tenant_id != requested_tenant_id:
+    A missing echo is refused. `_request_payload` now sends the admitted tenant
+    on every request, so a response that echoes nothing did not answer the
+    request we made: it is stale, from an incompatible Core revision, or in
+    breach of the documented echo. None of those is a response to accept and
+    report READY over. An earlier revision here tolerated `None`, which was
+    right when a request could legitimately carry no policy context and became
+    wrong the moment one always does -- the two changes were made together and
+    the relaxation outlived its reason."""
+
+    if response.tenant_id != requested_tenant_id:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
             "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"
         )
