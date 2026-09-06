@@ -14,6 +14,8 @@ Current scope: every command below is implemented and runs against this reposito
 
 ## Before The First Command
 
+On Windows, GNU Make is not present by default and must be installed separately. winget, Chocolatey, Scoop and MSYS2 all provide it; pick whichever package manager the machine already uses.
+
 `make install` resolves to `install-ci`, which runs `python -m pip install` directly rather than
 into a managed environment. Create and activate a virtualenv FIRST: PEP 668 distributions (most
 current Linux packages, and Homebrew Python on macOS) mark the system interpreter externally
