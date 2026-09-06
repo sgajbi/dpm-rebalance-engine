@@ -119,10 +119,23 @@ def fetch_benchmark_assignment_with_lotus_core(
     reporting_currency: str | None,
     policy_context: dict[str, object] | None,
     correlation_id: str,
+    tenant_id: str,
 ) -> LotusCoreBenchmarkAssignment:
-    """Fetch Core's effective-dated BenchmarkAssignment:v1 without inferring its semantics."""
+    """Fetch Core's effective-dated BenchmarkAssignment:v1 without inferring its semantics.
 
-    admitted_tenant_id = _require_admitted_tenant(policy_context)
+    `tenant_id` is the caller's admitted tenant and is deliberately separate from
+    `policy_context`. Authorization scope must not be selectable by business-policy
+    content: the production policy context is built by
+    `build_advisory_policy_context()`, which carries mandate, jurisdiction and
+    benchmark selectors and no tenant, and a tenant added to it later would be
+    policy input choosing the authority a read runs under.
+
+    It is a required keyword rather than an optional one so mypy names every call
+    site when this is wired into the proposal flow, instead of a default silently
+    restoring an unscoped read.
+    """
+
+    admitted_tenant_id = _require_admitted_tenant(tenant_id)
     response = _post_benchmark_assignment_request(
         portfolio_id=portfolio_id,
         as_of_date=as_of_date,
@@ -139,7 +152,7 @@ def fetch_benchmark_assignment_with_lotus_core(
     )
 
 
-def _require_admitted_tenant(policy_context: dict[str, object] | None) -> str:
+def _require_admitted_tenant(tenant_id: str) -> str:
     """Establish the tenant this read is made under, before any request is sent.
 
     Core's shared middleware requires a nonblank `X-Tenant-Id` on this route and
@@ -150,7 +163,7 @@ def _require_admitted_tenant(policy_context: dict[str, object] | None) -> str:
     This never mints or defaults a tenant. Absent authority is a refusal.
     """
 
-    admitted = _core_policy_context(policy_context).get("tenant_id")
+    admitted = tenant_id.strip() if isinstance(tenant_id, str) else ""
     if not admitted:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
             "CORE_BENCHMARK_ASSIGNMENT_TENANT_REQUIRED"
@@ -177,6 +190,7 @@ def _post_benchmark_assignment_request(
                     as_of_date=as_of_date,
                     reporting_currency=reporting_currency,
                     policy_context=policy_context,
+                    admitted_tenant_id=admitted_tenant_id,
                 ),
                 headers={
                     "X-Correlation-Id": correlation_id,
@@ -203,13 +217,17 @@ def _request_payload(
     as_of_date: str,
     reporting_currency: str | None,
     policy_context: dict[str, object] | None,
+    admitted_tenant_id: str,
 ) -> dict[str, object]:
     payload: dict[str, object] = {"as_of_date": as_of_date}
     if reporting_currency is not None and reporting_currency.strip():
         payload["reporting_currency"] = reporting_currency.strip()
     core_policy_context = _core_policy_context(policy_context)
-    if core_policy_context:
-        payload["policy_context"] = core_policy_context
+    # Core documents policy_context as governance metadata and echoes its tenant
+    # into response lineage. It is populated from the admitted tenant rather than
+    # from policy content, so the body cannot disagree with the authority header.
+    core_policy_context["tenant_id"] = admitted_tenant_id
+    payload["policy_context"] = core_policy_context
     return payload
 
 
@@ -309,19 +327,23 @@ def _validate_requested_tenant(
     *,
     requested_tenant_id: str,
 ) -> None:
-    """Bind the response to the tenant this read was admitted under.
+    """Echo integrity only. This is NOT tenant attribution, and must not be read as it.
 
-    A matching portfolio and as-of date do not establish that the assignment
-    belongs to the requesting tenant: Core is asked with a tenant and answers
-    with one, and until they are compared a misrouted or cache-collided
-    response is indistinguishable from a correct one.
+    Core builds this field as
+    `tenant_id=request.policy_context.tenant_id if request.policy_context else None`,
+    so the tenant in the response is the tenant this service put in the request.
+    Comparing them compares our own input with itself. It can catch something
+    rewriting the payload between here and Core, which is worth a little, and it
+    can catch nothing about whether the assignment belongs to this tenant, which
+    is what an earlier version of this docstring claimed.
 
-    A response that states no tenant cannot be confirmed in scope either, so it
-    is refused rather than accepted on the strength of the other two fields.
-    There is no unscoped case to decide here: `_require_admitted_tenant` has
-    already refused before the request was sent."""
+    The authority that actually constrains this read is `X-Tenant-Id`, which
+    Core's shared middleware enforces before the route executes. Independent
+    tenant attribution for BenchmarkAssignment:v1 would have to come from Core's
+    own store; it does not exist today and is raised upstream rather than
+    simulated here."""
 
-    if response.tenant_id is None or response.tenant_id != requested_tenant_id:
+    if response.tenant_id is not None and response.tenant_id != requested_tenant_id:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
             "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"
         )

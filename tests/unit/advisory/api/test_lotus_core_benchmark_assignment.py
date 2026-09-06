@@ -105,6 +105,7 @@ def test_fetch_maps_core_v1_assignment_with_full_source_audit_context(monkeypatc
         reporting_currency="USD",
         policy_context={"tenant_id": "tenant_sg", "policy_pack_id": "policy_pb_v1"},
         correlation_id="corr-554",
+        tenant_id="tenant_sg",
     )
 
     assert evidence.effective_benchmark_id == "BM_GLOBAL_BALANCED"
@@ -188,6 +189,7 @@ def test_fetch_rejects_missing_or_mismatched_source_evidence(
             reporting_currency=None,
             policy_context={"tenant_id": "tenant_sg"},
             correlation_id="corr-554",
+            tenant_id="tenant_sg",
         )
 
     assert exc_info.value.reason == reason_code
@@ -207,6 +209,7 @@ def test_fetch_maps_core_transport_failure_to_typed_unavailable_evidence(monkeyp
             reporting_currency=None,
             policy_context={"tenant_id": "tenant_sg"},
             correlation_id="corr-554",
+            tenant_id="tenant_sg",
         )
 
     assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_SOURCE_UNAVAILABLE"
@@ -225,6 +228,7 @@ def test_fetch_omits_blank_optional_context_without_forwarding_unowned_fields(mo
         reporting_currency="  ",
         policy_context={"tenant_id": "tenant_sg", "benchmark_id": "BM_NOT_FORWARDED"},
         correlation_id="corr-554",
+        tenant_id="tenant_sg",
     )
 
     assert client.calls[0]["json"] == {
@@ -257,6 +261,7 @@ def test_fetch_maps_source_degradation_to_partial_without_discarding_source_fact
         reporting_currency=None,
         policy_context={"tenant_id": "tenant_sg"},
         correlation_id="corr-554",
+        tenant_id="tenant_sg",
     )
 
     assert (evidence.supportability, evidence.effective_benchmark_id) == (
@@ -265,7 +270,13 @@ def test_fetch_maps_source_degradation_to_partial_without_discarding_source_fact
     )
 
 
-def _fetch(monkeypatch, *, payload: object, policy_context: dict[str, object] | None):
+def _fetch(
+    monkeypatch,
+    *,
+    payload: object,
+    policy_context: dict[str, object] | None,
+    tenant_id: str = "tenant_sg",
+):
     client = _FakeClient(_FakeResponse(status_code=200, payload=payload))
     monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
     monkeypatch.setattr(
@@ -277,33 +288,51 @@ def _fetch(monkeypatch, *, payload: object, policy_context: dict[str, object] | 
         reporting_currency=None,
         policy_context=policy_context,
         correlation_id="corr-589",
+        tenant_id=tenant_id,
     )
 
 
-@pytest.mark.parametrize(
-    "response_tenant_id",
-    ["tenant_other", None],
-    ids=["a different tenant", "no stated tenant"],
-)
-def test_fetch_refuses_an_assignment_it_cannot_confirm_belongs_to_the_requested_tenant(
-    monkeypatch, response_tenant_id: str | None
-) -> None:
-    """A matching portfolio and as-of date do not establish tenant scope.
+def test_fetch_refuses_a_response_whose_echoed_tenant_was_rewritten(monkeypatch) -> None:
+    """Echo integrity, and deliberately nothing more.
 
-    Core is asked with a tenant and answers with one, and until the two are
-    compared a misrouted or cache-collided response is indistinguishable from a
-    correct one. A response that states no tenant cannot be confirmed either,
-    so it is refused rather than accepted on the strength of the other two
-    fields matching."""
+    Core builds the response tenant as
+    `request.policy_context.tenant_id if request.policy_context else None`, so
+    this field is the tenant we sent. A value that comes back *different* means
+    something rewrote the payload in transit, which is worth refusing. It does
+    not mean the assignment belongs to another tenant, because the field never
+    carried that claim -- see the test below."""
 
     with pytest.raises(LotusCoreBenchmarkAssignmentUnavailableError) as exc_info:
         _fetch(
             monkeypatch,
-            payload=_payload(tenant_id=response_tenant_id),
-            policy_context={"tenant_id": "tenant_sg"},
+            payload=_payload(tenant_id="tenant_other"),
+            policy_context={},
         )
 
     assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"
+
+
+def test_a_response_without_a_tenant_is_not_treated_as_an_attribution_failure(
+    monkeypatch,
+) -> None:
+    """A null echoed tenant means an empty request context, not an unowned assignment.
+
+    An earlier revision refused this, on the reasoning that a response stating no
+    tenant "cannot be confirmed in scope". That reasoning does not survive reading
+    Core: the field is an echo, so its absence says something about the request we
+    sent, not about the assignment. Refusing it asserted a meaning the field does
+    not carry, and would have failed every call that sent no body policy context.
+
+    Scope is established by `X-Tenant-Id`, which Core's middleware enforces before
+    the route runs."""
+
+    evidence = _fetch(
+        monkeypatch,
+        payload=_payload(tenant_id=None),
+        policy_context={},
+    )
+
+    assert evidence.source_tenant_id is None
 
 
 def test_fetch_accepts_the_assignment_when_the_response_states_the_admitted_tenant(
@@ -321,12 +350,12 @@ def test_fetch_accepts_the_assignment_when_the_response_states_the_admitted_tena
 
 
 @pytest.mark.parametrize(
-    "policy_context",
-    [None, {}, {"tenant_id": "   "}, {"policy_pack_id": "policy_pb_v1"}],
-    ids=["no context", "empty context", "blank tenant", "context without a tenant"],
+    "tenant_id",
+    ["", "   ", "\t"],
+    ids=["empty", "spaces", "tab"],
 )
 def test_fetch_refuses_an_unscoped_read_before_sending_any_request(
-    monkeypatch, policy_context: dict[str, object] | None
+    monkeypatch, tenant_id: str
 ) -> None:
     """An unscoped read is refused, and refused before the request is made.
 
@@ -352,8 +381,9 @@ def test_fetch_refuses_an_unscoped_read_before_sending_any_request(
             portfolio_id="PF_1",
             as_of_date="2026-03-25",
             reporting_currency=None,
-            policy_context=policy_context,
+            policy_context={"policy_pack_id": "policy_pb_v1", "benchmark_id": "BM_X"},
             correlation_id="corr-589",
+            tenant_id=tenant_id,
         )
 
     assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_TENANT_REQUIRED"
@@ -381,6 +411,7 @@ def test_fetch_sends_the_admitted_tenant_in_the_header_core_actually_reads(monke
         reporting_currency=None,
         policy_context={"tenant_id": "tenant_sg"},
         correlation_id="corr-589",
+        tenant_id="tenant_sg",
     )
 
     assert client.calls[0]["headers"] == {
@@ -433,3 +464,61 @@ def test_fetch_reports_ready_when_every_status_the_source_states_is_healthy(monk
     )
 
     assert evidence.supportability == "READY"
+
+
+def test_the_production_policy_context_shape_is_accepted_and_never_supplies_authority(
+    monkeypatch,
+) -> None:
+    """The exact dictionary the proposal flow builds must work, and must not be authority.
+
+    `build_advisory_policy_context()` returns input_mode, context_source, three
+    context statuses, household, mandate, jurisdiction, legal entity, benchmark
+    and missing_context. It has no tenant, and it never will have one by design:
+    if authority were read from here, adding a tenant key to a business-policy
+    dictionary would let policy input choose the scope a read runs under.
+
+    An earlier revision took the tenant from this dictionary, so every call
+    carrying the real shape would have been refused before reaching Core, and
+    the tests hid it by passing a tenant-bearing context production never builds.
+    This uses the real shape, keyed from the production builder's own output.
+    """
+
+    from src.core.advisory.policy_context import (
+        ProposalPolicySelectors,
+        build_advisory_policy_context,
+    )
+
+    production_context = build_advisory_policy_context(
+        input_mode="STATEFUL",
+        resolution_source="CORE",
+        selectors=ProposalPolicySelectors(
+            household_id="HH_1",
+            mandate_id="MD_1",
+            jurisdiction="SG",
+            legal_entity_code="LE_1",
+            benchmark_id="BM_GLOBAL_BALANCED",
+        ),
+    )
+    assert "tenant_id" not in production_context, (
+        "the production policy context must stay free of tenant, or authority and "
+        "business policy become the same input"
+    )
+
+    client = _FakeClient(_FakeResponse(status_code=200, payload=_payload()))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
+    )
+
+    evidence = fetch_benchmark_assignment_with_lotus_core(
+        portfolio_id="PF_1",
+        as_of_date="2026-03-25",
+        reporting_currency=None,
+        policy_context=production_context,
+        correlation_id="corr-621",
+        tenant_id="tenant_sg",
+    )
+
+    assert evidence.effective_benchmark_id == "BM_GLOBAL_BALANCED"
+    assert client.calls[0]["headers"]["X-Tenant-Id"] == "tenant_sg"
+    assert client.calls[0]["json"]["policy_context"]["tenant_id"] == "tenant_sg"
