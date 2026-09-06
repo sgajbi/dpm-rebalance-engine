@@ -79,17 +79,17 @@ It should define:
 ### This RFC does not own
 
 1. workspace contract shape, which remains under
-   [RFC-0004](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0004-iterative-advisory-proposal-workspace-contract.md),
+   [RFC-0004](../../docs/rfcs/RFC-0004-iterative-advisory-proposal-workspace-contract.md),
 2. lifecycle aggregate and audit ownership, which remains under
-   [RFC-0013](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0013-proposal-persistence-workflow-lifecycle.md),
+   [RFC-0013](../../docs/rfcs/RFC-0013-proposal-persistence-workflow-lifecycle.md),
 3. policy-pack and jurisdiction behavior, which remains under
-   [RFC-0015](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0015-jurisdiction-policy-packs.md),
+   [RFC-0015](../../docs/rfcs/RFC-0015-jurisdiction-policy-packs.md),
 4. costs and frictions, which remain under
-   [RFC-0016](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0016-costs-fees-frictions-v1.md),
+   [RFC-0016](../../docs/rfcs/RFC-0016-costs-fees-frictions-v1.md),
 5. execution integration specifics, which remain under
-   [RFC-0017](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0017-execution-integration-interface.md),
+   [RFC-0017](../../docs/rfcs/RFC-0017-execution-integration-interface.md),
 6. broader runtime closure, which remains under
-   [RFC-0019](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0019-authoritative-context-runtime-and-workspace-closure.md).
+   [RFC-0019](../../docs/rfcs/RFC-0019-authoritative-context-runtime-and-workspace-closure.md).
 
 ## Architecture Direction
 

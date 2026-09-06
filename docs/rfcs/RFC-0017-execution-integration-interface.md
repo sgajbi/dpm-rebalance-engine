@@ -73,15 +73,15 @@ The first implementation should stay narrow:
 ### This RFC does not own
 
 1. proposal artifact structure, which remains under
-   [RFC-0011](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0011-proposal-artifact.md),
+   [RFC-0011](../../docs/rfcs/RFC-0011-proposal-artifact.md),
 2. workflow gate semantics, which remain under
-   [RFC-0012](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0012-advisory-workflow-gates.md),
+   [RFC-0012](../../docs/rfcs/RFC-0012-advisory-workflow-gates.md),
 3. lifecycle persistence and audit ownership, which remain under
-   [RFC-0013](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0013-proposal-persistence-workflow-lifecycle.md),
+   [RFC-0013](../../docs/rfcs/RFC-0013-proposal-persistence-workflow-lifecycle.md),
 4. broad runtime closure and evidence convergence, which remain under
-   [RFC-0019](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0019-authoritative-context-runtime-and-workspace-closure.md),
+   [RFC-0019](../../docs/rfcs/RFC-0019-authoritative-context-runtime-and-workspace-closure.md),
 5. post-trade surveillance and oversight, which remain under
-   [RFC-0018](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0018-monitoring-surveillance-post-trade-controls.md).
+   [RFC-0018](../../docs/rfcs/RFC-0018-monitoring-surveillance-post-trade-controls.md).
 
 ## Architecture Direction
 

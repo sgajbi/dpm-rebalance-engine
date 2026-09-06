@@ -81,37 +81,37 @@ foundation.
 
 ### Already implemented and not redefined here
 
-1. [RFC-0004](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0004-iterative-advisory-proposal-workspace-contract.md)
+1. [RFC-0004](../../docs/rfcs/RFC-0004-iterative-advisory-proposal-workspace-contract.md)
    owns the existence and baseline shape of the workspace contract.
-2. [RFC-0005](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0005-postgres-only-advisory-runtime-hard-cutover.md)
+2. [RFC-0005](../../docs/rfcs/RFC-0005-postgres-only-advisory-runtime-hard-cutover.md)
    owns the Postgres runtime and persistence posture.
-3. [RFC-0006](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0006-lotus-advise-target-operating-model-and-integration-architecture.md)
+3. [RFC-0006](../../docs/rfcs/RFC-0006-lotus-advise-target-operating-model-and-integration-architecture.md)
    owns service boundary and upstream/downstream ownership rules.
-4. [RFC-0007](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0007-advisory-proposal-simulate-mvp.md),
-   [RFC-0008](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0008-advisory-proposal-auto-funding.md),
-   [RFC-0009](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0009-drift-analytics.md), and
-   [RFC-0010](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0010-suitability-scanner-v1.md)
+4. [RFC-0007](../../docs/rfcs/RFC-0007-advisory-proposal-simulate-mvp.md),
+   [RFC-0008](../../docs/rfcs/RFC-0008-advisory-proposal-auto-funding.md),
+   [RFC-0009](../../docs/rfcs/RFC-0009-drift-analytics.md), and
+   [RFC-0010](../../docs/rfcs/RFC-0010-suitability-scanner-v1.md)
    own the current advisory evaluation baseline.
-5. [RFC-0011](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0011-proposal-artifact.md)
+5. [RFC-0011](../../docs/rfcs/RFC-0011-proposal-artifact.md)
    owns the artifact payload shape.
-6. [RFC-0012](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0012-advisory-workflow-gates.md)
+6. [RFC-0012](../../docs/rfcs/RFC-0012-advisory-workflow-gates.md)
    owns workflow gate and next-step semantics.
-7. [RFC-0013](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0013-proposal-persistence-workflow-lifecycle.md)
+7. [RFC-0013](../../docs/rfcs/RFC-0013-proposal-persistence-workflow-lifecycle.md)
    owns proposal persistence, lifecycle, lineage, and audit model.
 
 ### Future RFCs that remain in force after RFC-0019
 
-1. [RFC-0014](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0014-data-quality-snapshots-replayability.md)
+1. [RFC-0014](../../docs/rfcs/RFC-0014-data-quality-snapshots-replayability.md)
    should own detailed snapshot and data-quality policy. RFC-0019 only requires evidence
    convergence, not a full DQ policy rewrite.
-2. [RFC-0015](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0015-jurisdiction-policy-packs.md)
+2. [RFC-0015](../../docs/rfcs/RFC-0015-jurisdiction-policy-packs.md)
    should continue owning jurisdiction and policy-pack behavior.
-3. [RFC-0016](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0016-costs-fees-frictions-v1.md)
+3. [RFC-0016](../../docs/rfcs/RFC-0016-costs-fees-frictions-v1.md)
    should continue owning transaction-cost and friction modeling.
-4. [RFC-0017](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0017-execution-integration-interface.md)
+4. [RFC-0017](../../docs/rfcs/RFC-0017-execution-integration-interface.md)
    should continue owning external execution integration specifics. RFC-0019 only closes the
    advisory-side runtime and reconciliation seam.
-5. [RFC-0018](C:/Users/Sandeep/projects/lotus-advise/docs/rfcs/RFC-0018-monitoring-surveillance-post-trade-controls.md)
+5. [RFC-0018](../../docs/rfcs/RFC-0018-monitoring-surveillance-post-trade-controls.md)
    should continue owning broader post-trade surveillance and oversight.
 
 ## Architecture Direction
