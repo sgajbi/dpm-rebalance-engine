@@ -631,3 +631,77 @@ def test_a_failed_core_read_is_attempted_once_and_not_retried(monkeypatch) -> No
         f"whose idempotency it cannot establish"
     )
     assert client.calls[0]["headers"]["X-Tenant-Id"] == "tenant_sg"
+
+
+@pytest.mark.parametrize("status_code", [401, 403])
+def test_core_refusing_an_admitted_request_maps_to_typed_unavailable(
+    monkeypatch, status_code: int
+) -> None:
+    """Core refusing an admitted tenant is a different path from us refusing to ask.
+
+    The manifest's auth_failure case previously pointed at tests that either
+    reject a blank tenant before an HTTP client exists, or succeed outright.
+    Neither reaches Core's own authorization response, so 401/403 handling could
+    drift with the contract lane green — the module's only status regression was
+    404.
+
+    This sends a properly admitted request and has Core refuse it. The typed
+    reason matters: an authorization refusal from the source must not be reported
+    as missing data, because a caller reading INVALID would go looking at its
+    payload for a problem that is in its credentials.
+    """
+
+    client = _FakeClient(_FakeResponse(status_code=status_code, payload={"detail": "denied"}))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
+    )
+
+    with pytest.raises(LotusCoreBenchmarkAssignmentUnavailableError) as exc_info:
+        fetch_benchmark_assignment_with_lotus_core(
+            portfolio_id="PF_1",
+            as_of_date="2026-03-25",
+            reporting_currency=None,
+            policy_context={},
+            correlation_id="corr-621",
+            tenant_id="tenant_sg",
+        )
+
+    assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_SOURCE_UNAVAILABLE"
+    assert client.calls, "the request must actually have been sent for this to be Core's refusal"
+
+
+class _TimingOutClient(_FakeClient):
+    def post(self, url: str, *, json: dict[str, object], headers: dict[str, str]) -> _FakeResponse:
+        self.calls.append({"url": url, "json": json, "headers": headers})
+        raise httpx.ReadTimeout("Core did not respond", request=httpx.Request("POST", url))
+
+
+def test_a_core_timeout_maps_to_the_stable_unavailable_reason(monkeypatch) -> None:
+    """A timeout, not a connect error.
+
+    The manifest's timeout case referenced a test raising `httpx.ConnectError`.
+    The current broad `httpx.HTTPError` catch covers both, so the case passed —
+    but a later specialization could drop timeout handling without failing the
+    lane that claims to cover it. Two distinct failures were being certified by
+    one of them.
+    """
+
+    client = _TimingOutClient(_FakeResponse(status_code=200, payload=_payload()))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
+    )
+
+    with pytest.raises(LotusCoreBenchmarkAssignmentUnavailableError) as exc_info:
+        fetch_benchmark_assignment_with_lotus_core(
+            portfolio_id="PF_1",
+            as_of_date="2026-03-25",
+            reporting_currency=None,
+            policy_context={},
+            correlation_id="corr-621",
+            tenant_id="tenant_sg",
+        )
+
+    assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_SOURCE_UNAVAILABLE"
+    assert len(client.calls) == 1, "a timeout must not be retried into a second attempt"

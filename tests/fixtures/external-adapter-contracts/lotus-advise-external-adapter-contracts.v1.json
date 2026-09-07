@@ -561,17 +561,17 @@
         },
         {
           "case_id": "auth_failure",
-          "expected_behavior": "refuses an unscoped read before any request is sent, and never mints or defaults a tenant",
+          "expected_behavior": "refuses an unscoped read before any request, and maps Core's own 401/403 on an admitted request to typed unavailable rather than to a data problem",
           "test_references": [
             "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_refuses_an_unscoped_read_before_sending_any_request",
-            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_the_production_policy_context_shape_is_accepted_and_never_supplies_authority"
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_core_refusing_an_admitted_request_maps_to_typed_unavailable"
           ]
         },
         {
           "case_id": "timeout",
-          "expected_behavior": "masks transport failure under a stable unavailable posture without inventing evidence",
+          "expected_behavior": "maps a read timeout to the stable unavailable posture without inventing evidence",
           "test_references": [
-            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_maps_core_transport_failure_to_typed_unavailable_evidence"
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_a_core_timeout_maps_to_the_stable_unavailable_reason"
           ]
         },
         {
@@ -583,10 +583,10 @@
         },
         {
           "case_id": "duplicate_response",
-          "expected_behavior": "refuses a response that does not correspond to the request it answers, detected through the echoed tenant",
+          "expected_behavior": "issues exactly one outbound read per call and refuses a response that does not correspond to the request it answers",
           "test_references": [
-            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_refuses_a_response_whose_echoed_tenant_was_rewritten",
-            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_a_response_that_echoes_no_tenant_is_refused"
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_a_failed_core_read_is_attempted_once_and_not_retried",
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_refuses_a_response_whose_echoed_tenant_was_rewritten"
           ]
         },
         {
