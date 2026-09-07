@@ -225,7 +225,7 @@ def test_current_policy_has_only_revision_bound_python_growth_exceptions() -> No
     # one, and an exception that does not say so invites the next reader to assume
     # shallow regression bulk -- which is the thing this metric exists to surface.
     assert "production +107 lines" in tenant_admission_exception["reason"]
-    assert "tests +422" in tenant_admission_exception["reason"]
+    assert "tests +487" in tenant_admission_exception["reason"]
     assert "declared coverage did not execute" in tenant_admission_exception["reason"]
     total_lines = next(
         metric for metric in policy["metrics"] if metric["name"] == "total_python_lines"
