@@ -1,6 +1,6 @@
 # Lotus Advise Quality Baseline Report
 
-- Generated At: `2026-09-07T01:18:00.014138+00:00`
+- Generated At: `2026-09-07T01:37:32.708287+00:00`
 - Git Identity: omitted from committed Markdown; use Git history and GitHub Actions
   run metadata for exact branch/head evidence.
 - CI Phase: `calibrated-regression`
@@ -10,7 +10,7 @@
 - Python files: `1112`
 - Packages: `42`
 - Modules: `1070`
-- Total Python lines: `205732`
+- Total Python lines: `205734`
 
 ## Largest Files
 

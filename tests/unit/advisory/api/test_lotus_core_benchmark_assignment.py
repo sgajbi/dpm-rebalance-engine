@@ -579,10 +579,12 @@ def test_fetch_refuses_a_provider_response_whose_body_cannot_be_decoded(monkeypa
             tenant_id="tenant_sg",
         )
 
-    assert exc_info.value.reason in {
-        "CORE_BENCHMARK_ASSIGNMENT_SOURCE_INVALID",
-        "CORE_BENCHMARK_ASSIGNMENT_SOURCE_UNAVAILABLE",
-    }
+    # The exact reason, not a set. A set membership would pass if an undecodable body
+    # were reclassified as SOURCE_UNAVAILABLE, which says "try again later" about a
+    # response that will never become valid -- and the manifest declares this case as
+    # source-invalid coverage, so a weak assertion would leave the contract lane unable
+    # to detect exactly the drift it claims to guard.
+    assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_SOURCE_INVALID"
 
 
 class _FailingRecordingClient(_FakeClient):
