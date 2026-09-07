@@ -1,6 +1,6 @@
 {
   "schema_version": "lotus.advise.quality-trend-policy.v1",
-  "policy_version": "lotus-advise-quality-trend.v1+be89ca7f0c47",
+  "policy_version": "lotus-advise-quality-trend.v1+c3de664382b0",
   "report_path": "quality/baseline_report.md",
   "metrics": [
     {
@@ -66,6 +66,15 @@
         "reason": "Reviewed #602 proposal-outcome realization slice: the measured growth implements the source-authoritative Idea-to-Advise proposal linkage and terminal reconciliation contract, append-only versioned outcomes, compare-and-set/idempotent concurrency behavior, PostgreSQL migration and restart recovery proof, entitlement-first API handling, OpenAPI and data-product contract truth, plus behavioral unit, HTTP, recovery, migration, and live PostgreSQL tests. Review follow-up centralizes the shared progression invariant, preserves original-intake replay after mutable proposal progression, projects current proposal linkage on replay, enforces one-realization-per-proposal parity in memory, translates the named PostgreSQL uniqueness race to a rollback-safe domain conflict, gates writes across the reader-incompatible deployment wave, proves PostgreSQL missing-state, invalid-link, chronology and lost-compare-and-set failures, and restores the B-ranked complexity inventory to the exact mainline count of 132; this exception permits only the measured Python content for this issue-backed lifecycle closure and does not relax coverage, complexity, typing, or test assertions.",
         "approver": "sgajbi",
         "expires_on": "2026-09-16"
+      },
+      {
+        "metric": "total_python_lines",
+        "base_sha": "b4bf26da45ed920868c9585c74697e2e3a6770c3",
+        "head_python_content_fingerprint": "ffe72a8305caa80883d84e78dd909042e3403a3a39f9ac04bc5ccbb65d1612b4",
+        "allowed_delta": 520,
+        "reason": "Reviewed #621 tenant admission at the Core benchmark seam: production +107 lines, tests +422. The production half carries the admission refusal before I/O, the X-Tenant-Id transport, the echo-integrity check and the reconciliation/data-quality statuses. The test half is deliberately the larger part and is not shallow bulk: four review findings on this PR were that declared coverage did not execute, so these lines are what makes the consumer-contract lane run what it names -- admitted, unscoped, undecodable-body and non-retry cases, each asserting the outbound call, plus a serialized provider fixture parsed through the adapter's own response model. Bound to the measured head content so any further Python change invalidates it, and expiring so the allowance cannot become the steady state.",
+        "approver": "sgajbi",
+        "expires_on": "2026-10-07"
       }
     ]
   }
