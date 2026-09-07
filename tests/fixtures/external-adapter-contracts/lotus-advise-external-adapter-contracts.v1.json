@@ -498,7 +498,7 @@
         "name": "core-effective-dated-benchmark-assignment",
         "version": "lotus-core-benchmark-assignment-consumer.v1",
         "schema_ref": "src/integrations/lotus_core/benchmark_assignment.py",
-        "provider_fixture_ref": "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py",
+        "provider_fixture_ref": "tests/fixtures/lotus_core/benchmark_assignment_v1.json",
         "fixture_revision": "2026-09-07.issue-589"
       },
       "authority": "source-owned effective-dated benchmark assignment; this consumer admits the tenant, never mints one, and never infers supportability the source did not state",
@@ -532,9 +532,9 @@
         },
         {
           "case_id": "malformed_json",
-          "expected_behavior": "maps a non-object or schema-invalid provider payload to a typed source-invalid refusal",
+          "expected_behavior": "maps a provider response whose body cannot be decoded to a typed source-invalid refusal",
           "test_references": [
-            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_rejects_missing_or_mismatched_source_evidence"
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_refuses_a_provider_response_whose_body_cannot_be_decoded"
           ]
         },
         {
@@ -576,9 +576,9 @@
         },
         {
           "case_id": "retry",
-          "expected_behavior": "does not reissue the read without admitted authority; the recording client observes no call",
+          "expected_behavior": "does not retry a failed Core read; one admitted-tenant request is attempted exactly once",
           "test_references": [
-            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_fetch_refuses_an_unscoped_read_before_sending_any_request"
+            "tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py::test_a_failed_core_read_is_attempted_once_and_not_retried"
           ]
         },
         {

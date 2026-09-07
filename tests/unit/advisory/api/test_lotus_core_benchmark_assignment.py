@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 import httpx
@@ -541,3 +542,90 @@ def test_the_production_policy_context_shape_is_accepted_and_never_supplies_auth
     assert evidence.effective_benchmark_id == "BM_GLOBAL_BALANCED"
     assert client.calls[0]["headers"]["X-Tenant-Id"] == "tenant_sg"
     assert client.calls[0]["json"]["policy_context"]["tenant_id"] == "tenant_sg"
+
+
+class _UndecodableResponse(_FakeResponse):
+    """A 200 whose body is not JSON, which `_FakeResponse` could never produce.
+
+    The manifest declared malformed-JSON coverage against a case that returned a
+    schema-invalid *dictionary*. That exercises field validation, not decoding —
+    `json()` returned an object and never raised, so the malformed path had no
+    evidence behind it at all.
+
+    httpx raises `json.JSONDecodeError` from `Response.json()` on an undecodable
+    body, so that is what this raises.
+    """
+
+    def json(self) -> object:
+        raise json.JSONDecodeError("Expecting value", "<not json>", 0)
+
+
+def test_fetch_refuses_a_provider_response_whose_body_cannot_be_decoded(monkeypatch) -> None:
+    """An undecodable body is a source-invalid refusal, not an unhandled crash."""
+
+    client = _FakeClient(_UndecodableResponse(status_code=200, payload=None))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
+    )
+
+    with pytest.raises(LotusCoreBenchmarkAssignmentUnavailableError) as exc_info:
+        fetch_benchmark_assignment_with_lotus_core(
+            portfolio_id="PF_1",
+            as_of_date="2026-03-25",
+            reporting_currency=None,
+            policy_context={},
+            correlation_id="corr-621",
+            tenant_id="tenant_sg",
+        )
+
+    assert exc_info.value.reason in {
+        "CORE_BENCHMARK_ASSIGNMENT_SOURCE_INVALID",
+        "CORE_BENCHMARK_ASSIGNMENT_SOURCE_UNAVAILABLE",
+    }
+
+
+class _FailingRecordingClient(_FakeClient):
+    """Records every outbound attempt and fails each one at the transport layer."""
+
+    def post(self, url: str, *, json: dict[str, object], headers: dict[str, str]) -> _FakeResponse:
+        self.calls.append({"url": url, "json": json, "headers": headers})
+        raise httpx.ConnectError("Core is unavailable", request=httpx.Request("POST", url))
+
+
+def test_a_failed_core_read_is_attempted_once_and_not_retried(monkeypatch) -> None:
+    """A failing read under an admitted tenant is attempted exactly once.
+
+    The manifest previously claimed retry coverage from the unscoped-refusal test,
+    which supplies a blank tenant and asserts zero calls. That is true and says
+    nothing about retry: a call that is never made cannot be made twice.
+
+    This uses an admitted tenant so the request genuinely goes out, then fails it,
+    and asserts the attempt count. It is what would detect an accidental repeated
+    outbound request, and it pins the adapter's bounded non-retry posture — retry
+    belongs to whoever owns the operation's idempotency, not to a read that cannot
+    know whether repeating is safe.
+    """
+
+    client = _FailingRecordingClient(_FakeResponse(status_code=200, payload=_payload()))
+    monkeypatch.setenv("LOTUS_CORE_BASE_URL", "http://lotus-core:8202")
+    monkeypatch.setattr(
+        "src.integrations.lotus_core.benchmark_assignment.httpx.Client", lambda timeout: client
+    )
+
+    with pytest.raises(LotusCoreBenchmarkAssignmentUnavailableError) as exc_info:
+        fetch_benchmark_assignment_with_lotus_core(
+            portfolio_id="PF_1",
+            as_of_date="2026-03-25",
+            reporting_currency=None,
+            policy_context={},
+            correlation_id="corr-621",
+            tenant_id="tenant_sg",
+        )
+
+    assert exc_info.value.reason == "CORE_BENCHMARK_ASSIGNMENT_SOURCE_UNAVAILABLE"
+    assert len(client.calls) == 1, (
+        f"the adapter attempted the read {len(client.calls)} times; it must not retry a Core read "
+        f"whose idempotency it cannot establish"
+    )
+    assert client.calls[0]["headers"]["X-Tenant-Id"] == "tenant_sg"

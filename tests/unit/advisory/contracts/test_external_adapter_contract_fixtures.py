@@ -114,6 +114,42 @@ def test_lotus_core_contract_declares_source_effect_decision_ownership() -> None
     assert source_effect_fields.isdisjoint(non_authoritative_fields)
 
 
+def test_benchmark_assignment_provider_fixture_satisfies_the_adapter_schema() -> None:
+    """The provider fixture must be parseable by the code that consumes Core.
+
+    It previously pointed at the consumer's own unit-test module, whose payload is
+    invented locally by `_payload()`. That cannot drift when Core's contract
+    drifts, because nothing derives it from Core -- so it offered no independent
+    provider evidence at all.
+
+    Loading it through the adapter's response model is what makes it evidence: a
+    fixture that stops satisfying the schema the adapter actually enforces fails
+    here rather than sitting in the tree looking authoritative.
+    """
+
+    from src.integrations.lotus_core.benchmark_assignment import _CoreBenchmarkAssignmentResponse
+
+    manifest = _manifest()
+    reference = manifest["adapters"]["lotus_core_benchmark_assignment"]["provider_contract"][
+        "provider_fixture_ref"
+    ]
+    fixture_path = REPO_ROOT / reference
+    assert fixture_path.is_file(), reference
+    assert fixture_path.suffix == ".json", (
+        f"{reference} must be a serialized provider payload, not a test module; a Python test "
+        f"cannot drift with the provider contract because it is not derived from it"
+    )
+
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+    parsed = _CoreBenchmarkAssignmentResponse.model_validate(payload)
+
+    assert parsed.product_name == "BenchmarkAssignment"
+    assert parsed.product_version == "v1"
+    assert parsed.tenant_id, (
+        "the fixture must carry the tenant Core echoes, or it cannot exercise the check"
+    )
+
+
 def test_external_adapter_contract_cases_cover_required_failure_modes() -> None:
     manifest = _manifest()
 
