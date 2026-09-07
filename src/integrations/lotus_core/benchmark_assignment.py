@@ -14,6 +14,9 @@ from src.integrations.lotus_core.stateful_context_routes import resolve_control_
 _BENCHMARK_ASSIGNMENT_PATH = "/integration/portfolios/{portfolio_id}/benchmark-assignment"
 _CURRENT_FRESHNESS_STATUS = "CURRENT"
 _NO_DEGRADATION_STATUS = "NONE"
+_RECONCILED_STATUS = "RECONCILED"
+_CORE_TENANT_HEADER = "X-Tenant-Id"
+_COMPLETE_DATA_QUALITY_STATUS = "COMPLETE"
 
 LotusCoreBenchmarkAssignmentSupportability: TypeAlias = Literal["READY", "PARTIAL"]
 LotusCoreBenchmarkAssignmentUnavailableReason: TypeAlias = Literal[
@@ -22,6 +25,8 @@ LotusCoreBenchmarkAssignmentUnavailableReason: TypeAlias = Literal[
     "CORE_BENCHMARK_ASSIGNMENT_SOURCE_INVALID",
     "CORE_BENCHMARK_ASSIGNMENT_PORTFOLIO_MISMATCH",
     "CORE_BENCHMARK_ASSIGNMENT_AS_OF_MISMATCH",
+    "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH",
+    "CORE_BENCHMARK_ASSIGNMENT_TENANT_REQUIRED",
 ]
 
 
@@ -114,21 +119,56 @@ def fetch_benchmark_assignment_with_lotus_core(
     reporting_currency: str | None,
     policy_context: dict[str, object] | None,
     correlation_id: str,
+    tenant_id: str,
 ) -> LotusCoreBenchmarkAssignment:
-    """Fetch Core's effective-dated BenchmarkAssignment:v1 without inferring its semantics."""
+    """Fetch Core's effective-dated BenchmarkAssignment:v1 without inferring its semantics.
 
+    `tenant_id` is the caller's admitted tenant and is deliberately separate from
+    `policy_context`. Authorization scope must not be selectable by business-policy
+    content: the production policy context is built by
+    `build_advisory_policy_context()`, which carries mandate, jurisdiction and
+    benchmark selectors and no tenant, and a tenant added to it later would be
+    policy input choosing the authority a read runs under.
+
+    It is a required keyword rather than an optional one so mypy names every call
+    site when this is wired into the proposal flow, instead of a default silently
+    restoring an unscoped read.
+    """
+
+    admitted_tenant_id = _require_admitted_tenant(tenant_id)
     response = _post_benchmark_assignment_request(
         portfolio_id=portfolio_id,
         as_of_date=as_of_date,
         reporting_currency=reporting_currency,
         policy_context=policy_context,
         correlation_id=correlation_id,
+        admitted_tenant_id=admitted_tenant_id,
     )
     return _map_response(
         response,
         requested_portfolio_id=portfolio_id,
         requested_as_of_date=as_of_date,
+        requested_tenant_id=admitted_tenant_id,
     )
+
+
+def _require_admitted_tenant(tenant_id: str) -> str:
+    """Establish the tenant this read is made under, before any request is sent.
+
+    Core's shared middleware requires a nonblank `X-Tenant-Id` on this route and
+    answers 401 without one, so an unscoped call cannot succeed. It must also not
+    be attempted: refusing only after the response returns would mean the request
+    was already made under no established authority.
+
+    This never mints or defaults a tenant. Absent authority is a refusal.
+    """
+
+    admitted = tenant_id.strip() if isinstance(tenant_id, str) else ""
+    if not admitted:
+        raise LotusCoreBenchmarkAssignmentUnavailableError(
+            "CORE_BENCHMARK_ASSIGNMENT_TENANT_REQUIRED"
+        )
+    return admitted
 
 
 def _post_benchmark_assignment_request(
@@ -138,6 +178,7 @@ def _post_benchmark_assignment_request(
     reporting_currency: str | None,
     policy_context: dict[str, object] | None,
     correlation_id: str,
+    admitted_tenant_id: str,
 ) -> httpx.Response:
     path = _BENCHMARK_ASSIGNMENT_PATH.format(portfolio_id=quote(portfolio_id, safe=""))
     url = f"{resolve_control_plane_base_url()}{path}"
@@ -149,8 +190,12 @@ def _post_benchmark_assignment_request(
                     as_of_date=as_of_date,
                     reporting_currency=reporting_currency,
                     policy_context=policy_context,
+                    admitted_tenant_id=admitted_tenant_id,
                 ),
-                headers={"X-Correlation-Id": correlation_id},
+                headers={
+                    "X-Correlation-Id": correlation_id,
+                    _CORE_TENANT_HEADER: admitted_tenant_id,
+                },
             )
             response.raise_for_status()
             return response
@@ -172,13 +217,17 @@ def _request_payload(
     as_of_date: str,
     reporting_currency: str | None,
     policy_context: dict[str, object] | None,
+    admitted_tenant_id: str,
 ) -> dict[str, object]:
     payload: dict[str, object] = {"as_of_date": as_of_date}
     if reporting_currency is not None and reporting_currency.strip():
         payload["reporting_currency"] = reporting_currency.strip()
     core_policy_context = _core_policy_context(policy_context)
-    if core_policy_context:
-        payload["policy_context"] = core_policy_context
+    # Core documents policy_context as governance metadata and echoes its tenant
+    # into response lineage. It is populated from the admitted tenant rather than
+    # from policy content, so the body cannot disagree with the authority header.
+    core_policy_context["tenant_id"] = admitted_tenant_id
+    payload["policy_context"] = core_policy_context
     return payload
 
 
@@ -198,12 +247,14 @@ def _map_response(
     *,
     requested_portfolio_id: str,
     requested_as_of_date: str,
+    requested_tenant_id: str,
 ) -> LotusCoreBenchmarkAssignment:
     parsed = _parse_response(response)
     _validate_requested_identity(
         parsed,
         requested_portfolio_id=requested_portfolio_id,
         requested_as_of_date=requested_as_of_date,
+        requested_tenant_id=requested_tenant_id,
     )
     _validate_effective_range(parsed)
     return LotusCoreBenchmarkAssignment(
@@ -258,6 +309,7 @@ def _validate_requested_identity(
     *,
     requested_portfolio_id: str,
     requested_as_of_date: str,
+    requested_tenant_id: str,
 ) -> None:
     if response.portfolio_id != requested_portfolio_id:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
@@ -266,6 +318,43 @@ def _validate_requested_identity(
     if response.as_of_date.isoformat() != requested_as_of_date:
         raise LotusCoreBenchmarkAssignmentUnavailableError(
             "CORE_BENCHMARK_ASSIGNMENT_AS_OF_MISMATCH"
+        )
+    _validate_requested_tenant(response, requested_tenant_id=requested_tenant_id)
+
+
+def _validate_requested_tenant(
+    response: _CoreBenchmarkAssignmentResponse,
+    *,
+    requested_tenant_id: str,
+) -> None:
+    """Echo integrity only. This is NOT tenant attribution, and must not be read as it.
+
+    Core builds this field as
+    `tenant_id=request.policy_context.tenant_id if request.policy_context else None`,
+    so the tenant in the response is the tenant this service put in the request.
+    Comparing them compares our own input with itself. It can catch something
+    rewriting the payload between here and Core, which is worth a little, and it
+    can catch nothing about whether the assignment belongs to this tenant, which
+    is what an earlier version of this docstring claimed.
+
+    The authority that actually constrains this read is `X-Tenant-Id`, which
+    Core's shared middleware enforces before the route executes. Independent
+    tenant attribution for BenchmarkAssignment:v1 would have to come from Core's
+    own store; it does not exist today and is raised upstream rather than
+    simulated here.
+
+    A missing echo is refused. `_request_payload` now sends the admitted tenant
+    on every request, so a response that echoes nothing did not answer the
+    request we made: it is stale, from an incompatible Core revision, or in
+    breach of the documented echo. None of those is a response to accept and
+    report READY over. An earlier revision here tolerated `None`, which was
+    right when a request could legitimately carry no policy context and became
+    wrong the moment one always does -- the two changes were made together and
+    the relaxation outlived its reason."""
+
+    if response.tenant_id != requested_tenant_id:
+        raise LotusCoreBenchmarkAssignmentUnavailableError(
+            "CORE_BENCHMARK_ASSIGNMENT_TENANT_MISMATCH"
         )
 
 
@@ -295,13 +384,21 @@ def _validate_effective_date_contains_as_of(response: _CoreBenchmarkAssignmentRe
 def _supportability(
     response: _CoreBenchmarkAssignmentResponse,
 ) -> LotusCoreBenchmarkAssignmentSupportability:
-    return (
-        "READY"
-        if response.source_evidence_current
-        and response.freshness_status.upper() == _CURRENT_FRESHNESS_STATUS
-        and response.degradation.status.upper() == _NO_DEGRADATION_STATUS
-        else "PARTIAL"
+    """READY means the source says its evidence is usable, in every dimension it states.
+
+    `reconciliation_status` and `data_quality_status` were parsed and stored
+    but excluded from this decision, so an unreconciled or incomplete
+    assignment was reported READY on the strength of freshness alone. Source
+    states the limitation; this adapter must not discard it."""
+
+    stated_dimensions_are_healthy = (
+        response.source_evidence_current,
+        response.freshness_status.upper() == _CURRENT_FRESHNESS_STATUS,
+        response.degradation.status.upper() == _NO_DEGRADATION_STATUS,
+        response.reconciliation_status.upper() == _RECONCILED_STATUS,
+        response.data_quality_status.upper() == _COMPLETE_DATA_QUALITY_STATUS,
     )
+    return "READY" if all(stated_dimensions_are_healthy) else "PARTIAL"
 
 
 __all__ = [

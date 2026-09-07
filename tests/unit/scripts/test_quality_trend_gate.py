@@ -196,9 +196,10 @@ def test_current_policy_has_only_revision_bound_python_growth_exceptions() -> No
     policy = _policy()
     entries = policy["exceptions"]["entries"]
 
-    assert len(entries) == 3
+    assert len(entries) == 4
     exceptions_by_base = {entry["base_sha"]: entry for entry in entries}
     benchmark_exception = exceptions_by_base["e879984ed78262ff2dc97bb7f345e1209fe53103"]
+    tenant_admission_exception = exceptions_by_base["b4bf26da45ed920868c9585c74697e2e3a6770c3"]
     realization_exception = exceptions_by_base["4337fb939bc9d675a49e640678b01fbc40f9fd9d"]
     proposal_outcome_exception = exceptions_by_base["8b4bb56e2657d0dfe26168e141e3632a66dc1f26"]
     assert all(entry["metric"] == "total_python_lines" for entry in entries)
@@ -220,6 +221,12 @@ def test_current_policy_has_only_revision_bound_python_growth_exceptions() -> No
     )
     assert "restores the B-ranked complexity inventory" in proposal_outcome_exception["reason"]
     assert "#602" in proposal_outcome_exception["reason"]
+    # #621 tenant admission. The split is recorded because the test half is the larger
+    # one, and an exception that does not say so invites the next reader to assume
+    # shallow regression bulk -- which is the thing this metric exists to surface.
+    assert "production +107 lines" in tenant_admission_exception["reason"]
+    assert "tests +487" in tenant_admission_exception["reason"]
+    assert "declared coverage did not execute" in tenant_admission_exception["reason"]
     total_lines = next(
         metric for metric in policy["metrics"] if metric["name"] == "total_python_lines"
     )

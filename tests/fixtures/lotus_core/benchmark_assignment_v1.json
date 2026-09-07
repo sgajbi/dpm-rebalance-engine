@@ -1,0 +1,38 @@
+{
+  "product_name": "BenchmarkAssignment",
+  "product_version": "v1",
+  "portfolio_id": "PF_1",
+  "benchmark_id": "BM_GLOBAL_BALANCED",
+  "as_of_date": "2026-03-25",
+  "effective_from": "2026-01-01",
+  "effective_to": null,
+  "assignment_source": "benchmark_policy_engine",
+  "assignment_status": "active",
+  "assignment_recorded_at": "2026-03-25T09:15:00Z",
+  "assignment_version": 3,
+  "policy_pack_id": "policy_pb_v1",
+  "source_system": "mandate-booking-system",
+  "contract_version": "rfc_062_v1",
+  "tenant_id": "tenant_sg",
+  "generated_at": "2026-03-25T09:16:00Z",
+  "restatement_version": "v1",
+  "reconciliation_status": "RECONCILED",
+  "data_quality_status": "COMPLETE",
+  "latest_evidence_timestamp": "2026-03-25T09:14:00Z",
+  "source_batch_fingerprint": "batch_20260325_0001",
+  "snapshot_id": "snapshot_554",
+  "content_hash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "source_refs": [
+    "lotus-core://benchmark/PF_1/2026-03-25"
+  ],
+  "source_lineage": {
+    "source_owner": "lotus-core",
+    "source_product": "BenchmarkAssignment"
+  },
+  "source_evidence_current": true,
+  "freshness_status": "CURRENT",
+  "policy_version": "policy-v1",
+  "degradation": {
+    "status": "NONE"
+  }
+}

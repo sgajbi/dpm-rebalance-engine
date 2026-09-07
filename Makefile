@@ -218,8 +218,12 @@ advisory-copilot-evaluation-gate:
 advisory-copilot-safety-gate:
 	python scripts/advisory_copilot_safety_gate.py
 
+# Runs the manifest checker AND the consumer-contract tests it names. The checker only
+# verifies that each referenced function exists, so on its own the references were metadata:
+# a tenant-header or supportability regression left this lane green while the manifest still
+# pointed at the test that would have caught it.
 external-adapter-contracts:
-	python -m pytest tests/unit/advisory/contracts/test_external_adapter_contract_fixtures.py -q
+	python -m pytest tests/unit/advisory/contracts/test_external_adapter_contract_fixtures.py tests/unit/advisory/api/test_lotus_core_benchmark_assignment.py -q
 
 demo-assurance-gate: openapi-gate no-alias-gate api-vocabulary-gate domain-data-products-gate observability-diagnostics advisory-domain-golden-regressions
 	@echo "Demo assurance gate passed"

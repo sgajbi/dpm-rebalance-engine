@@ -12,7 +12,13 @@ CONTRACT_FIXTURE = (
     / "external-adapter-contracts"
     / "lotus-advise-external-adapter-contracts.v1.json"
 )
-REQUIRED_ADAPTERS = {"lotus_core", "lotus_risk", "lotus_report", "lotus_ai"}
+REQUIRED_ADAPTERS = {
+    "lotus_core",
+    "lotus_core_benchmark_assignment",
+    "lotus_risk",
+    "lotus_report",
+    "lotus_ai",
+}
 REQUIRED_CASE_IDS = {
     "valid_provider_response",
     "malformed_json",
@@ -55,7 +61,7 @@ def test_external_adapter_contract_manifest_declares_all_authority_seams() -> No
     manifest = _manifest()
 
     assert manifest["manifest_version"] == "lotus-advise.external-adapter-contracts.v1"
-    assert manifest["fixture_revision"] == "2026-08-28.issue-557"
+    assert manifest["fixture_revision"] == "2026-09-07.issue-589"
     assert set(manifest["required_case_ids"]) == REQUIRED_CASE_IDS
     assert set(manifest["adapters"]) == REQUIRED_ADAPTERS
 
@@ -106,6 +112,42 @@ def test_lotus_core_contract_declares_source_effect_decision_ownership() -> None
     } <= non_authoritative_fields
     assert advise_decision_fields <= non_authoritative_fields
     assert source_effect_fields.isdisjoint(non_authoritative_fields)
+
+
+def test_benchmark_assignment_provider_fixture_satisfies_the_adapter_schema() -> None:
+    """The provider fixture must be parseable by the code that consumes Core.
+
+    It previously pointed at the consumer's own unit-test module, whose payload is
+    invented locally by `_payload()`. That cannot drift when Core's contract
+    drifts, because nothing derives it from Core -- so it offered no independent
+    provider evidence at all.
+
+    Loading it through the adapter's response model is what makes it evidence: a
+    fixture that stops satisfying the schema the adapter actually enforces fails
+    here rather than sitting in the tree looking authoritative.
+    """
+
+    from src.integrations.lotus_core.benchmark_assignment import _CoreBenchmarkAssignmentResponse
+
+    manifest = _manifest()
+    reference = manifest["adapters"]["lotus_core_benchmark_assignment"]["provider_contract"][
+        "provider_fixture_ref"
+    ]
+    fixture_path = REPO_ROOT / reference
+    assert fixture_path.is_file(), reference
+    assert fixture_path.suffix == ".json", (
+        f"{reference} must be a serialized provider payload, not a test module; a Python test "
+        f"cannot drift with the provider contract because it is not derived from it"
+    )
+
+    payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+    parsed = _CoreBenchmarkAssignmentResponse.model_validate(payload)
+
+    assert parsed.product_name == "BenchmarkAssignment"
+    assert parsed.product_version == "v1"
+    assert parsed.tenant_id, (
+        "the fixture must carry the tenant Core echoes, or it cannot exercise the check"
+    )
 
 
 def test_external_adapter_contract_cases_cover_required_failure_modes() -> None:
